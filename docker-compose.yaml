@@ -1,0 +1,21 @@
+version: '2.1'
+
+services:
+  datastax-enterprise:
+    image: datastax/dse-server:6.8.16
+    command: -s
+    hostname: datastax-enterprise
+    container_name: datastax-enterprise
+    environment:
+      DS_LICENSE: accept
+    ports:
+      - "9042:9042"
+
+  datastax-studio:
+    image: datastax/dse-studio
+    ports:
+      - "9091:9091"
+    environment:
+      DS_LICENSE: accept
+    depends_on:
+      - datastax-enterprise
