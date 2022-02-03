@@ -2,8 +2,8 @@ package com.caesars.virgil
 
 import com.datastax.oss.driver.api.core.cql._
 import com.datastax.oss.driver.api.core.{CqlSession, CqlSessionBuilder}
+import zio._
 import zio.stream.ZStream
-import zio.{Chunk, Task, TaskManaged, ZIO, ZManaged}
 
 import scala.jdk.CollectionConverters._
 
@@ -51,16 +51,16 @@ class ZioCassandraSession(session: CqlSession) {
       .map(_.wasApplied())
   }
 
-  def prepare(query: String): Task[PreparedStatement] =
+  private def prepare(query: String): Task[PreparedStatement] =
     ZIO.fromCompletionStage(session.prepareAsync(query))
 
-  def executeAction(query: String): Task[AsyncResultSet] =
+  private def executeAction(query: String): Task[AsyncResultSet] =
     ZIO.fromCompletionStage(session.executeAsync(query))
 
-  def executeAction(query: Statement[_]): Task[AsyncResultSet] =
+  private def executeAction(query: Statement[_]): Task[AsyncResultSet] =
     ZIO.fromCompletionStage(session.executeAsync(query))
 
-  def select(query: Statement[_]): ZStream[Any, Throwable, Row] = {
+  private def select(query: Statement[_]): ZStream[Any, Throwable, Row] = {
     val initialEffect = ZIO.fromCompletionStage(session.executeAsync(query))
 
     ZStream.fromEffect(initialEffect).flatMap { initial =>
@@ -77,7 +77,7 @@ class ZioCassandraSession(session: CqlSession) {
     }
   }
 
-  def selectFirst(query: Statement[_]): Task[Option[Row]] =
+  private def selectFirst(query: Statement[_]): Task[Option[Row]] =
     executeAction(query)
       .map(resultSet => Option(resultSet.one()))
 
@@ -98,6 +98,23 @@ class ZioCassandraSession(session: CqlSession) {
 }
 
 object ZioCassandraSession {
+  def select[Output](
+    input: CassandraInteraction.Query[Output]
+  ): ZStream[Has[ZioCassandraSession], Throwable, Output] =
+    ZStream
+      .service[ZioCassandraSession]
+      .flatMap(_.select(input))
+
+  def selectFirst[Output](
+    input: CassandraInteraction.Query[Output]
+  ): RIO[Has[ZioCassandraSession], Option[Output]] =
+    ZIO.serviceWith[ZioCassandraSession](_.selectFirst(input))
+
+  def executeAction(input: CassandraInteraction.Action): RIO[Has[ZioCassandraSession], Boolean] =
+    ZIO.serviceWith[ZioCassandraSession](_.executeAction(input))
+
+  def executeBatchAction(input: CassandraInteraction.BatchAction): RIO[Has[ZioCassandraSession], Boolean] =
+    ZIO.serviceWith[ZioCassandraSession](_.executeBatchAction(input))
 
   /**
    * Create a ZIO Cassandra Session from an existing Datastax Java Driver's
