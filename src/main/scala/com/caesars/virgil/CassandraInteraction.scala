@@ -18,7 +18,7 @@ object CassandraInteraction {
    * @param query
    *   is the raw formulated query using named markers if there is data to
    *   submit
-   * @param data
+   * @param columns
    *   is the data needed to submit to Cassandra
    * @param reader
    *   is the capability to read data from Cassandra
@@ -32,8 +32,23 @@ object CassandraInteraction {
     def withOutput[OutputType2](implicit reader: Reader[OutputType2]): Query[OutputType2] =
       Query[OutputType2](query, columns, reader)
   }
+
+  /**
+   * Actions map 1:1 with CQL INSERT and UPDATE statements
+   * @param query
+   *   is the raw formulated query using named markers if there is data to
+   *   submit
+   * @param columns
+   *   is the data needed to submit to Cassandra
+   */
   final case class Action(query: String, columns: Columns) extends CassandraInteraction
 
+  /**
+   * Batch Actions map 1:1 with CQL BATCH (LOGGED/UNLOGGED/COUNTER) INSERT and
+   * UPDATE statements
+   * @param actions
+   *   are the individual actions that need to be executed as part of the batch
+   */
   final case class BatchAction(actions: NonEmptyChunk[Action], batchType: CassandraBatchType)
       extends CassandraInteraction
   object BatchAction {

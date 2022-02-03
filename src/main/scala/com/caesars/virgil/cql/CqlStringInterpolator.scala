@@ -10,14 +10,14 @@ import scala.collection.immutable.ListMap
  * CqlStringInterpolator is an interpolator for CQL strings
  *
  * For example:
- * ```scala
+ * {{{
  * val value1: Int    = 1
  * val value2: String = "test"
  * val query          = cql"SELECT * FROM example_table WHERE col1 = $value1 AND col2 = $value2"
- * ```
+ * }}}
  *
  * Produces the following datatype:
- * ```scala
+ * {{{
  * CqlInterpolatedString(
  *   query = "SELECT * FROM example_table WHERE col1 = :param0 AND col2 = :param1",
  *   dataToBeBound = ListMap(
@@ -33,7 +33,7 @@ import scala.collection.immutable.ListMap
  *     }
  *   )
  * )
- * ```
+ * }}}
  */
 class CqlStringInterpolator(ctx: StringContext) {
   private def replaceValueWithQuestionMark(
