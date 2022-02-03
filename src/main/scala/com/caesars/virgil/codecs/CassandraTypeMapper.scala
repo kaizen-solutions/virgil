@@ -1,6 +1,8 @@
 package com.caesars.virgil.codecs
 
-import com.datastax.oss.driver.api.core.`type`.DataType
+import com.caesars.virgil.codecs.userdefinedtypes.{UdtReader, UdtWriter}
+import com.datastax.oss.driver.api.core.`type`.{DataType, UserDefinedType}
+import com.datastax.oss.driver.api.core.data.UdtValue
 import com.datastax.oss.driver.internal.core.`type`.{DefaultListType, DefaultMapType, DefaultSetType}
 
 import java.nio.ByteBuffer
@@ -216,5 +218,23 @@ object CassandraTypeMapper {
         val elementOfSetDataType = dataType.asInstanceOf[DefaultSetType].getElementType
         in.asScala.map(ev.fromCassandra(_, elementOfSetDataType)).toSet
       }
+    }
+
+  implicit def udtCassandraTypeMapper[Scala](implicit
+    udtWriter: UdtWriter.CaseClass[Scala],
+    udtReader: UdtReader.CaseClass[Scala]
+  ): CassandraTypeMapper.WithCassandra[Scala, UdtValue] =
+    new CassandraTypeMapper[Scala] {
+      override type Cassandra = UdtValue
+
+      override def classType: Class[Cassandra] = classOf[UdtValue]
+
+      override def toCassandra(in: Scala, dataType: DataType): Cassandra = {
+        val schema = dataType.asInstanceOf[UserDefinedType]
+        udtWriter.write(FieldName.Unused, in, schema.newValue())
+      }
+
+      override def fromCassandra(in: Cassandra, dataType: DataType): Scala =
+        udtReader.read(FieldName.Unused, in)
     }
 }

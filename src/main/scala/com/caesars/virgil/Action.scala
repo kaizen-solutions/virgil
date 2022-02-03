@@ -30,7 +30,7 @@ object Action {
     def toQuery[OutputType](implicit evidence: Reader[OutputType]): Query[OutputType] =
       Query(query, columns, evidence)
 
-    def addLogged(other: Single): Batch =
+    def ++(other: Single): Batch =
       Batch(NonEmptyChunk(self, other), CassandraBatchType.Logged)
   }
 
@@ -43,6 +43,9 @@ object Action {
   final case class Batch(actions: NonEmptyChunk[Single], batchType: CassandraBatchType) extends Action {
     def add(other: Single): Batch =
       Batch(actions :+ other, batchType)
+
+    def ++(other: Batch): Batch =
+      Batch(actions ++ other.actions, batchType)
 
     def withBatchType(in: CassandraBatchType): Batch =
       Batch(actions, in)

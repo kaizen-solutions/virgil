@@ -116,6 +116,9 @@ object ZioCassandraSession {
   ): RIO[Has[ZioCassandraSession], Option[Output]] =
     ZIO.serviceWith[ZioCassandraSession](_.selectFirst(input))
 
+  def execute(input: Action): RIO[Has[ZioCassandraSession], Boolean] =
+    ZIO.serviceWith[ZioCassandraSession](_.execute(input))
+
   def executeAction(input: Action.Single): RIO[Has[ZioCassandraSession], Boolean] =
     ZIO.serviceWith[ZioCassandraSession](_.executeAction(input))
 
