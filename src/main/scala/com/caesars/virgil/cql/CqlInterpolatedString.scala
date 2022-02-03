@@ -1,7 +1,8 @@
 package com.caesars.virgil.cql
 
-import com.caesars.virgil.{CassandraInteraction, Column, Columns}
 import com.caesars.virgil.codecs.Reader
+import com.caesars.virgil.{Action, Columns, Query}
+import com.datastax.oss.driver.api.core.cql.Row
 
 import scala.collection.immutable.ListMap
 
@@ -11,15 +12,22 @@ import scala.collection.immutable.ListMap
  * submitted to Cassandra for execution.
  */
 final case class CqlInterpolatedString private (queryString: String, dataToBeBound: ListMap[String, ValueInCql]) {
-  def query[Output](implicit evidence: Reader[Output]): CassandraInteraction.Query[Output] =
-    CassandraInteraction.Query(
+  def query[Output](implicit evidence: Reader[Output]): Query[Output] =
+    Query(
       query = queryString,
       columns = Columns.from(dataToBeBound),
       reader = evidence
     )
 
-  def action: CassandraInteraction.Action =
-    CassandraInteraction.Action(
+  def query: Query[Row] =
+    Query(
+      query = queryString,
+      columns = Columns.from(dataToBeBound),
+      reader = Reader.cassandraRowReader
+    )
+
+  def action: Action.Single =
+    Action.Single(
       query = queryString,
       columns = Columns.from(dataToBeBound)
     )

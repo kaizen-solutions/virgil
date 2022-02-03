@@ -1,9 +1,5 @@
 package com.caesars.virgil.cql
 
-import com.caesars.virgil.CassandraInteraction
-import com.caesars.virgil.codecs.{Reader, Writer}
-import com.datastax.oss.driver.api.core.cql.Row
-
 import scala.collection.immutable.ListMap
 
 /**
