@@ -2,8 +2,6 @@ package com.caesars.virgil
 
 import com.caesars.virgil.codecs.Reader
 
-import scala.collection.immutable.ListMap
-
 /* Models an interaction with Cassandra.
    An interaction can be a
    - a query which fetches data

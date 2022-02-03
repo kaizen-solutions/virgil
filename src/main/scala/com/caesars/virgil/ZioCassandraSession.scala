@@ -1,12 +1,10 @@
 package com.caesars.virgil
 
-import com.caesars.virgil.cql.ValueInCql
-import com.datastax.oss.driver.api.core.cql.{AsyncResultSet, BoundStatement, PreparedStatement, Row, Statement}
+import com.datastax.oss.driver.api.core.cql._
 import com.datastax.oss.driver.api.core.{CqlSession, CqlSessionBuilder}
 import zio.stream.ZStream
 import zio.{Chunk, Task, TaskManaged, ZIO, ZManaged}
 
-import scala.collection.immutable.ListMap
 import scala.jdk.CollectionConverters._
 
 /**
@@ -66,15 +64,18 @@ class ZioCassandraSession(session: CqlSession) {
       .map(resultSet => Option(resultSet.one()))
 
   private def buildStatement(queryString: String, columns: Columns): Task[BoundStatement] =
-    prepare(queryString).map { preparedStatement =>
-      val initial = preparedStatement.bind()
-      columns.underlying.foldLeft(initial) { case (accBoundStatement, (colName, column)) =>
-        column.write.write(
-          builder = accBoundStatement,
-          column = colName.name,
-          value = column.value
-        )
+    prepare(queryString).mapEffect { preparedStatement =>
+      val result: BoundStatementBuilder = {
+        val initial = preparedStatement.boundStatementBuilder()
+        columns.underlying.foldLeft(initial) { case (accBoundStatement, (colName, column)) =>
+          column.write.write(
+            builder = accBoundStatement,
+            column = colName.name,
+            value = column.value
+          )
+        }
       }
+      result.build
     }
 }
 

@@ -1,18 +1,18 @@
 package com.caesars.virgil.codecs
 
 import com.datastax.oss.driver.api.core.`type`.UserDefinedType
-
-import com.datastax.oss.driver.api.core.cql.BoundStatement
+import com.datastax.oss.driver.api.core.cql.BoundStatementBuilder
 import com.datastax.oss.driver.api.core.data.UdtValue
 import magnolia1._
 
 import scala.language.experimental.macros
 
 trait Writer[ScalaType] { self =>
-  def write(builder: BoundStatement, column: String, value: ScalaType): BoundStatement
+  def write(builder: BoundStatementBuilder, column: String, value: ScalaType): BoundStatementBuilder
 
   def contramap[ScalaType2](f: ScalaType2 => ScalaType): Writer[ScalaType2] =
-    (boundStatement: BoundStatement, column: String, value: ScalaType2) => self.write(boundStatement, column, f(value))
+    (boundStatement: BoundStatementBuilder, column: String, value: ScalaType2) =>
+      self.write(boundStatement, column, f(value))
 }
 
 object Writer extends TypeMapperSupport with MagnoliaWriterSupport {
@@ -20,8 +20,8 @@ object Writer extends TypeMapperSupport with MagnoliaWriterSupport {
 
   def derive[A](implicit ev: Writer[A]): Writer[A] = ev
 
-  def make[ScalaType](f: (BoundStatement, String, ScalaType) => BoundStatement): Writer[ScalaType] =
-    (boundStatement: BoundStatement, column: String, value: ScalaType) => f(boundStatement, column, value)
+  def make[ScalaType](f: (BoundStatementBuilder, String, ScalaType) => BoundStatementBuilder): Writer[ScalaType] =
+    (boundStatement: BoundStatementBuilder, column: String, value: ScalaType) => f(boundStatement, column, value)
 
   implicit val bigDecimalWriter: Writer[BigDecimal] =
     make((bs, colName, scalaType) => bs.setBigDecimal(colName, scalaType.bigDecimal))
@@ -59,7 +59,7 @@ object Writer extends TypeMapperSupport with MagnoliaWriterSupport {
    * want to map their Scala type into a UDT Value
    */
   def writeUdtValue[ScalaType](f: (ScalaType, UserDefinedType) => UdtValue): Writer[ScalaType] = {
-    (boundStatement: BoundStatement, column: String, value: ScalaType) =>
+    (boundStatement: BoundStatementBuilder, column: String, value: ScalaType) =>
       val userDefinedType =
         boundStatement.getPreparedStatement.getVariableDefinitions
           .get(column)
@@ -72,7 +72,7 @@ object Writer extends TypeMapperSupport with MagnoliaWriterSupport {
 
 trait TypeMapperSupport {
   implicit def deriveBinderFromCassandraTypeMapper[A](implicit ev: CassandraTypeMapper[A]): Writer[A] = {
-    (statement: BoundStatement, columnName: String, value: A) =>
+    (statement: BoundStatementBuilder, columnName: String, value: A) =>
       val datatype        = statement.getType(columnName)
       val typeInformation = ev.classType
       val cassandra       = ev.toCassandra(value, datatype)
@@ -85,7 +85,7 @@ trait MagnoliaWriterSupport {
 
   // Only supports case classes since this maps 1:1 with Cassandra's concept of a Row
   def join[T](ctx: CaseClass[Writer, T]): Writer[T] = new Writer[T] {
-    override def write(builder: BoundStatement, column: String, value: T): BoundStatement =
+    override def write(builder: BoundStatementBuilder, column: String, value: T): BoundStatementBuilder =
       ctx.parameters.foldLeft(builder) { case (acc, param) =>
         val columnName = param.label
         val data       = param.dereference(value)

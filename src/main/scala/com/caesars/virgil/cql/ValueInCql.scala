@@ -1,6 +1,7 @@
 package com.caesars.virgil.cql
 
 import com.caesars.virgil.codecs.Writer
+import scala.language.implicitConversions
 
 /**
  * Represents a Scala value present in a CQL interpolated string which
