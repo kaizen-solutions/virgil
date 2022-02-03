@@ -1,10 +1,12 @@
 package com.caesars.virgil
 
-import com.datastax.oss.driver.api.core.cql.{AsyncResultSet, PreparedStatement, Row, Statement}
+import com.caesars.virgil.cql.ValueInCql
+import com.datastax.oss.driver.api.core.cql.{AsyncResultSet, BoundStatement, PreparedStatement, Row, Statement}
 import com.datastax.oss.driver.api.core.{CqlSession, CqlSessionBuilder}
 import zio.stream.ZStream
 import zio.{Chunk, Task, TaskManaged, ZIO, ZManaged}
 
+import scala.collection.immutable.ListMap
 import scala.jdk.CollectionConverters._
 
 /**
@@ -16,17 +18,21 @@ import scala.jdk.CollectionConverters._
  */
 class ZioCassandraSession(session: CqlSession) {
   def select[Output](input: CassandraInteraction.Query[Output]): ZStream[Any, Throwable, Output] =
-    ZStream.fromEffect(prepare(input.query)).flatMap { preparedStatement =>
-      val boundStatement = {
-        val initial = preparedStatement.bind()
-        input.data.foldLeft(initial) { case (acc, (name, column: ValueInCql)) =>
-          val writer = column.writer
-          val value  = column.value
-          writer.write(boundStatement = acc, column = name, value = value)
-        }
-      }
+    ZStream.fromEffect(buildStatement(input.query, input.columns)).flatMap { boundStatement =>
       val reader = input.reader
       select(boundStatement).map(reader.read("unused", _))
+    }
+
+  def selectFirst[Output](input: CassandraInteraction.Query[Output]): Task[Option[Output]] =
+    buildStatement(input.query, input.columns).flatMap { boundStatement =>
+      val reader = input.reader
+      selectFirst(boundStatement).map(_.map(reader.read("unused", _)))
+    }
+
+  def executeAction(input: CassandraInteraction.Action): Task[Boolean] =
+    buildStatement(input.query, input.columns).flatMap { boundStatement =>
+      executeAction(boundStatement)
+        .map(_.wasApplied())
     }
 
   def prepare(query: String): Task[PreparedStatement] =
@@ -58,6 +64,20 @@ class ZioCassandraSession(session: CqlSession) {
   def selectFirst(query: Statement[_]): Task[Option[Row]] =
     executeAction(query)
       .map(resultSet => Option(resultSet.one()))
+
+  private def buildStatement(queryString: String, columns: Columns): Task[BoundStatement] =
+    prepare(queryString).map { preparedStatement =>
+      val initial = preparedStatement.bind()
+      columns.underlying.foldLeft(initial) { case (acc, (columnName, column: ValueInCql)) =>
+        val writer = column.writer
+        val value  = column.value
+        writer.write(
+          builder = acc,
+          column = columnName.name,
+          value = value
+        )
+      }
+    }
 }
 
 object ZioCassandraSession {

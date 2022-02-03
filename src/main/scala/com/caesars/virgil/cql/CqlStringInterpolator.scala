@@ -1,6 +1,6 @@
 package com.caesars.virgil.cql
 
-import com.caesars.virgil.{CassandraInteraction, ValueInCql}
+import com.caesars.virgil.CassandraInteraction
 import com.caesars.virgil.codecs.{Reader, Writer}
 import com.datastax.oss.driver.api.core.cql.Row
 
@@ -8,12 +8,38 @@ import scala.collection.immutable.ListMap
 
 /**
  * CqlStringInterpolator is an interpolator for CQL strings
+ *
+ * For example:
+ * ```scala
+ * val value1: Int    = 1
+ * val value2: String = "test"
+ * val query          = cql"SELECT * FROM example_table WHERE col1 = $value1 AND col2 = $value2"
+ * ```
+ *
+ * Produces the following datatype:
+ * ```scala
+ * CqlInterpolatedString(
+ *   query = "SELECT * FROM example_table WHERE col1 = :param0 AND col2 = :param1",
+ *   dataToBeBound = ListMap(
+ *     "param0" -> ValueInCql {
+ *       type ScalaType = Int
+ *       value = 1
+ *       writer = Writer.intWriter
+ *     },
+ *     "param1" -> ValueInCql {
+ *       type ScalaType = String
+ *       value = "test"
+ *       writer = Writer.stringWriter
+ *     }
+ *   )
+ * )
+ * ```
  */
 class CqlStringInterpolator(ctx: StringContext) {
   private def replaceValueWithQuestionMark(
     strings: Iterator[String],
     expressions: Iterator[ValueInCql]
-  ): (String, ListMap[String, ValueInCql]) = {
+  ): CqlInterpolatedString = {
     val sb                  = new StringBuilder
     var expressionCounter   = 0
     val parameterNamePrefix = "param"
@@ -37,11 +63,9 @@ class CqlStringInterpolator(ctx: StringContext) {
       data = data + (param -> entry)
     }
     val query = sb.toString
-    (query, data)
+    CqlInterpolatedString(queryString = query, dataToBeBound = data)
   }
 
-  def apply(values: ValueInCql*): CassandraInteraction.Query[Row] = {
-    val (query, data) = replaceValueWithQuestionMark(ctx.parts.iterator, values.iterator)
-    CassandraInteraction.Query(query, data, Reader[Row])
-  }
+  def apply(values: ValueInCql*): CqlInterpolatedString =
+    replaceValueWithQuestionMark(ctx.parts.iterator, values.iterator)
 }

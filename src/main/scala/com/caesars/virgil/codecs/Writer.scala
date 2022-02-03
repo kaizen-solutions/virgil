@@ -9,7 +9,7 @@ import magnolia1._
 import scala.language.experimental.macros
 
 trait Writer[ScalaType] { self =>
-  def write(boundStatement: BoundStatement, column: String, value: ScalaType): BoundStatement
+  def write(builder: BoundStatement, column: String, value: ScalaType): BoundStatement
 
   def contramap[ScalaType2](f: ScalaType2 => ScalaType): Writer[ScalaType2] =
     (boundStatement: BoundStatement, column: String, value: ScalaType2) => self.write(boundStatement, column, f(value))
@@ -83,8 +83,8 @@ trait MagnoliaWriterSupport {
 
   // Only supports case classes since this maps 1:1 with Cassandra's concept of a Row
   def join[T](ctx: CaseClass[Writer, T]): Writer[T] = new Writer[T] {
-    override def write(boundStatement: BoundStatement, column: String, value: T): BoundStatement =
-      ctx.parameters.foldLeft(boundStatement) { case (acc, param) =>
+    override def write(builder: BoundStatement, column: String, value: T): BoundStatement =
+      ctx.parameters.foldLeft(builder) { case (acc, param) =>
         val columnName = param.label
         val data       = param.dereference(value)
         param.typeclass.write(acc, columnName, data)

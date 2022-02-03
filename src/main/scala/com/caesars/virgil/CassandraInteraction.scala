@@ -25,12 +25,12 @@ object CassandraInteraction {
    * @tparam OutputType
    *   is the type of data we expect to read from Cassandra
    */
-  final case class Query[OutputType](query: String, data: ListMap[String, ValueInCql], reader: Reader[OutputType])
+  final case class Query[OutputType](query: String, columns: Columns, reader: Reader[OutputType])
       extends CassandraInteraction {
-    def toAction: Action = Action(query, data)
+    def toAction: Action = Action(query, columns)
 
     def withOutput[OutputType2](implicit reader: Reader[OutputType2]): Query[OutputType2] =
-      Query[OutputType2](query, data, reader)
+      Query[OutputType2](query, columns, reader)
   }
-  final case class Action(query: String, data: ListMap[String, ValueInCql]) extends CassandraInteraction
+  final case class Action(query: String, columns: Columns) extends CassandraInteraction
 }

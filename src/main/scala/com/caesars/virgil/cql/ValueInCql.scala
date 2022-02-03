@@ -1,4 +1,4 @@
-package com.caesars.virgil
+package com.caesars.virgil.cql
 
 import com.caesars.virgil.codecs.Writer
 
@@ -30,7 +30,7 @@ object ValueInCql {
   )(implicit evidence: Writer[Scala]): ValueInCql.WithScalaType[Scala] =
     new ValueInCql {
       type ScalaType = Scala
-      val value  = in
-      val writer = evidence
+      val value: Scala          = in
+      val writer: Writer[Scala] = evidence
     }
 }
