@@ -33,6 +33,24 @@ class ZioCassandraSession(session: CqlSession) {
         .map(_.wasApplied())
     }
 
+  def executeBatchAction(input: CassandraInteraction.BatchAction): Task[Boolean] = {
+    val batchType = input.batchType match {
+      case CassandraBatchType.Logged   => DefaultBatchType.LOGGED
+      case CassandraBatchType.Unlogged => DefaultBatchType.UNLOGGED
+      case CassandraBatchType.Counter  => DefaultBatchType.COUNTER
+    }
+
+    val initial = BatchStatement.builder(batchType)
+    ZIO
+      .foldLeft(input.actions)(initial) { (acc, nextAction) =>
+        buildStatement(nextAction.query, nextAction.columns)
+          .map(boundStatement => acc.addStatement(boundStatement))
+      }
+      .mapEffect(_.build())
+      .flatMap(executeAction)
+      .map(_.wasApplied())
+  }
+
   def prepare(query: String): Task[PreparedStatement] =
     ZIO.fromCompletionStage(session.prepareAsync(query))
 
