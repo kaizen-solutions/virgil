@@ -14,6 +14,9 @@ trait Column {
   def name: ColumnName
   def value: ScalaType
   def write: Writer[ScalaType]
+
+  override def toString: String =
+    s"Column(name = ${name.name}, value = $value)"
 }
 object Column {
   def make[A](columnName: ColumnName, columnValue: A)(implicit evidence: Writer[A]): Column =

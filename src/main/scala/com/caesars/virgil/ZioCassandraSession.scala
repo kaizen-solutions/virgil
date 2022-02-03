@@ -68,13 +68,11 @@ class ZioCassandraSession(session: CqlSession) {
   private def buildStatement(queryString: String, columns: Columns): Task[BoundStatement] =
     prepare(queryString).map { preparedStatement =>
       val initial = preparedStatement.bind()
-      columns.underlying.foldLeft(initial) { case (acc, (columnName, column: ValueInCql)) =>
-        val writer = column.writer
-        val value  = column.value
-        writer.write(
-          builder = acc,
-          column = columnName.name,
-          value = value
+      columns.underlying.foldLeft(initial) { case (accBoundStatement, (colName, column)) =>
+        column.write.write(
+          builder = accBoundStatement,
+          column = colName.name,
+          value = column.value
         )
       }
     }

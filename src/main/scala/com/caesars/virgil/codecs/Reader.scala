@@ -22,6 +22,8 @@ trait Reader[ScalaType] { self =>
 object Reader extends MagnoliaReaderSupport {
   def apply[A](implicit ev: Reader[A]): Reader[A] = ev
 
+  def derive[A](implicit ev: Reader[A]): Reader[A] = ev
+
   def make[A](f: (String, CassandraRow) => A): Reader[A] = (columnName: String, row: CassandraRow) => f(columnName, row)
 
   implicit val bigDecimalReader: Reader[BigDecimal]          = make((columnName, row) => row.getBigDecimal(columnName))

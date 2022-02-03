@@ -18,6 +18,8 @@ trait Writer[ScalaType] { self =>
 object Writer extends TypeMapperSupport with MagnoliaWriterSupport {
   def apply[A](implicit ev: Writer[A]): Writer[A] = ev
 
+  def derive[A](implicit ev: Writer[A]): Writer[A] = ev
+
   def make[ScalaType](f: (BoundStatement, String, ScalaType) => BoundStatement): Writer[ScalaType] =
     (boundStatement: BoundStatement, column: String, value: ScalaType) => f(boundStatement, column, value)
 
