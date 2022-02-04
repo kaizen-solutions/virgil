@@ -1,16 +1,15 @@
-ThisBuild / version            := "0.1.0-SNAPSHOT"
-ThisBuild / scalaVersion       := "2.13.8"
-ThisBuild / crossScalaVersions := Seq("2.13.8", "2.12.15")
-ThisBuild / publishTo          := None
+ThisBuild / version                             := "0.1.0-SNAPSHOT"
+ThisBuild / scalaVersion                        := "2.13.8"
+ThisBuild / crossScalaVersions                  := Seq("2.13.8", "2.12.15")
+ThisBuild / githubWorkflowPublishTargetBranches := Seq.empty
 
 lazy val root =
   (project in file("."))
     .settings(
-      githubWorkflowPublishTargetBranches := Seq.empty,
-      licenses                            := List("Apache-2.0" -> url("https://www.mozilla.org/en-US/MPL/2.0/")),
-      organization                        := "io.kaizensolutions",
-      organizationName                    := "kaizen-solutions",
-      name                                := "virgil",
+      licenses         := List("Apache-2.0" -> url("https://www.mozilla.org/en-US/MPL/2.0/")),
+      organization     := "io.kaizensolutions",
+      organizationName := "kaizen-solutions",
+      name             := "virgil",
       libraryDependencies ++= {
         val datastax  = "com.datastax.oss"
         val datastaxV = "4.13.0"
