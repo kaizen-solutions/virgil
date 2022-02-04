@@ -17,6 +17,20 @@ trait Reader[ScalaType] { self =>
 
   def map[AnotherScalaType](f: ScalaType => AnotherScalaType): Reader[AnotherScalaType] =
     (columnName: String, row: CassandraRow) => f(self.read(columnName, row))
+
+  /**
+   * This is mainly used for the Cassandra Row Reader instance so you can have a
+   * different Scala representation and not have it map 1:1 with the Cassandra
+   * Row. Most likely, the column name fed in will be discarded and unused since
+   * the user is interacting with the row directly.
+   */
+  def zipWith[AnotherScalaType, ResultScalaType](that: Reader[AnotherScalaType])(
+    f: (ScalaType, AnotherScalaType) => ResultScalaType
+  ): Reader[ResultScalaType] =
+    (columnName: String, row: CassandraRow) => f(self.read(columnName, row), that.read(columnName, row))
+
+  def zip[AnotherScalaType](that: Reader[AnotherScalaType]): Reader[(ScalaType, AnotherScalaType)] =
+    zipWith(that)((_, _))
 }
 object Reader extends MagnoliaReaderSupport {
   def apply[A](implicit ev: Reader[A]): Reader[A] = ev
@@ -40,6 +54,16 @@ object Reader extends MagnoliaReaderSupport {
   implicit val uuidReader: Reader[java.util.UUID]            = make((columnName, row) => row.getUuid(columnName))
 
   implicit val cassandraRowReader: Reader[CassandraRow] = make((_, row) => row)
+
+  /**
+   * fromRow exposes a low level API to read from a Cassandra row in case you
+   * don't want to use derivation. You can use this in addition with zipWith to
+   * compose small Readers together to form a larger Reader.
+   * @param f
+   * @tparam A
+   * @return
+   */
+  def fromRow[A](f: CassandraRow => A): Reader[A] = (_: String, row: CassandraRow) => f(row)
 
   implicit def optionReader[A](implicit underlying: Reader[A]): Reader[Option[A]] =
     make((columnName, row) => Option(underlying.read(columnName, row)))

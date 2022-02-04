@@ -64,6 +64,19 @@ object Writer extends TypeMapperSupport with MagnoliaWriterSupport {
       val udtValue = f(value, userDefinedType)
       boundStatement.setUdtValue(column, udtValue)
   }
+
+  /**
+   * Provides a lower level API so you can have full control of the low level
+   * Datastax API. You would use this if you do not want to make use of
+   * automatic derivation.
+   * @param f
+   * @tparam ScalaType
+   * @return
+   */
+  def fromBoundStatementBuilder[ScalaType](
+    f: (ScalaType, BoundStatementBuilder) => BoundStatementBuilder
+  ): Writer[ScalaType] =
+    (builder: BoundStatementBuilder, _: String, value: ScalaType) => f(value, builder)
 }
 
 trait TypeMapperSupport {

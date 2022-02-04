@@ -47,6 +47,15 @@ object UdtWriter extends MagnoliaUdtWriterSupport {
       case FieldName.Labelled(name) => f(name, value, udt)
     }
 
+  /**
+   * toUdtValue exposes a low level API to write a Scala type directly to a
+   * Cassandra UdtValue in case you don't want to use derivation.
+   * @param f
+   * @tparam A
+   * @return
+   */
+  def toUdtValue[A](f: (A, UdtValue) => UdtValue): UdtWriter[A] = (_, value, udt) => f(value, udt)
+
   implicit def deriveUdtWriterFromCassandraTypeMapper[ScalaType](implicit
     ev: CassandraTypeMapper[ScalaType]
   ): UdtWriter[ScalaType] = makeWithFieldName[ScalaType] { (name, value, udt) =>

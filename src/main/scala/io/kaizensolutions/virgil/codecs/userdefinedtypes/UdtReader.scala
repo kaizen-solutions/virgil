@@ -10,6 +10,14 @@ trait UdtReader[ScalaType] { self =>
 
   def map[ScalaType2](f: ScalaType => ScalaType2): UdtReader[ScalaType2] = (name: FieldName, cassandra: UdtValue) =>
     f(self.read(name, cassandra))
+
+  def zipWith[ScalaType2, ResultScalaType](that: UdtReader[ScalaType2])(
+    f: (ScalaType, ScalaType2) => ResultScalaType
+  ): UdtReader[ResultScalaType] =
+    (name: FieldName, cassandra: UdtValue) => f(self.read(name, cassandra), that.read(name, cassandra))
+
+  def zip[ScalaType2](that: UdtReader[ScalaType2]): UdtReader[(ScalaType, ScalaType2)] =
+    zipWith(that)((_, _))
 }
 object UdtReader extends MagnoliaUdtReaderSupport {
   // Indicates a UdtReader that is a case class and not a small part of a UdtReader
@@ -56,6 +64,17 @@ object UdtReader extends MagnoliaUdtReaderSupport {
         case FieldName.Labelled(name) => f(name, cassandra)
 
       }
+
+  /**
+   * fromUdtValue exposes a low level API to read from a Cassandra UdtValue in
+   * case you don't want to use derivation. You can use this in addition with
+   * zipWith to compose small UdtReaders together to form a larger UdtReader.
+   * @param f
+   * @tparam A
+   * @return
+   */
+  def fromUdtValue[A](f: UdtValue => A): UdtReader.CaseClass[A] =
+    (_: FieldName, cassandra: UdtValue) => f(cassandra)
 
   implicit def deriveUdtReaderFromCassandraTypeMapper[A](implicit ev: CassandraTypeMapper[A]): UdtReader[A] =
     makeWithFieldName { (name, udtValue) =>
