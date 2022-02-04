@@ -1,12 +1,6 @@
 ThisBuild / version            := "0.1.0-SNAPSHOT"
 ThisBuild / scalaVersion       := "2.13.8"
 ThisBuild / crossScalaVersions := Seq("2.13.8", "2.12.15")
-ThisBuild / scalacOptions ++= Seq(
-  "-deprecation",
-  "-Vimplicits",
-  "-Vimplicits-verbose-tree",
-  "-Vtype-diffs"
-)
 
 lazy val root =
   (project in file("."))

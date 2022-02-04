@@ -60,8 +60,8 @@ class ZioCassandraSession(session: CqlSession) {
   private def prepare(query: String): Task[PreparedStatement] =
     ZIO.fromCompletionStage(session.prepareAsync(query))
 
-  private def executeAction(query: String): Task[AsyncResultSet] =
-    ZIO.fromCompletionStage(session.executeAsync(query))
+//  private def executeAction(query: String): Task[AsyncResultSet] =
+//    ZIO.fromCompletionStage(session.executeAsync(query))
 
   private def executeAction(query: Statement[_]): Task[AsyncResultSet] =
     ZIO.fromCompletionStage(session.executeAsync(query))

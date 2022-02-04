@@ -5,8 +5,6 @@ import com.datastax.oss.driver.api.core.cql.BoundStatementBuilder
 import com.datastax.oss.driver.api.core.data.UdtValue
 import magnolia1._
 
-import scala.language.experimental.macros
-
 trait Writer[ScalaType] { self =>
   def write(builder: BoundStatementBuilder, column: String, value: ScalaType): BoundStatementBuilder
 
@@ -92,5 +90,5 @@ trait MagnoliaWriterSupport {
   }
 
   // Semi automatic derivation to avoid conflict with CassandraTypeMapper
-  def gen[T]: Writer[T] = macro Magnolia.gen[T]
+  def derive[T]: Writer[T] = macro Magnolia.gen[T]
 }

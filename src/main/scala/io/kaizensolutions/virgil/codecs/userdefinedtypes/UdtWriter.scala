@@ -6,8 +6,6 @@ import com.datastax.oss.driver.api.core.data.UdtValue
 import io.kaizensolutions.virgil.codecs.{CassandraTypeMapper, FieldName, Writer}
 import magnolia1._
 
-import scala.language.experimental.macros
-
 trait UdtWriter[ScalaType] { self =>
   def write(name: FieldName, value: ScalaType, udt: UdtValue): UdtValue
 

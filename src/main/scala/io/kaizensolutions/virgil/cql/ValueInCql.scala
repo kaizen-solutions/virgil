@@ -2,8 +2,6 @@ package io.kaizensolutions.virgil.cql
 
 import io.kaizensolutions.virgil.codecs.Writer
 
-import scala.language.implicitConversions
-
 /**
  * Represents a Scala value present in a CQL interpolated string which
  * ultimately needs to be sent to Cassandra along with a query ValueInCql also

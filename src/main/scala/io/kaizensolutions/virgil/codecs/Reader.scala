@@ -6,7 +6,6 @@ import com.datastax.oss.driver.api.core.data.UdtValue
 import magnolia1._
 
 import scala.jdk.CollectionConverters._
-import scala.language.experimental.macros
 
 /**
  * Reader provides a mechanism to read data from a Cassandra row
@@ -90,5 +89,5 @@ private[codecs] trait MagnoliaReaderSupport {
   }
 
   // Semi automatic derivation to avoid conflict with CassandraTypeMapper
-  def gen[T]: Reader[T] = macro Magnolia.gen[T]
+  def derive[T]: Reader[T] = macro Magnolia.gen[T]
 }

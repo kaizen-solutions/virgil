@@ -31,7 +31,7 @@ import scala.collection.immutable.ListMap
  * )
  * }}}
  */
-class CqlStringInterpolator(ctx: StringContext) {
+final class CqlStringInterpolator(ctx: StringContext) {
   private def replaceValueWithQuestionMark(
     strings: Iterator[String],
     expressions: Iterator[ValueInCql]
