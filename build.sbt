@@ -5,10 +5,11 @@ ThisBuild / crossScalaVersions := Seq("2.13.8", "2.12.15")
 lazy val root =
   (project in file("."))
     .settings(
-      licenses         := List("Apache-2.0" -> url("https://www.mozilla.org/en-US/MPL/2.0/")),
-      organization     := "io.kaizensolutions",
-      organizationName := "kaizen-solutions",
-      name             := "virgil",
+      githubWorkflowPublishTargetBranches := Seq.empty,
+      licenses                            := List("Apache-2.0" -> url("https://www.mozilla.org/en-US/MPL/2.0/")),
+      organization                        := "io.kaizensolutions",
+      organizationName                    := "kaizen-solutions",
+      name                                := "virgil",
       libraryDependencies ++= {
         val datastax  = "com.datastax.oss"
         val datastaxV = "4.13.0"
