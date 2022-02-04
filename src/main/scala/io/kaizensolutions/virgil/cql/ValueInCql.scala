@@ -1,6 +1,7 @@
 package io.kaizensolutions.virgil.cql
 
 import io.kaizensolutions.virgil.codecs.Writer
+
 import scala.language.implicitConversions
 
 /**

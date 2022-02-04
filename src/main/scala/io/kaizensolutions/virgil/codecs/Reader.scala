@@ -3,10 +3,10 @@ package io.kaizensolutions.virgil.codecs
 import com.datastax.oss.driver.api.core.`type`.{ListType, MapType, SetType}
 import com.datastax.oss.driver.api.core.cql.{Row => CassandraRow}
 import com.datastax.oss.driver.api.core.data.UdtValue
+import magnolia1._
 
 import scala.jdk.CollectionConverters._
 import scala.language.experimental.macros
-import magnolia1._
 
 /**
  * Reader provides a mechanism to read data from a Cassandra row

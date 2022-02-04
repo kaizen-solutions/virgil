@@ -2,8 +2,6 @@ package io.kaizensolutions.virgil
 
 import io.kaizensolutions.virgil.codecs.Writer
 import io.kaizensolutions.virgil.cql.ValueInCql
-import io.kaizensolutions.virgil.codecs.Writer
-import io.kaizensolutions.virgil.cql.ValueInCql
 
 import scala.collection.immutable.ListMap
 

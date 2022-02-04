@@ -1,11 +1,9 @@
 package io.kaizensolutions.virgil.cql
 
-import io.kaizensolutions.virgil.codecs.Reader
-import io.kaizensolutions.virgil.{Action, Columns, Query}
 import com.datastax.oss.driver.api.core.cql.Row
 import io.kaizensolutions.virgil.Action.Single
-import io.kaizensolutions.virgil.{Columns, Query}
 import io.kaizensolutions.virgil.codecs.Reader
+import io.kaizensolutions.virgil.{Action, Columns, Query}
 
 import scala.collection.immutable.ListMap
 

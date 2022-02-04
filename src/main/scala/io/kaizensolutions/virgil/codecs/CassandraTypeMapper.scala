@@ -1,9 +1,9 @@
 package io.kaizensolutions.virgil.codecs
 
-import io.kaizensolutions.virgil.codecs.userdefinedtypes.{UdtReader, UdtWriter}
 import com.datastax.oss.driver.api.core.`type`.{DataType, UserDefinedType}
 import com.datastax.oss.driver.api.core.data.UdtValue
 import com.datastax.oss.driver.internal.core.`type`.{DefaultListType, DefaultMapType, DefaultSetType}
+import io.kaizensolutions.virgil.codecs.userdefinedtypes.{UdtReader, UdtWriter}
 
 import java.nio.ByteBuffer
 import java.time.LocalDate
