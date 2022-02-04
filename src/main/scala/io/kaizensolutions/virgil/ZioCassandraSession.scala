@@ -2,6 +2,7 @@ package io.kaizensolutions.virgil
 
 import com.datastax.oss.driver.api.core.cql._
 import com.datastax.oss.driver.api.core.{CqlSession, CqlSessionBuilder}
+import io.kaizensolutions.virgil.configuration.ExecutionAttributes
 import zio._
 import zio.stream.ZStream
 
@@ -15,31 +16,45 @@ import scala.jdk.CollectionConverters._
  *   is the underlying Datastax Java driver session
  */
 class ZioCassandraSession(session: CqlSession) {
-  def select[Output](input: Query[Output]): ZStream[Any, Throwable, Output] =
-    ZStream.fromEffect(buildStatement(input.query, input.columns)).flatMap { boundStatement =>
+  def select[Output](
+    input: Query[Output],
+    config: ExecutionAttributes = ExecutionAttributes.default
+  ): ZStream[Any, Throwable, Output] =
+    ZStream.fromEffect(buildStatement(input.query, input.columns, config)).flatMap { boundStatement =>
       val reader = input.reader
       select(boundStatement).map(reader.read("unused", _))
     }
 
-  def selectFirst[Output](input: Query[Output]): Task[Option[Output]] =
-    buildStatement(input.query, input.columns).flatMap { boundStatement =>
+  def selectFirst[Output](
+    input: Query[Output],
+    config: ExecutionAttributes = ExecutionAttributes.default
+  ): Task[Option[Output]] =
+    buildStatement(input.query, input.columns, config).flatMap { boundStatement =>
       val reader = input.reader
       selectFirst(boundStatement).map(_.map(reader.read("unused", _)))
     }
 
-  def execute(input: Action): Task[Boolean] =
+  def execute(
+    input: Action,
+    config: ExecutionAttributes = ExecutionAttributes.default
+  ): Task[Boolean] =
     input match {
-      case single @ Action.Single(_, _) => executeAction(single)
-      case batch @ Action.Batch(_, _)   => executeBatchAction(batch)
+      case single @ Action.Single(_, _) => executeAction(single, config)
+      case batch @ Action.Batch(_, _)   => executeBatchAction(batch, config)
     }
 
-  def executeAction(input: Action.Single): Task[Boolean] =
-    buildStatement(input.query, input.columns).flatMap { boundStatement =>
-      executeAction(boundStatement)
-        .map(_.wasApplied())
+  def executeAction(
+    input: Action.Single,
+    config: ExecutionAttributes = ExecutionAttributes.default
+  ): Task[Boolean] =
+    buildStatement(input.query, input.columns, config).flatMap { boundStatement =>
+      executeAction(boundStatement).map(_.wasApplied())
     }
 
-  def executeBatchAction(input: Action.Batch): Task[Boolean] = {
+  def executeBatchAction(
+    input: Action.Batch,
+    config: ExecutionAttributes = ExecutionAttributes.default
+  ): Task[Boolean] = {
     val batchType = input.batchType match {
       case CassandraBatchType.Logged   => DefaultBatchType.LOGGED
       case CassandraBatchType.Unlogged => DefaultBatchType.UNLOGGED
@@ -49,9 +64,10 @@ class ZioCassandraSession(session: CqlSession) {
     val initial = BatchStatement.builder(batchType)
     ZIO
       .foldLeft(input.actions)(initial) { (acc, nextAction) =>
-        buildStatement(nextAction.query, nextAction.columns)
+        buildStatement(nextAction.query, nextAction.columns, ExecutionAttributes.default)
           .map(boundStatement => acc.addStatement(boundStatement))
       }
+      .map(config.configureBatch)
       .mapEffect(_.build())
       .flatMap(executeAction)
       .map(_.wasApplied())
@@ -87,43 +103,61 @@ class ZioCassandraSession(session: CqlSession) {
     executeAction(query)
       .map(resultSet => Option(resultSet.one()))
 
-  private def buildStatement(queryString: String, columns: Columns): Task[BoundStatement] =
+  private def buildStatement(
+    queryString: String,
+    columns: Columns,
+    config: ExecutionAttributes
+  ): Task[BoundStatement] =
     prepare(queryString).mapEffect { preparedStatement =>
       val result: BoundStatementBuilder = {
         val initial = preparedStatement.boundStatementBuilder()
-        columns.underlying.foldLeft(initial) { case (accBoundStatement, (colName, column)) =>
+        val boundColumns = columns.underlying.foldLeft(initial) { case (accBuilder, (colName, column)) =>
           column.write.write(
-            builder = accBoundStatement,
+            builder = accBuilder,
             column = colName.name,
             value = column.value
           )
         }
+        // Configure bound statement with the common execution attributes
+        // https://docs.datastax.com/en/developer/java-driver/4.13/manual/core/statements/
+        config.configure(boundColumns)
       }
-      result.build
+      result.build()
     }
 }
 
 object ZioCassandraSession {
   def select[Output](
-    input: Query[Output]
+    input: Query[Output],
+    config: ExecutionAttributes = ExecutionAttributes.default
   ): ZStream[Has[ZioCassandraSession], Throwable, Output] =
     ZStream
       .service[ZioCassandraSession]
-      .flatMap(_.select(input))
+      .flatMap(_.select(input, config))
 
   def selectFirst[Output](
-    input: Query[Output]
+    input: Query[Output],
+    config: ExecutionAttributes = ExecutionAttributes.default
   ): RIO[Has[ZioCassandraSession], Option[Output]] =
-    ZIO.serviceWith[ZioCassandraSession](_.selectFirst(input))
+    ZIO.serviceWith[ZioCassandraSession](_.selectFirst(input, config))
 
-  def execute(input: Action): RIO[Has[ZioCassandraSession], Boolean] =
-    ZIO.serviceWith[ZioCassandraSession](_.execute(input))
+  def execute(
+    input: Action,
+    config: ExecutionAttributes = ExecutionAttributes.default
+  ): RIO[Has[ZioCassandraSession], Boolean] =
+    ZIO.serviceWith[ZioCassandraSession](_.execute(input, config))
 
-  def executeAction(input: Action.Single): RIO[Has[ZioCassandraSession], Boolean] =
-    ZIO.serviceWith[ZioCassandraSession](_.executeAction(input))
+  def executeAction(
+    input: Action.Single,
+    config: ExecutionAttributes = ExecutionAttributes.default
+  ): RIO[Has[ZioCassandraSession], Boolean] =
+    ZIO.serviceWith[ZioCassandraSession](_.executeAction(input, config))
 
-  def executeBatchAction(input: Action.Batch): RIO[Has[ZioCassandraSession], Boolean] =
-    ZIO.serviceWith[ZioCassandraSession](_.executeBatchAction(input))
+  def executeBatchAction(
+    input: Action.Batch,
+    config: ExecutionAttributes = ExecutionAttributes.default
+  ): RIO[Has[ZioCassandraSession], Boolean] =
+    ZIO.serviceWith[ZioCassandraSession](_.executeBatchAction(input, config))
 
   /**
    * Create a ZIO Cassandra Session from an existing Datastax Java Driver's
