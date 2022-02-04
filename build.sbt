@@ -12,8 +12,8 @@ lazy val root =
   (project in file("."))
     .settings(
       licenses         := List("Apache-2.0" -> url("https://www.mozilla.org/en-US/MPL/2.0/")),
-      organization     := "com.caesars",
-      organizationName := "caesars",
+      organization     := "io.kaizensolutions",
+      organizationName := "kaizen-solutions",
       name             := "virgil",
       libraryDependencies ++= {
         val datastax  = "com.datastax.oss"

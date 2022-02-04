@@ -1,4 +1,4 @@
-package com.caesars.virgil
+package io.kaizensolutions.virgil
 
 sealed trait CassandraBatchType
 object CassandraBatchType {

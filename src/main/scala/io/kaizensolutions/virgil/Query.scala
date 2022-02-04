@@ -1,6 +1,6 @@
-package com.caesars.virgil
+package io.kaizensolutions.virgil
 
-import com.caesars.virgil.codecs.Reader
+import io.kaizensolutions.virgil.codecs.Reader
 
 /**
  * Queries map 1:1 with CQL SELECT statements and return a list of results which

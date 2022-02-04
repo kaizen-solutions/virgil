@@ -1,4 +1,4 @@
-package com.caesars.virgil
+package io.kaizensolutions.virgil
 
 import com.datastax.oss.driver.api.core.cql._
 import com.datastax.oss.driver.api.core.{CqlSession, CqlSessionBuilder}

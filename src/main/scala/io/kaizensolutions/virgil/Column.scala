@@ -1,7 +1,9 @@
-package com.caesars.virgil
+package io.kaizensolutions.virgil
 
-import com.caesars.virgil.codecs.Writer
-import com.caesars.virgil.cql.ValueInCql
+import io.kaizensolutions.virgil.codecs.Writer
+import io.kaizensolutions.virgil.cql.ValueInCql
+import io.kaizensolutions.virgil.codecs.Writer
+import io.kaizensolutions.virgil.cql.ValueInCql
 
 import scala.collection.immutable.ListMap
 

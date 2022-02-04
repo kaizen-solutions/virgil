@@ -1,8 +1,11 @@
-package com.caesars.virgil.cql
+package io.kaizensolutions.virgil.cql
 
-import com.caesars.virgil.codecs.Reader
-import com.caesars.virgil.{Action, Columns, Query}
+import io.kaizensolutions.virgil.codecs.Reader
+import io.kaizensolutions.virgil.{Action, Columns, Query}
 import com.datastax.oss.driver.api.core.cql.Row
+import io.kaizensolutions.virgil.Action.Single
+import io.kaizensolutions.virgil.{Columns, Query}
+import io.kaizensolutions.virgil.codecs.Reader
 
 import scala.collection.immutable.ListMap
 
@@ -26,7 +29,7 @@ final case class CqlInterpolatedString private (queryString: String, dataToBeBou
       reader = Reader.cassandraRowReader
     )
 
-  def action: Action.Single =
+  def action: Single =
     Action.Single(
       query = queryString,
       columns = Columns.from(dataToBeBound)

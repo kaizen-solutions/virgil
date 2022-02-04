@@ -1,6 +1,6 @@
-package com.caesars.virgil.cql
+package io.kaizensolutions.virgil.cql
 
-import com.caesars.virgil.codecs.Writer
+import io.kaizensolutions.virgil.codecs.Writer
 import scala.language.implicitConversions
 
 /**

@@ -1,6 +1,6 @@
-package com.caesars.virgil
+package io.kaizensolutions.virgil
 
-import com.caesars.virgil.codecs.Reader
+import io.kaizensolutions.virgil.codecs.Reader
 import zio.NonEmptyChunk
 
 sealed trait Action

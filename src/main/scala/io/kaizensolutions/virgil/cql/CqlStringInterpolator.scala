@@ -1,4 +1,4 @@
-package com.caesars.virgil.cql
+package io.kaizensolutions.virgil.cql
 
 import scala.collection.immutable.ListMap
 

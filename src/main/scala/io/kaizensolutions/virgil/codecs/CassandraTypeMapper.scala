@@ -1,6 +1,6 @@
-package com.caesars.virgil.codecs
+package io.kaizensolutions.virgil.codecs
 
-import com.caesars.virgil.codecs.userdefinedtypes.{UdtReader, UdtWriter}
+import io.kaizensolutions.virgil.codecs.userdefinedtypes.{UdtReader, UdtWriter}
 import com.datastax.oss.driver.api.core.`type`.{DataType, UserDefinedType}
 import com.datastax.oss.driver.api.core.data.UdtValue
 import com.datastax.oss.driver.internal.core.`type`.{DefaultListType, DefaultMapType, DefaultSetType}

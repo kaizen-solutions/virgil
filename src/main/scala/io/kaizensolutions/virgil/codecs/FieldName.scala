@@ -1,4 +1,4 @@
-package com.caesars.virgil.codecs
+package io.kaizensolutions.virgil.codecs
 
 /**
  * This type is used by Readers and Writers to decide whether to utilize schema

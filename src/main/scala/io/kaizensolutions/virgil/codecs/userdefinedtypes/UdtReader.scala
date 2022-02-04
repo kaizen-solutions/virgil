@@ -1,6 +1,6 @@
-package com.caesars.virgil.codecs.userdefinedtypes
+package io.kaizensolutions.virgil.codecs.userdefinedtypes
 
-import com.caesars.virgil.codecs.{CassandraTypeMapper, FieldName, Reader}
+import io.kaizensolutions.virgil.codecs.{CassandraTypeMapper, FieldName, Reader}
 import com.datastax.oss.driver.api.core.cql.Row
 import com.datastax.oss.driver.api.core.data.UdtValue
 import magnolia1._

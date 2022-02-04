@@ -1,9 +1,10 @@
-package com.caesars.virgil.codecs.userdefinedtypes
+package io.kaizensolutions.virgil.codecs.userdefinedtypes
 
-import com.caesars.virgil.codecs.{CassandraTypeMapper, FieldName, Writer}
+import io.kaizensolutions.virgil.codecs.{CassandraTypeMapper, FieldName, Writer}
 import com.datastax.oss.driver.api.core.`type`.UserDefinedType
 import com.datastax.oss.driver.api.core.cql.BoundStatementBuilder
 import com.datastax.oss.driver.api.core.data.UdtValue
+import io.kaizensolutions.virgil.codecs.{CassandraTypeMapper, FieldName}
 import magnolia1._
 
 import scala.language.experimental.macros

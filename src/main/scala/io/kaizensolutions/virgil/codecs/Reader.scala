@@ -1,4 +1,4 @@
-package com.caesars.virgil.codecs
+package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.`type`.{ListType, MapType, SetType}
 import com.datastax.oss.driver.api.core.cql.{Row => CassandraRow}
