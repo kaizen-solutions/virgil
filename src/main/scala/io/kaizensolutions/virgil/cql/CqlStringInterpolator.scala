@@ -9,7 +9,7 @@ import scala.collection.immutable.ListMap
  * {{{
  * val value1: Int    = 1
  * val value2: String = "test"
- * val query          = cql"SELECT * FROM example_table WHERE col1 = $value1 AND col2 = $value2"
+ * val query          = cql"SELECT * FROM example_table WHERE col1 = \$value1 AND col2 = \$value2"
  * }}}
  *
  * Produces the following datatype:
