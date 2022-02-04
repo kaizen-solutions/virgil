@@ -32,4 +32,25 @@ final case class CqlInterpolatedString private (queryString: String, dataToBeBou
       query = queryString,
       columns = Columns.from(dataToBeBound)
     )
+
+  def ++(that: CqlInterpolatedString): CqlInterpolatedString =
+    CqlInterpolatedString(
+      queryString = s"${queryString}${that.queryString}",
+      dataToBeBound = dataToBeBound ++ that.dataToBeBound
+    )
+
+  def +(that: String): CqlInterpolatedString =
+    CqlInterpolatedString(
+      queryString = s"$queryString$that",
+      dataToBeBound = dataToBeBound
+    )
+}
+trait CqlInterpolatedStringSyntax {
+  implicit class CqlInterpolatedStringOpsForString(self: String) {
+    def +(that: CqlInterpolatedString): CqlInterpolatedString =
+      CqlInterpolatedString(
+        queryString = s"$self${that.queryString}",
+        dataToBeBound = that.dataToBeBound
+      )
+  }
 }
