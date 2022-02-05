@@ -31,7 +31,7 @@ object Action {
       Query(query, columns, evidence)
 
     def ++(other: Single): Batch =
-      Batch(NonEmptyChunk(self, other), CassandraBatchType.Logged)
+      Batch(NonEmptyChunk(self, other), BatchType.Logged)
   }
 
   /**
@@ -40,24 +40,24 @@ object Action {
    * @param actions
    *   are the individual actions that need to be executed as part of the batch
    */
-  final case class Batch(actions: NonEmptyChunk[Single], batchType: CassandraBatchType) extends Action {
+  final case class Batch(actions: NonEmptyChunk[Single], batchType: BatchType) extends Action {
     def add(other: Single): Batch =
       Batch(actions :+ other, batchType)
 
     def ++(other: Batch): Batch =
       Batch(actions ++ other.actions, batchType)
 
-    def withBatchType(in: CassandraBatchType): Batch =
+    def withBatchType(in: BatchType): Batch =
       Batch(actions, in)
   }
   object Batch {
-    def logged(actions: NonEmptyChunk[Single]): Batch   = Batch(actions, CassandraBatchType.Logged)
+    def logged(actions: NonEmptyChunk[Single]): Batch   = Batch(actions, BatchType.Logged)
     def logged(action: Single, actions: Single*): Batch = logged(NonEmptyChunk(action, actions: _*))
 
-    def unlogged(actions: NonEmptyChunk[Single]): Batch   = Batch(actions, CassandraBatchType.Unlogged)
+    def unlogged(actions: NonEmptyChunk[Single]): Batch   = Batch(actions, BatchType.Unlogged)
     def unlogged(action: Single, actions: Single*): Batch = logged(NonEmptyChunk(action, actions: _*))
 
-    def counter(actions: NonEmptyChunk[Single]): Batch   = Batch(actions, CassandraBatchType.Counter)
+    def counter(actions: NonEmptyChunk[Single]): Batch   = Batch(actions, BatchType.Counter)
     def counter(action: Single, actions: Single*): Batch = counter(NonEmptyChunk(action, actions: _*))
   }
 }

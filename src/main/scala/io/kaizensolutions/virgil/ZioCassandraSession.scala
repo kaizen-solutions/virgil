@@ -1,6 +1,6 @@
 package io.kaizensolutions.virgil
 
-import com.datastax.oss.driver.api.core.cql._
+import com.datastax.oss.driver.api.core.cql.{BatchType => _, _}
 import com.datastax.oss.driver.api.core.{CqlSession, CqlSessionBuilder}
 import io.kaizensolutions.virgil.configuration.{ExecutionAttributes, PageState}
 import zio._
@@ -74,9 +74,9 @@ class ZioCassandraSession(session: CqlSession) {
     config: ExecutionAttributes = ExecutionAttributes.default
   ): Task[Boolean] = {
     val batchType = input.batchType match {
-      case CassandraBatchType.Logged   => DefaultBatchType.LOGGED
-      case CassandraBatchType.Unlogged => DefaultBatchType.UNLOGGED
-      case CassandraBatchType.Counter  => DefaultBatchType.COUNTER
+      case BatchType.Logged   => DefaultBatchType.LOGGED
+      case BatchType.Unlogged => DefaultBatchType.UNLOGGED
+      case BatchType.Counter  => DefaultBatchType.COUNTER
     }
 
     val initial = BatchStatement.builder(batchType)
