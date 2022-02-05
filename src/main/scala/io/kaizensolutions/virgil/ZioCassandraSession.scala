@@ -168,6 +168,13 @@ object ZioCassandraSession {
   ): RIO[Has[ZioCassandraSession], Option[Output]] =
     ZIO.serviceWith[ZioCassandraSession](_.selectFirst(input, config))
 
+  def selectPage[Output](
+    input: Query[Output],
+    page: Option[PageState] = None,
+    config: ExecutionAttributes = ExecutionAttributes.default
+  ): RIO[Has[ZioCassandraSession], (Chunk[Output], Option[PageState])] =
+    ZIO.serviceWith[ZioCassandraSession](_.selectPage(input, page, config))
+
   def execute(
     input: Action,
     config: ExecutionAttributes = ExecutionAttributes.default
