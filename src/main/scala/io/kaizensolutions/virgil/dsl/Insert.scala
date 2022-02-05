@@ -18,8 +18,11 @@ class Insert[State <: InsertState](
     new Insert(table, columns + column)
   }
 
-  def ifNotExists(implicit stateEvidence: State <:< InsertState.ColumnAdded): Insert[State] =
+  def ifNotExists(implicit stateEvidence: State <:< InsertState.ColumnAdded): Insert[State] = {
+    // Make unused variables check happy
+    val _ = stateEvidence
     new Insert(table = table, columns = columns, timeToLive = timeToLive, timestamp = timestamp, ifNotExists = true)
+  }
 
   def usingTTL(timeToLive: Int)(implicit stateEvidence: State <:< InsertState.ColumnAdded): Insert[State] = {
     // Make unused variables check happy
