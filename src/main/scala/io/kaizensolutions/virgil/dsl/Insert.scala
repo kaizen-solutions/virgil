@@ -7,7 +7,8 @@ class Insert[State <: InsertState](
   private val table: String,
   private val columns: Columns,
   private val timeToLive: Option[Int] = None,
-  private val timestamp: Option[Long] = None
+  private val timestamp: Option[Long] = None,
+  private val ifNotExists: Boolean = false
 ) {
   def value[ScalaType](columnName: String, inputValue: ScalaType)(implicit
     ev: Writer[ScalaType]
@@ -16,6 +17,9 @@ class Insert[State <: InsertState](
     val column = Column.make(name, inputValue)(ev)
     new Insert(table, columns + column)
   }
+
+  def ifNotExists(implicit stateEvidence: State <:< InsertState.ColumnAdded): Insert[State] =
+    new Insert(table = table, columns = columns, timeToLive = timeToLive, timestamp = timestamp, ifNotExists = true)
 
   def usingTTL(timeToLive: Int)(implicit stateEvidence: State <:< InsertState.ColumnAdded): Insert[State] = {
     // Make unused variables check happy
@@ -43,7 +47,7 @@ class Insert[State <: InsertState](
        |)""".stripMargin
 
   private def renderQuery: String =
-    s"INSERT INTO $table $renderColumnNames VALUES $renderInterpolatedValues $renderTimestampTTL"
+    s"INSERT INTO $table $renderColumnNames VALUES $renderInterpolatedValues $renderIfNotExists $renderTimestampTTL"
 
   private def renderColumnNames: String =
     columns.underlying.keys
@@ -54,6 +58,9 @@ class Insert[State <: InsertState](
     columns.underlying.keys
       .map(colName => s":${colName.name}")
       .mkString(start = "(", sep = ",", end = ")")
+
+  private def renderIfNotExists: String =
+    if (ifNotExists) "IF NOT EXISTS" else ""
 
   private def renderTimestampTTL: String =
     (timeToLive, timestamp) match {
