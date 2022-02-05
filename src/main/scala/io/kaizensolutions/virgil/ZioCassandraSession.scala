@@ -11,7 +11,10 @@ import scala.jdk.CollectionConverters._
 /**
  * ZioCassandraSession is a ZIO based wrapper for the Apache Cassandra Java
  * Driver that provides ZIO and ZStream abstractions over the Datastax Java
- * driver
+ * driver. We consider ZioCassandraSession to be the interpreter of [[Query]]]s
+ * and [[Action]]s built by the cql API or the higher level APIs that are
+ * provided by the [[dsl]] package.
+ *
  * @param session
  *   is the underlying Datastax Java driver session
  */

@@ -39,6 +39,9 @@ object Column {
 final case class Columns(underlying: ListMap[ColumnName, Column]) {
   def +(column: Column): Columns =
     copy(underlying = underlying + (column.name -> column))
+
+  override def toString: String =
+    s"""Columns(${underlying.map { case (k, v) => s"${k.name} -> ${v.value}" }.mkString(", ")})"""
 }
 object Columns {
   def from(columns: ListMap[String, ValueInCql]): Columns =
@@ -46,6 +49,8 @@ object Columns {
       val colName = ColumnName.make(name)
       colName -> Column.from(value, colName)
     })
+
+  def empty: Columns = Columns(ListMap.empty)
 }
 
 /**
