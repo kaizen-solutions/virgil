@@ -2,7 +2,7 @@ package io.kaizensolutions.virgil
 
 import com.datastax.oss.driver.api.core.cql._
 import com.datastax.oss.driver.api.core.{CqlSession, CqlSessionBuilder}
-import io.kaizensolutions.virgil.configuration.ExecutionAttributes
+import io.kaizensolutions.virgil.configuration.{ExecutionAttributes, PageState}
 import zio._
 import zio.stream.ZStream
 
@@ -36,6 +36,21 @@ class ZioCassandraSession(session: CqlSession) {
       val reader = input.reader
       selectFirst(boundStatement).map(_.map(reader.read("unused", _)))
     }
+
+  def selectPage[Output](
+    input: Query[Output],
+    page: Option[PageState] = None,
+    config: ExecutionAttributes = ExecutionAttributes.default
+  ): Task[(Chunk[Output], Option[PageState])] =
+    for {
+      boundStatement        <- buildStatement(input.query, input.columns, config)
+      reader                 = input.reader
+      driverPageState        = page.map(_.underlying).orNull
+      boundStatementWithPage = boundStatement.setPagingState(driverPageState)
+      rp                    <- selectPage(boundStatementWithPage)
+      (results, nextPage)    = rp
+      chunksToOutput         = results.map(reader.read("unused", _))
+    } yield (chunksToOutput, nextPage)
 
   def execute(
     input: Action,
@@ -101,6 +116,15 @@ class ZioCassandraSession(session: CqlSession) {
       }
     }
   }
+
+  private def selectPage(queryConfiguredWithPageState: Statement[_]): Task[(Chunk[Row], Option[PageState])] =
+    executeAction(queryConfiguredWithPageState).map { rs =>
+      val currentRows = Chunk.fromIterable(rs.currentPage().asScala)
+      if (rs.hasMorePages) {
+        val pageState = PageState.fromDriver(rs.getExecutionInfo.getSafePagingState)
+        (currentRows, Option(pageState))
+      } else (currentRows, None)
+    }
 
   private def selectFirst(query: Statement[_]): Task[Option[Row]] =
     executeAction(query)
