@@ -9,7 +9,7 @@ import scala.collection.immutable.ListMap
  * A Column consists of a name along with the data and the capability to write
  * the data to a DataStax statement.
  */
-trait Column {
+trait Column { self =>
   type ScalaType
   def name: ColumnName
   def value: ScalaType
@@ -34,11 +34,21 @@ object Column {
       def value: ScalaType         = valueInCql.value
       def write: Writer[ScalaType] = valueInCql.writer
     }
+
+  def withName(columnName: ColumnName, existing: Column): Column = new Column {
+    override type ScalaType = existing.ScalaType
+    override def name: ColumnName         = columnName
+    override def value: ScalaType         = existing.value
+    override def write: Writer[ScalaType] = existing.write
+  }
 }
 
 final case class Columns(underlying: ListMap[ColumnName, Column]) {
   def +(column: Column): Columns =
     copy(underlying = underlying + (column.name -> column))
+
+  def ++(that: Columns): Columns =
+    copy(underlying = underlying ++ that.underlying)
 
   override def toString: String =
     s"""Columns(${underlying.map { case (k, v) => s"${k.name} -> ${v.value}" }.mkString(", ")})"""
