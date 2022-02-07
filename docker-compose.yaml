@@ -8,6 +8,7 @@ services:
     container_name: datastax-enterprise
     environment:
       DS_LICENSE: accept
+      JVM_EXTRA_OPTS: -Dcassandra.initial_token=0 -Dcassandra.skip_wait_for_gossip_to_settle=0
     ports:
       - "9042:9042"
 
