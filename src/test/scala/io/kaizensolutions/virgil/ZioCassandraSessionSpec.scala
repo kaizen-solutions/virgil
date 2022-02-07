@@ -22,10 +22,11 @@ object ZioCassandraSessionSpec {
     Throwable
   ], TestSuccess] =
     suite("Cassandra Session Interpreter Specification") {
-      queries + (actions @@ timeout(30.seconds) @@ samples(10))
+      (queries + actions) @@ timeout(1.minute) @@ samples(10)
     }
 
-  def queries: Spec[Has[ZioCassandraSession], TestFailure[Throwable], TestSuccess] =
+  def queries
+    : Spec[Has[ZioCassandraSession] with Random with Sized with TestConfig, TestFailure[Throwable], TestSuccess] =
     suite("Queries") {
       testM("selectFirst") {
         ZioCassandraSession
@@ -56,24 +57,19 @@ object ZioCassandraSessionSpec {
             )
         } +
         testM("selectPage") {
-          val query =
-            cql"SELECT prepared_id, logged_keyspace, query_string FROM system.prepared_statements"
-              .query[PreparedStatementsResponse]
-
-          val expected =
-            ZioCassandraSession.select(query)
-
-          val actual = selectPageStream(
-            query = query,
-            executionAttributes = ExecutionAttributes.default
-              .withConsistencyLevel(ConsistencyLevel.LocalOne)
-              .withPageSize(1)
-          )
-
-          for {
-            actual   <- actual.runCollect
-            expected <- expected.runCollect
-          } yield assert(actual)(hasSameElements(expected))
+          import SelectPageRow._
+          checkM(Gen.chunkOfN(50)(gen)) { actual =>
+            for {
+              _  <- ZioCassandraSession.executeAction(truncate)
+              _  <- ZIO.foreachPar_(actual.map(insert))(ZioCassandraSession.executeAction(_))
+              all = ZioCassandraSession.select(selectAll).runCollect
+              paged =
+                selectPageStream(selectAll, ExecutionAttributes.default.withPageSize(actual.length / 2)).runCollect
+              result                        <- all.zipPar(paged)
+              (dataFromSelect, dataFromPage) = result
+            } yield assert(dataFromPage)(hasSameElements(dataFromSelect)) &&
+              assert(dataFromSelect)(hasSameElements(actual))
+          }
         }
     }
 
@@ -117,7 +113,7 @@ object ZioCassandraSessionSpec {
         }
     }
 
-  // Used to provide a similar interface to the `select` method
+  // Used to provide a similar API as the `select` method
   private def selectPageStream[ScalaType](
     query: Query[ScalaType],
     executionAttributes: ExecutionAttributes
@@ -176,4 +172,25 @@ object ExecuteTestTable {
   def selectAllIn(table: String)(ids: List[Int]): Query[ExecuteTestTable] =
     (cql"SELECT id, info FROM ".appendString(table) ++ cql" WHERE id IN $ids")
       .query[ExecuteTestTable]
+}
+
+final case class SelectPageRow(id: Int, bucket: Int, info: String)
+object SelectPageRow {
+  implicit val readerForSelectPageRow: Reader[SelectPageRow] = Reader.derive[SelectPageRow]
+  implicit val writerForSelectPageRow: Writer[SelectPageRow] = Writer.derive[SelectPageRow]
+
+  val truncate = s"TRUNCATE ziocassandrasessionspec_selectPage"
+
+  def insert(in: SelectPageRow): Action.Single =
+    cql"INSERT INTO ziocassandrasessionspec_selectPage (id, bucket, info) VALUES (${in.id}, ${in.bucket}, ${in.info})".action
+
+  def selectAll: Query[SelectPageRow] =
+    cql"SELECT id, bucket, info FROM ziocassandrasessionspec_selectPage".query[SelectPageRow]
+
+  val gen: Gen[Random with Sized, SelectPageRow] =
+    for {
+      id     <- Gen.int(1, 1000)
+      bucket <- Gen.int(1, 50)
+      info   <- Gen.alphaNumericStringBounded(10, 15)
+    } yield SelectPageRow(id, bucket, info)
 }

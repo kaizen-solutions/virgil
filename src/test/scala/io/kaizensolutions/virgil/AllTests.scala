@@ -60,6 +60,6 @@ object AllTests extends DefaultRunnableSpec {
 
   override def spec: ZSpec[TestEnvironment, Any] =
     suite("Virgil Test Suite") {
-      ZioCassandraSessionSpec.sessionSpec @@ TestAspect.parallel
+      (ZioCassandraSessionSpec.sessionSpec + UserDefinedTypesSpec.userDefinedTypesSpec) @@ TestAspect.parallel
     }.provideCustomLayerShared(dependencies)
 }
