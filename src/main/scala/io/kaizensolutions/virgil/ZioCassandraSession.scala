@@ -91,11 +91,11 @@ class ZioCassandraSession(session: CqlSession) {
       .map(_.wasApplied())
   }
 
+  def executeAction(query: String): Task[AsyncResultSet] =
+    ZIO.fromCompletionStage(session.executeAsync(query))
+
   private def prepare(query: String): Task[PreparedStatement] =
     ZIO.fromCompletionStage(session.prepareAsync(query))
-
-//  private def executeAction(query: String): Task[AsyncResultSet] =
-//    ZIO.fromCompletionStage(session.executeAsync(query))
 
   private def executeAction(query: Statement[_]): Task[AsyncResultSet] =
     ZIO.fromCompletionStage(session.executeAsync(query))
@@ -180,6 +180,9 @@ object ZioCassandraSession {
     config: ExecutionAttributes = ExecutionAttributes.default
   ): RIO[Has[ZioCassandraSession], Boolean] =
     ZIO.serviceWith[ZioCassandraSession](_.execute(input, config))
+
+  def executeAction(action: String): RIO[Has[ZioCassandraSession], AsyncResultSet] =
+    ZIO.serviceWith[ZioCassandraSession](_.executeAction(action))
 
   def executeAction(
     input: Action.Single,

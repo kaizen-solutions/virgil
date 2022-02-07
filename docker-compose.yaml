@@ -2,7 +2,7 @@ version: '2.1'
 
 services:
   datastax-enterprise:
-    image: datastax/dse-server:6.8.16
+    image: datastax/dse-server:6.8.19
     command: -s
     hostname: datastax-enterprise
     container_name: datastax-enterprise

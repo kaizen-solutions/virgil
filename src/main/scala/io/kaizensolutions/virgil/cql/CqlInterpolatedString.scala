@@ -39,7 +39,7 @@ final case class CqlInterpolatedString private (queryString: String, dataToBeBou
       dataToBeBound = dataToBeBound ++ that.dataToBeBound
     )
 
-  def +(that: String): CqlInterpolatedString =
+  def appendString(that: String): CqlInterpolatedString =
     CqlInterpolatedString(
       queryString = s"$queryString$that",
       dataToBeBound = dataToBeBound
@@ -47,7 +47,7 @@ final case class CqlInterpolatedString private (queryString: String, dataToBeBou
 }
 trait CqlInterpolatedStringSyntax {
   implicit class CqlInterpolatedStringOpsForString(self: String) {
-    def +(that: CqlInterpolatedString): CqlInterpolatedString =
+    def appendCql(that: CqlInterpolatedString): CqlInterpolatedString =
       CqlInterpolatedString(
         queryString = s"$self${that.queryString}",
         dataToBeBound = that.dataToBeBound

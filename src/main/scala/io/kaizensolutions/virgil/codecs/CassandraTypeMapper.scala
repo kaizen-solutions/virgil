@@ -1,8 +1,7 @@
 package io.kaizensolutions.virgil.codecs
 
-import com.datastax.oss.driver.api.core.`type`.{DataType, UserDefinedType}
+import com.datastax.oss.driver.api.core.`type`.{DataType, ListType, MapType, SetType, UserDefinedType}
 import com.datastax.oss.driver.api.core.data.UdtValue
-import com.datastax.oss.driver.internal.core.`type`.{DefaultListType, DefaultMapType, DefaultSetType}
 import io.kaizensolutions.virgil.codecs.userdefinedtypes.{UdtReader, UdtWriter}
 
 import java.nio.ByteBuffer
@@ -144,12 +143,12 @@ object CassandraTypeMapper {
       override def classType: Class[java.util.List[ev.Cassandra]] = classOf[Cassandra]
 
       override def toCassandra(in: List[A], dataType: DataType): Cassandra = {
-        val elementOfSetDataType = dataType.asInstanceOf[DefaultListType].getElementType
+        val elementOfSetDataType = dataType.asInstanceOf[ListType].getElementType
         in.map(ev.toCassandra(_, elementOfSetDataType)).asJava
       }
 
       override def fromCassandra(in: Cassandra, dataType: DataType): List[A] = {
-        val elementOfListDataType = dataType.asInstanceOf[DefaultListType].getElementType
+        val elementOfListDataType = dataType.asInstanceOf[ListType].getElementType
         in.asScala.map(ev.fromCassandra(_, elementOfListDataType)).toList
       }
     }
@@ -164,7 +163,7 @@ object CassandraTypeMapper {
       override def classType: Class[java.util.Map[kEv.Cassandra, vEv.Cassandra]] = classOf[Cassandra]
 
       override def toCassandra(in: Map[K, V], dataType: DataType): Cassandra = {
-        val mapDataType   = dataType.asInstanceOf[DefaultMapType]
+        val mapDataType   = dataType.asInstanceOf[MapType]
         val keyDataType   = mapDataType.getKeyType
         val valueDataType = mapDataType.getValueType
         in.map { case (k, v) =>
@@ -173,7 +172,7 @@ object CassandraTypeMapper {
       }
 
       override def fromCassandra(in: Cassandra, dataType: DataType): Map[K, V] = {
-        val mapDataType   = dataType.asInstanceOf[DefaultMapType]
+        val mapDataType   = dataType.asInstanceOf[MapType]
         val keyDataType   = mapDataType.getKeyType
         val valueDataType = mapDataType.getValueType
         in.asScala.map { case (kC, vC) =>
@@ -210,12 +209,12 @@ object CassandraTypeMapper {
       override def classType: Class[java.util.Set[ev.Cassandra]] = classOf[Cassandra]
 
       override def toCassandra(in: Set[A], dataType: DataType): Cassandra = {
-        val elementOfSetDataType = dataType.asInstanceOf[DefaultSetType].getElementType
+        val elementOfSetDataType = dataType.asInstanceOf[SetType].getElementType
         in.map(ev.toCassandra(_, elementOfSetDataType)).asJava
       }
 
       override def fromCassandra(in: Cassandra, dataType: DataType): Set[A] = {
-        val elementOfSetDataType = dataType.asInstanceOf[DefaultSetType].getElementType
+        val elementOfSetDataType = dataType.asInstanceOf[SetType].getElementType
         in.asScala.map(ev.fromCassandra(_, elementOfSetDataType)).toSet
       }
     }

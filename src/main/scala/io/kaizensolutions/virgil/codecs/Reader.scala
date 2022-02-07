@@ -5,6 +5,7 @@ import com.datastax.oss.driver.api.core.cql.{Row => CassandraRow}
 import com.datastax.oss.driver.api.core.data.UdtValue
 import magnolia1._
 
+import scala.annotation.implicitNotFound
 import scala.jdk.CollectionConverters._
 
 /**
@@ -12,6 +13,10 @@ import scala.jdk.CollectionConverters._
  * @tparam ScalaType
  *   to be read from Cassandra
  */
+@implicitNotFound(
+  """A Reader is not present for ${ScalaType}, if you have a case class, please use Reader.derive[${ScalaType}] 
+  to automatically generate a Reader"""
+)
 trait Reader[ScalaType] { self =>
   def read(columnName: String, row: CassandraRow): ScalaType
 

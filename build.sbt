@@ -24,9 +24,12 @@ lazy val root =
           "org.scala-lang"                % "scala-reflect"           % scalaVersion.value,
           zio                            %% "zio"                     % zioV,
           zio                            %% "zio-streams"             % zioV,
-          zio                            %% "zio-test"                % zioV % Test,
-          zio                            %% "zio-test-sbt"            % zioV % Test
+          zio                            %% "zio-test"                % zioV     % Test,
+          zio                            %% "zio-test-sbt"            % zioV     % Test,
+          "com.dimafeng"                 %% "testcontainers-scala"    % "0.40.1" % Test,
+          "com.outr"                     %% "scribe-slf4j"            % "3.7.0"  % Test
         )
       },
-      testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
+      testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
+      Test / fork := true
     )

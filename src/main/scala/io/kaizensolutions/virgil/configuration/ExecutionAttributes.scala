@@ -5,7 +5,7 @@ import com.datastax.oss.driver.api.core.cql.{BatchStatementBuilder, BoundStateme
 final case class ExecutionAttributes(
   pageSize: Option[Int] = None,
   executionProfile: Option[String] = None,
-  consistencyLevel: Option[CassandraConsistencyLevel] = None,
+  consistencyLevel: Option[ConsistencyLevel] = None,
   idempotent: Option[Boolean] = None
 ) {
   def withPageSize(pageSize: Int): ExecutionAttributes =
@@ -14,7 +14,7 @@ final case class ExecutionAttributes(
   def withExecutionProfile(executionProfile: String): ExecutionAttributes =
     copy(executionProfile = Some(executionProfile))
 
-  def withConsistencyLevel(consistencyLevel: CassandraConsistencyLevel): ExecutionAttributes =
+  def withConsistencyLevel(consistencyLevel: ConsistencyLevel): ExecutionAttributes =
     copy(consistencyLevel = Some(consistencyLevel));
 
   def withIdempotent(idempotent: Boolean): ExecutionAttributes =
