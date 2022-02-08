@@ -61,3 +61,10 @@ object Action {
     def counter(action: Single, actions: Single*): Batch = counter(NonEmptyChunk(action, actions: _*))
   }
 }
+
+sealed trait BatchType
+object BatchType {
+  case object Logged   extends BatchType
+  case object Unlogged extends BatchType
+  case object Counter  extends BatchType
+}
