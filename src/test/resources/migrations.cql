@@ -69,3 +69,11 @@ CREATE TABLE userdefinedtypesspec_heavilynestedudttable
     data example_collection_nested_udt_type,
     PRIMARY KEY (id)
 );
+
+CREATE TABLE collectionspec_simplecollectiontable
+(
+    id       INT PRIMARY KEY,
+    mapTest  FROZEN<MAP<INT,TEXT>>,
+    setTest  FROZEN<SET<BIGINT>>,
+    listTest FROZEN<LIST<TEXT>>
+);

@@ -23,7 +23,7 @@ trait CassandraTypeMapper[Scala] {
   def toCassandra(in: Scala, dataType: DataType): Cassandra
   def fromCassandra(in: Cassandra, dataType: DataType): Scala
 }
-object CassandraTypeMapper {
+object CassandraTypeMapper extends LowPriorityTypeMapperInstances {
   type WithCassandra[Sc, Cas] = CassandraTypeMapper[Sc] { type Cassandra = Cas }
 
   def apply[A](implicit ev: CassandraTypeMapper[A]): CassandraTypeMapper[A] = ev
@@ -218,7 +218,9 @@ object CassandraTypeMapper {
         in.asScala.map(ev.fromCassandra(_, elementOfSetDataType)).toSet
       }
     }
+}
 
+trait LowPriorityTypeMapperInstances {
   implicit def udtCassandraTypeMapper[Scala](implicit
     udtWriter: UdtWriter.CaseClass[Scala],
     udtReader: UdtReader.CaseClass[Scala]

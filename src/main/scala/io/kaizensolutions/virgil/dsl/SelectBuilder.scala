@@ -15,6 +15,14 @@ class SelectBuilder[State <: SelectState](
     new SelectBuilder(tableName, columnNames :+ name, relations)
   }
 
+  def columns(name: String, names: String*)(implicit
+    ev: State <:< SelectState.Empty
+  ): SelectBuilder[SelectState.NonEmpty] = {
+    val _        = ev
+    val allNames = Chunk.fromIterable(name +: names)
+    new SelectBuilder(tableName, columnNames ++ allNames, relations)
+  }
+
   def where(relation: Relation)(implicit ev: State =:= SelectState.NonEmpty): SelectBuilder[SelectState.Relation] = {
     val _ = ev
     new SelectBuilder(tableName, columnNames, relations :+ relation)
@@ -25,7 +33,7 @@ class SelectBuilder[State <: SelectState](
     new SelectBuilder(tableName, columnNames, relations :+ relation)
   }
 
-  def build(implicit ev: State <:< SelectState.NonEmpty): Query[Row] = {
+  def buildRow(implicit ev: State <:< SelectState.NonEmpty): Query[Row] = {
     val _       = ev
     val columns = NonEmptyChunk.fromChunk(columnNames).get.map(BindMarkerName.make)
     Query(
@@ -38,8 +46,7 @@ class SelectBuilder[State <: SelectState](
     readerEv: Reader[FromCassandra],
     stateEv: State <:< SelectState.NonEmpty
   ): Query[FromCassandra] =
-    build(stateEv)
-      .withOutput[FromCassandra](readerEv)
+    buildRow(stateEv).withOutput[FromCassandra](readerEv)
 }
 object SelectBuilder {
   def from(tableName: String): SelectBuilder[SelectState.Empty] =
