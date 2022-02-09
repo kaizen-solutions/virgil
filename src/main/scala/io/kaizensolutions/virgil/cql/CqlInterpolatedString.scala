@@ -1,9 +1,8 @@
 package io.kaizensolutions.virgil.cql
 
 import com.datastax.oss.driver.api.core.cql.Row
-import io.kaizensolutions.virgil.Action.Single
 import io.kaizensolutions.virgil.codecs.Reader
-import io.kaizensolutions.virgil.{Action, Columns, Query}
+import io.kaizensolutions.virgil.{BindMarkers, Mutation, Query, QueryType}
 
 import scala.collection.immutable.ListMap
 
@@ -13,24 +12,24 @@ import scala.collection.immutable.ListMap
  * submitted to Cassandra for execution.
  */
 final case class CqlInterpolatedString private (queryString: String, dataToBeBound: ListMap[String, ValueInCql]) {
+  def mutation: Mutation.RawCql = Mutation.RawCql(queryString, BindMarkers.from(dataToBeBound))
+
   def query[Output](implicit evidence: Reader[Output]): Query[Output] =
     Query(
-      query = queryString,
-      columns = Columns.from(dataToBeBound),
+      queryType = QueryType.RawCql(
+        query = queryString,
+        columns = BindMarkers.from(dataToBeBound)
+      ),
       reader = evidence
     )
 
   def query: Query[Row] =
     Query(
-      query = queryString,
-      columns = Columns.from(dataToBeBound),
+      queryType = QueryType.RawCql(
+        query = queryString,
+        columns = BindMarkers.from(dataToBeBound)
+      ),
       reader = Reader.cassandraRowReader
-    )
-
-  def action: Single =
-    Action.Single(
-      query = queryString,
-      columns = Columns.from(dataToBeBound)
     )
 
   def ++(that: CqlInterpolatedString): CqlInterpolatedString =
