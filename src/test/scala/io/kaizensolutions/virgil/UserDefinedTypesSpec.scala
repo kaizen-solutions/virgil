@@ -42,7 +42,7 @@ object UserDefinedTypesSpec {
           } yield assertTrue(actual.get == expected)
         }
       }
-    } @@ timeout(30.seconds) @@ samples(50)
+    } @@ timeout(1.minute) @@ samples(10)
 }
 
 final case class Row_Person(
