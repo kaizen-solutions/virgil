@@ -77,3 +77,9 @@ CREATE TABLE collectionspec_simplecollectiontable
     setTest  FROZEN<SET<BIGINT>>,
     listTest FROZEN<LIST<TEXT>>
 );
+
+CREATE TABLE collectionspec_nestedcollectiontable
+(
+    a int PRIMARY KEY,
+    b frozen<map<int, frozen<set<frozen<set<frozen<set<frozen<set<int>>>>>>>>>>
+);

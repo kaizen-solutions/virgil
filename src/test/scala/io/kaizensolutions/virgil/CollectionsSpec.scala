@@ -17,7 +17,16 @@ object CollectionsSpec {
             _      <- ZioCassandraSession.execute(insert(expected))
             result <- ZioCassandraSession.select(select(expected.id)).runCollect
             actual  = result.head
-          } yield assertTrue(actual == expected)
+          } yield assertTrue(actual == expected) && assertTrue(result.length == 1)
+        }
+      } + testM("Read and write a row containing nested collections") {
+        import NestedCollectionRow._
+        checkM(gen) { expected =>
+          for {
+            _      <- ZioCassandraSession.execute(insert(expected))
+            result <- ZioCassandraSession.select(select(expected.a)).runCollect
+            actual  = result.head
+          } yield assertTrue(actual == expected) && assertTrue(result.length == 1)
         }
       }
     } @@ samples(10)
@@ -59,4 +68,34 @@ object SimpleCollectionRow {
       set  <- Gen.setOf(Gen.anyLong)
       list <- Gen.listOf(Gen.anyString)
     } yield SimpleCollectionRow(id, map, set, list)
+}
+
+final case class NestedCollectionRow(
+  a: Int,
+  b: Map[Int, Set[Set[Set[Set[Int]]]]]
+)
+object NestedCollectionRow {
+  implicit val readerForNestedCollectionRow: Reader[NestedCollectionRow] = Reader.derive[NestedCollectionRow]
+  implicit val writerForNestedCollectionRow: Writer[NestedCollectionRow] = Writer.derive[NestedCollectionRow]
+
+  def select(a: Int) =
+    Query.select
+      .from("collectionspec_nestedcollectiontable")
+      .column("a")
+      .column("b")
+      .where("a" === a)
+      .build[NestedCollectionRow]
+
+  def insert(in: NestedCollectionRow): Mutation =
+    Mutation.Insert
+      .into("collectionspec_nestedcollectiontable")
+      .value("a", in.a)
+      .value("b", in.b)
+      .build
+
+  def gen: Gen[Random with Sized, NestedCollectionRow] =
+    for {
+      a <- Gen.int(1, 10000000)
+      b <- Gen.mapOf(key = Gen.anyInt, value = Gen.setOf(Gen.setOf(Gen.setOf(Gen.setOf(Gen.anyInt)))))
+    } yield NestedCollectionRow(a, b)
 }
