@@ -32,7 +32,7 @@ import scala.collection.immutable.ListMap
  * }}}
  */
 final class CqlStringInterpolator(ctx: StringContext) {
-  private def replaceValueWithQuestionMark(
+  private def replaceValuesWithBindMarkers(
     strings: Iterator[String],
     expressions: Iterator[ValueInCql]
   ): CqlInterpolatedString = {
@@ -63,5 +63,6 @@ final class CqlStringInterpolator(ctx: StringContext) {
   }
 
   def apply(values: ValueInCql*): CqlInterpolatedString =
-    replaceValueWithQuestionMark(ctx.parts.iterator, values.iterator)
+    replaceValuesWithBindMarkers(ctx.parts.iterator, values.iterator)
+
 }

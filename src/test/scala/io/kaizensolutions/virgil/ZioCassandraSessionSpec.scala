@@ -1,6 +1,7 @@
 package io.kaizensolutions.virgil
 
 import com.datastax.oss.driver.api.core.uuid.Uuids
+import io.kaizensolutions.virgil.Mutation.Truncate
 import io.kaizensolutions.virgil.codecs.{Reader, Writer}
 import io.kaizensolutions.virgil.configuration.{ConsistencyLevel, ExecutionAttributes}
 import io.kaizensolutions.virgil.cql._
@@ -60,8 +61,8 @@ object ZioCassandraSessionSpec {
           import SelectPageRow._
           checkM(Gen.chunkOfN(50)(gen)) { actual =>
             for {
-              _  <- ZioCassandraSession.executeAction(truncate)
-              _  <- ZIO.foreachPar_(actual.map(insert))(ZioCassandraSession.executeAction(_))
+              _  <- ZioCassandraSession.execute(truncate)
+              _  <- ZIO.foreachPar_(actual.map(insert))(ZioCassandraSession.execute(_))
               all = ZioCassandraSession.select(selectAll).runCollect
               paged =
                 selectPageStream(selectAll, ExecutionAttributes.default.withPageSize(actual.length / 2)).runCollect
@@ -79,7 +80,7 @@ object ZioCassandraSessionSpec {
       testM("executeAction") {
         import ExecuteTestTable._
         checkM(Gen.listOfN(10)(gen)) { actual =>
-          val truncateData = ZioCassandraSession.executeAction(truncate(table))
+          val truncateData = ZioCassandraSession.execute(truncate(table))
           val toInsert     = actual.map(insert(table))
           val expected = ZioCassandraSession
             .select(selectAllIn(table)(actual.map(_.id)))
@@ -87,7 +88,7 @@ object ZioCassandraSessionSpec {
 
           for {
             _        <- truncateData
-            _        <- ZIO.foreachPar_(toInsert)(ZioCassandraSession.executeAction(_))
+            _        <- ZIO.foreachPar_(toInsert)(ZioCassandraSession.execute(_))
             expected <- expected
           } yield assert(actual)(hasSameElements(expected))
         }
@@ -95,10 +96,10 @@ object ZioCassandraSessionSpec {
         testM("executeBatchAction") {
           import ExecuteTestTable._
           checkM(Gen.listOfN(10)(gen)) { actual =>
-            val truncateData = ZioCassandraSession.executeAction(truncate(batchTable))
-            val toInsert: Action.Batch = {
+            val truncateData = ZioCassandraSession.execute(truncate(batchTable))
+            val toInsert: Batch = {
               val inserts = actual.map(ExecuteTestTable.insert(batchTable))
-              Action.Batch.unlogged(inserts.head, inserts.tail: _*)
+              Batch.unlogged(inserts.head, inserts.tail: _*)
             }
             val expected = ZioCassandraSession
               .select(selectAllIn(batchTable)(actual.map(_.id)))
@@ -106,7 +107,7 @@ object ZioCassandraSessionSpec {
 
             for {
               _        <- truncateData
-              _        <- ZioCassandraSession.executeBatchAction(toInsert)
+              _        <- ZioCassandraSession.executeBatch(toInsert)
               expected <- expected
             } yield assert(actual)(hasSameElements(expected))
           }
@@ -159,15 +160,15 @@ object ExecuteTestTable {
   val table      = "ziocassandrasessionspec_executeAction"
   val batchTable = "ziocassandrasessionspec_executeBatchAction"
 
-  def truncate(tbl: String) = s"TRUNCATE $tbl"
+  def truncate(tbl: String): Mutation = Truncate(tbl)
 
   val gen: Gen[Random with Sized, ExecuteTestTable] = for {
     id   <- Gen.int(1, 1000)
     info <- Gen.alphaNumericStringBounded(10, 15)
   } yield ExecuteTestTable(id, info)
 
-  def insert(table: String)(in: ExecuteTestTable): Action.Single =
-    (cql"INSERT INTO ".appendString(table) ++ cql"(id, info) VALUES (${in.id}, ${in.info})").action
+  def insert(table: String)(in: ExecuteTestTable): Mutation =
+    (cql"INSERT INTO ".appendString(table) ++ cql"(id, info) VALUES (${in.id}, ${in.info})").mutation
 
   def selectAllIn(table: String)(ids: List[Int]): Query[ExecuteTestTable] =
     (cql"SELECT id, info FROM ".appendString(table) ++ cql" WHERE id IN $ids")
@@ -181,8 +182,8 @@ object SelectPageRow {
 
   val truncate = s"TRUNCATE ziocassandrasessionspec_selectPage"
 
-  def insert(in: SelectPageRow): Action.Single =
-    cql"INSERT INTO ziocassandrasessionspec_selectPage (id, bucket, info) VALUES (${in.id}, ${in.bucket}, ${in.info})".action
+  def insert(in: SelectPageRow): Mutation =
+    cql"INSERT INTO ziocassandrasessionspec_selectPage (id, bucket, info) VALUES (${in.id}, ${in.bucket}, ${in.info})".mutation
 
   def selectAll: Query[SelectPageRow] =
     cql"SELECT id, bucket, info FROM ziocassandrasessionspec_selectPage".query[SelectPageRow]

@@ -24,12 +24,12 @@ object AllTests extends DefaultRunnableSpec {
                        .addContactPoint(InetSocketAddress.createUnresolved(host, port))
                    )
         createKeyspace =
-          cql"""CREATE KEYSPACE IF NOT EXISTS virgil 
+          cql"""CREATE KEYSPACE IF NOT EXISTS virgil
           WITH REPLICATION = {
             'class': 'SimpleStrategy',
             'replication_factor': 1
-          }""".action
-        useKeyspace = cql"USE virgil".action
+          }""".mutation
+        useKeyspace = cql"USE virgil".mutation
         _          <- session.execute(createKeyspace).toManaged_
         _          <- session.execute(useKeyspace).toManaged_
         _          <- runMigration(session, "migrations.cql").toManaged_

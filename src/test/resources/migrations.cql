@@ -42,4 +42,30 @@ CREATE TABLE IF NOT EXISTS userdefinedtypesspec_person
     name TEXT,
     age  INT,
     data frozen<udt_data>
-)
+);
+
+CREATE TYPE example_type (
+    x bigint,
+    y bigint,
+    date date,
+    time time
+    );
+
+CREATE TYPE example_nested_type(
+    a int,
+    b text,
+    c frozen<example_type>
+    );
+
+CREATE TYPE example_collection_nested_udt_type(
+    a int,
+    b frozen<map<int,frozen<set<frozen<set<frozen<set<frozen<set<example_nested_type>>>>>>>>>>,
+    c frozen<example_nested_type>
+    );
+
+CREATE TABLE userdefinedtypesspec_heavilynestedudttable
+(
+    id   int,
+    data example_collection_nested_udt_type,
+    PRIMARY KEY (id)
+);
