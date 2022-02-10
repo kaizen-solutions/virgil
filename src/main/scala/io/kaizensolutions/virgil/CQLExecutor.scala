@@ -184,7 +184,7 @@ object CQLExecutor {
   def execute[A](in: CQL[A]): ZStream[Has[CQLExecutor], Throwable, A] =
     ZStream.service[CQLExecutor].flatMap(_.execute(in))
 
-  def executePage[A](in: CQL[A], pageState: Option[PageState])(implicit
+  def executePage[A](in: CQL[A], pageState: Option[PageState] = None)(implicit
     ev: A =:!= MutationResult
   ): RIO[Has[CQLExecutor], Paged[A]] =
     ZIO.serviceWith[CQLExecutor](_.executePage(in, pageState))

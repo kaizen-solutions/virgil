@@ -67,6 +67,9 @@ final case class CQL[+Result] private (
   def all[Result1 >: Result](implicit ev: CQLType[Result1] <:< CQLType.Query[Result1]): CQL[Result1] =
     copy(cqlType = ev(cqlType).copy(pullMode = PullMode.All))
 
+  def withAttributes(in: ExecutionAttributes): CQL[Result] =
+    copy(executionAttributes = in)
+
   private def widen[AnotherResult](implicit ev: Result <:< AnotherResult): CQL[AnotherResult] = {
     val _                    = ev // Can make use of liftCo in 2.13.x but not in 2.12.x :(
     val anotherResultCqlType = self.cqlType.asInstanceOf[CQLType[AnotherResult]]
