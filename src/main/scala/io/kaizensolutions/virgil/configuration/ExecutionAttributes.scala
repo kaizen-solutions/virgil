@@ -7,7 +7,7 @@ final case class ExecutionAttributes(
   executionProfile: Option[String] = None,
   consistencyLevel: Option[ConsistencyLevel] = None,
   idempotent: Option[Boolean] = None
-) {
+) { self =>
   def withPageSize(pageSize: Int): ExecutionAttributes =
     copy(pageSize = Some(pageSize))
 
@@ -19,6 +19,27 @@ final case class ExecutionAttributes(
 
   def withIdempotent(idempotent: Boolean): ExecutionAttributes =
     copy(idempotent = Some(idempotent))
+
+  def combine(that: ExecutionAttributes): ExecutionAttributes =
+    ExecutionAttributes(
+      pageSize = (self.pageSize, that.pageSize) match {
+        case (Some(a), Some(b)) =>
+          if (a > b) Some(a)
+          else Some(b)
+
+        case (Some(a), None) => Some(a)
+        case (None, Some(b)) => Some(b)
+        case (None, None)    => None
+      },
+      executionProfile = self.executionProfile.orElse(that.executionProfile),
+      consistencyLevel = (self.consistencyLevel, that.consistencyLevel) match {
+        case (Some(a), Some(_)) => Some(a)
+        case (Some(a), None)    => Some(a)
+        case (None, Some(b))    => Some(b)
+        case (None, None)       => None
+      },
+      idempotent = self.idempotent.orElse(that.idempotent)
+    )
 
   private[virgil] def configure(s: BoundStatementBuilder): BoundStatementBuilder = {
     val withPageSz = pageSize.fold(ifEmpty = s)(s.setPageSize)
