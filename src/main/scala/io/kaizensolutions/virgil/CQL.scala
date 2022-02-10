@@ -5,9 +5,9 @@ import io.kaizensolutions.virgil.configuration.ExecutionAttributes
 import io.kaizensolutions.virgil.dsl.{Assignment, Relation}
 import zio._
 
-final case class CQL[+Result](
-  cqlType: CQLType[Result],
-  executionAttributes: ExecutionAttributes
+final case class CQL[+Result] private (
+  private[virgil] val cqlType: CQLType[Result],
+  private[virgil] val executionAttributes: ExecutionAttributes
 ) { self =>
   def +(that: CQL[MutationResult])(implicit ev: Result <:< MutationResult): CQL[MutationResult] = {
     val resultCqlType =
@@ -43,6 +43,18 @@ final case class CQL[+Result](
     CQL(resultCqlType, self.executionAttributes.combine(that.executionAttributes))
   }
 
+  def batchType(in: BatchType)(implicit ev: Result <:< MutationResult): CQL[MutationResult] =
+    self.cqlType match {
+      case _: CQLType.Mutation =>
+        self.widen[MutationResult]
+
+      case b: CQLType.Batch =>
+        self.copy(cqlType = b.copy(batchType = in))
+
+      case CQLType.Query(_, _, _) =>
+        self.widen[MutationResult] // Technically this is not possible due to type constraints
+    }
+
   def take[Result1 >: Result](n: Int)(implicit ev: CQLType[Result1] <:< CQLType.Query[Result1]): CQL[Result1] = {
     val adjustN = n match {
       case invalid if invalid <= 0 => 1
@@ -64,9 +76,9 @@ final case class CQL[+Result](
 object CQL {
   def batch(in: CQL[MutationResult], batchType: BatchType = BatchType.Logged): CQL[MutationResult] =
     in.cqlType match {
-      case mutation: CQLType.Mutation => CQL(CQLType.Batch(NonEmptyChunk(mutation), batchType), in.executionAttributes)
-      case CQLType.Batch(_, _)        => in
-      case CQLType.Query(_, _, _)     => in
+      case mutation: CQLType.Mutation  => CQL(CQLType.Batch(NonEmptyChunk(mutation), batchType), in.executionAttributes)
+      case CQLType.Batch(mutations, _) => in.copy(cqlType = CQLType.Batch(mutations, batchType))
+      case CQLType.Query(_, _, _)      => in
     }
 
   def cqlMutation(queryString: String, bindMarkers: BindMarkers): CQL[MutationResult] =

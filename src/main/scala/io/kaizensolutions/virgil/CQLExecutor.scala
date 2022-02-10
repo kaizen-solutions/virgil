@@ -11,11 +11,9 @@ import zio.stream._
 import scala.jdk.CollectionConverters._
 
 /**
- * ZioCassandraSession is a ZIO based wrapper for the Apache Cassandra Java
- * Driver that provides ZIO and ZStream abstractions over the Datastax Java
- * driver. We consider ZioCassandraSession to be the interpreter of [[Query]]s
- * and [[Mutation]]s built by the cql API or the higher level APIs that are
- * provided by the [[dsl]] package.
+ * CQLExecutor is a ZIO based wrapper for the Apache Cassandra Java Driver that
+ * provides ZIO and ZStream abstractions over the Datastax Java driver. We
+ * consider CQLExecutor to be the interpreter of [[CQL[A]] expressions.
  *
  * @param underlyingSession
  *   is the underlying Datastax Java driver session
@@ -183,41 +181,13 @@ class CQLExecutor(underlyingSession: CqlSession) {
 }
 
 object CQLExecutor {
-//  def select[Output](
-//    input: Query[Output],
-//    config: ExecutionAttributes = ExecutionAttributes.default
-//  ): ZStream[Has[ZioCassandraSession], Throwable, Output] =
-//    ZStream
-//      .service[ZioCassandraSession]
-//      .flatMap(_.select(input, config))
-//
-//  def selectFirst[Output](
-//    input: Query[Output],
-//    config: ExecutionAttributes = ExecutionAttributes.default
-//  ): RIO[Has[ZioCassandraSession], Option[Output]] =
-//    ZIO.serviceWith[ZioCassandraSession](_.selectFirst(input, config))
-//
-//  def selectPage[Output](
-//    input: Query[Output],
-//    page: Option[PageState] = None,
-//    config: ExecutionAttributes = ExecutionAttributes.default
-//  ): RIO[Has[ZioCassandraSession], (Chunk[Output], Option[PageState])] =
-//    ZIO.serviceWith[ZioCassandraSession](_.selectPage(input, page, config))
-//
-//  def execute(
-//    input: Mutation,
-//    config: ExecutionAttributes = ExecutionAttributes.default
-//  ): RIO[Has[ZioCassandraSession], Boolean] =
-//    ZIO.serviceWith[ZioCassandraSession](_.execute(input, config))
-//
-//  def executeBatch(
-//    input: Batch,
-//    config: ExecutionAttributes = ExecutionAttributes.default
-//  ): RIO[Has[ZioCassandraSession], Boolean] =
-//    ZIO.serviceWith[ZioCassandraSession](_.executeBatch(input, config))
-//
-//  def execute(action: String): RIO[Has[ZioCassandraSession], AsyncResultSet] =
-//    ZIO.serviceWith[ZioCassandraSession](_.executeAction(action))
+  def execute[A](in: CQL[A]): ZStream[Has[CQLExecutor], Throwable, A] =
+    ZStream.service[CQLExecutor].flatMap(_.execute(in))
+
+  def executePage[A](in: CQL[A], pageState: Option[PageState])(implicit
+    ev: A =:!= MutationResult
+  ): RIO[Has[CQLExecutor], Paged[A]] =
+    ZIO.serviceWith[CQLExecutor](_.executePage(in, pageState))
 
   /**
    * Create a ZIO Cassandra Session from an existing Datastax Java Driver's
