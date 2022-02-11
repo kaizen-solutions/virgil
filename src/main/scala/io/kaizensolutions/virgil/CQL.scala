@@ -56,7 +56,7 @@ final case class CQL[+Result] private (
         self.widen[MutationResult] // Technically this is not possible due to type constraints
     }
 
-  def take[Result1 >: Result](n: Int)(implicit ev: CQLType[Result1] <:< CQLType.Query[Result1]): CQL[Result1] = {
+  def take[Result1 >: Result](n: Long)(implicit ev: CQLType[Result1] <:< CQLType.Query[Result1]): CQL[Result1] = {
     val adjustN = n match {
       case invalid if invalid <= 0 => 1
       case _                       => n

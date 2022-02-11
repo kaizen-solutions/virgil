@@ -32,7 +32,10 @@ class CQLExecutor(underlyingSession: CqlSession) {
           case PullMode.TakeUpto(n) if n <= 1 =>
             ZStream.fromEffectOption(executeSingleResultQuery(q, in.executionAttributes).some)
 
-          case PullMode.TakeUpto(_) | PullMode.All =>
+          case PullMode.TakeUpto(n) =>
+            executeGeneralQuery(q, in.executionAttributes).take(n)
+
+          case PullMode.All =>
             executeGeneralQuery(q, in.executionAttributes)
         }
     }
