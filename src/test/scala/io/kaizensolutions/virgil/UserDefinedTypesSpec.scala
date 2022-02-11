@@ -14,32 +14,31 @@ import zio.test.environment.Live
 import java.time.{LocalDate, LocalTime}
 
 object UserDefinedTypesSpec {
-  def userDefinedTypesSpec
-    : ZSpec[Live with Has[ZioCassandraSession] with Random with Sized with TestConfig, Throwable] =
+  def userDefinedTypesSpec: ZSpec[Live with Has[CQLExecutor] with Random with Sized with TestConfig, Throwable] =
     suite("User Defined Types specification") {
       testM("Write and read Person rows containing UDTs which are nested") {
         import Row_Person._
         checkM(Row_Person.gen) { expected =>
-          val insertPeople = ZioCassandraSession.execute(insert(expected))
-          val fetchActual  = ZioCassandraSession.selectFirst(select(expected.id))
+          val insertPeople = CQLExecutor.execute(insert(expected)).runDrain
+          val fetchActual  = CQLExecutor.execute(select(expected.id)).runCollect
 
           for {
             _      <- insertPeople
             actual <- fetchActual
-          } yield assertTrue(actual.get == expected)
+          } yield assertTrue(actual.head == expected) && assertTrue(actual.length == 1)
         }
       } + testM(
         "Write and read rows for a UDT containing nested UDTs within themselves along with nested collections containing UDTs"
       ) {
         import Row_HeavilyNestedUDTTable._
         checkM(gen) { expected =>
-          val insertPeople = ZioCassandraSession.execute(insert(expected))
-          val fetchActual  = ZioCassandraSession.selectFirst(select(expected.id))
+          val insertPeople = CQLExecutor.execute(insert(expected)).runDrain
+          val fetchActual  = CQLExecutor.execute(select(expected.id)).runCollect
 
           for {
             _      <- insertPeople
             actual <- fetchActual
-          } yield assertTrue(actual.get == expected)
+          } yield assertTrue(actual.head == expected) && assertTrue(actual.length == 1)
         }
       }
     } @@ timeout(1.minute) @@ samples(10)
@@ -54,10 +53,10 @@ final case class Row_Person(
 object Row_Person {
   implicit val readerForRowPerson: Reader[Row_Person] = Reader.derive[Row_Person]
 
-  def insert(person: Row_Person): Mutation =
+  def insert(person: Row_Person): CQL[MutationResult] =
     cql"INSERT INTO userdefinedtypesspec_person (id, name, age, data) VALUES (${person.id}, ${person.name}, ${person.age}, ${person.data})".mutation
 
-  def select(id: Int): Query[Row_Person] =
+  def select(id: Int): CQL[Row_Person] =
     cql"SELECT id, name, age, data FROM userdefinedtypesspec_person WHERE id = $id".query[Row_Person]
 
   def gen: Gen[Random, Row_Person] =
@@ -131,15 +130,14 @@ object Row_HeavilyNestedUDTTable {
       data <- UDT_ExampleCollectionNestedUDTType.gen
     } yield Row_HeavilyNestedUDTTable(id, data)
 
-  def insert(in: Row_HeavilyNestedUDTTable): Mutation =
-    Mutation.Insert
-      .into("userdefinedtypesspec_heavilynestedudttable")
+  def insert(in: Row_HeavilyNestedUDTTable): CQL[MutationResult] =
+    InsertBuilder("userdefinedtypesspec_heavilynestedudttable")
       .value("id", in.id)
       .value("data", in.data)
       .build
 
-  def select(id: Int): Query[Row_HeavilyNestedUDTTable] =
-    Query.select
+  def select(id: Int): CQL[Row_HeavilyNestedUDTTable] =
+    SelectBuilder
       .from("userdefinedtypesspec_heavilynestedudttable")
       .column("id")
       .column("data")

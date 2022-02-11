@@ -1,6 +1,6 @@
 package io.kaizensolutions.virgil.dsl
 
-import io.kaizensolutions.virgil.Mutation
+import io.kaizensolutions.virgil.{CQL, MutationResult}
 import zio.{Chunk, NonEmptyChunk}
 
 class UpdateBuilder[State <: UpdateState](
@@ -25,12 +25,16 @@ class UpdateBuilder[State <: UpdateState](
     new UpdateBuilder(table, assignments, relations :+ relation)
   }
 
-  def build(implicit ev: State =:= UpdateState.Where): Mutation.Update = {
+  def build(implicit ev: State =:= UpdateState.Where): CQL[MutationResult] = {
     val _                = ev
     val readyAssignments = NonEmptyChunk.fromChunk(assignments)
     val readyRelations   = NonEmptyChunk.fromChunk(relations)
 
-    Mutation.Update(table, readyAssignments.get, readyRelations.get)
+    CQL.update(
+      tableName = table,
+      assignments = readyAssignments.get,
+      relations = readyRelations.get
+    )
   }
 }
 

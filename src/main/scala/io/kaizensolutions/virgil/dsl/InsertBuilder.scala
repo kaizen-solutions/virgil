@@ -1,7 +1,7 @@
 package io.kaizensolutions.virgil.dsl
 
 import io.kaizensolutions.virgil.codecs.Writer
-import io.kaizensolutions.virgil.{BindMarker, BindMarkerName, BindMarkers, Mutation}
+import io.kaizensolutions.virgil.{BindMarker, BindMarkerName, BindMarkers, CQL, MutationResult}
 
 class InsertBuilder[State <: InsertState](
   private val table: String,
@@ -44,10 +44,10 @@ class InsertBuilder[State <: InsertState](
     new InsertBuilder(table, columns, timeToLive, Some(timestamp))
   }
 
-  def build(implicit stateEvidence: State <:< InsertState.ColumnAdded): Mutation.Insert = {
+  def build(implicit stateEvidence: State <:< InsertState.ColumnAdded): CQL[MutationResult] = {
     // Make unused variables check happy
     val _ = stateEvidence
-    Mutation.Insert(tableName = table, columns = columns)
+    CQL.insert(table, columns)
   }
 
   override def toString: String =

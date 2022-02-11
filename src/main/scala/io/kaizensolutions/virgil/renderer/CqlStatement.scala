@@ -1,12 +1,13 @@
-package io.kaizensolutions.virgil.interpreters
+package io.kaizensolutions.virgil.renderer
 
+import io.kaizensolutions.virgil.CQLType.Mutation
 import io.kaizensolutions.virgil.codecs.Writer
 import io.kaizensolutions.virgil.dsl.{Assignment, Relation}
 import io.kaizensolutions.virgil._
 import zio.{Chunk, NonEmptyChunk}
 
 object CqlStatement {
-  def render(in: Mutation): (String, BindMarkers) =
+  def render(in: CQLType.Mutation): (String, BindMarkers) =
     in match {
       case Mutation.Insert(tableName, columns) =>
         insert.render(tableName, columns)
@@ -24,7 +25,7 @@ object CqlStatement {
         (cql, bindMarkers)
     }
 
-  def render[FromCassandra](in: Query[FromCassandra]): (String, BindMarkers) =
+  def render[FromCassandra](in: CQLType.Query[FromCassandra]): (String, BindMarkers) =
     in.queryType match {
       case QueryType.Select(tableName, columnNames, relations) =>
         select.render(tableName, columnNames, relations)
@@ -199,11 +200,11 @@ object CqlStatement {
   private object select {
     def render(
       tableName: String,
-      columnNames: NonEmptyChunk[BindMarkerName],
+      columnNames: NonEmptyChunk[String],
       relations: Chunk[Relation]
     ): (String, BindMarkers) = {
       val (relationsCql, relationBindMarkers) = renderRelations(relations)
-      val columnNamesCql                      = columnNames.map(_.name).mkString(start = "", sep = ",", end = "")
+      val columnNamesCql                      = columnNames.mkString(start = "", sep = ",", end = "")
 
       (s"SELECT $columnNamesCql FROM $tableName $relationsCql", relationBindMarkers)
     }

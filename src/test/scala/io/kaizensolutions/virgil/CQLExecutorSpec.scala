@@ -1,7 +1,6 @@
 package io.kaizensolutions.virgil
 
 import com.datastax.oss.driver.api.core.uuid.Uuids
-import io.kaizensolutions.virgil.Mutation.Truncate
 import io.kaizensolutions.virgil.codecs.{Reader, Writer}
 import io.kaizensolutions.virgil.configuration.{ConsistencyLevel, ExecutionAttributes}
 import io.kaizensolutions.virgil.cql._
@@ -18,36 +17,38 @@ import java.nio.ByteBuffer
 import java.util.UUID
 import scala.util.Try
 
-object ZioCassandraSessionSpec {
-  def sessionSpec: Spec[Live with Has[ZioCassandraSession] with Random with Sized with TestConfig, TestFailure[
+object CQLExecutorSpec {
+  def sessionSpec: Spec[Live with Has[CQLExecutor] with Random with Sized with TestConfig, TestFailure[
     Throwable
   ], TestSuccess] =
     suite("Cassandra Session Interpreter Specification") {
       (queries + actions) @@ timeout(1.minute) @@ samples(10)
     }
 
-  def queries
-    : Spec[Has[ZioCassandraSession] with Random with Sized with TestConfig, TestFailure[Throwable], TestSuccess] =
+  def queries: Spec[Has[CQLExecutor] with Random with Sized with TestConfig, TestFailure[Throwable], TestSuccess] =
     suite("Queries") {
       testM("selectFirst") {
-        ZioCassandraSession
-          .selectFirst(
-            input = cql"SELECT now() FROM system.local".query[SystemLocalResponse],
-            config = ExecutionAttributes.default.withConsistencyLevel(ConsistencyLevel.LocalOne)
+        CQLExecutor
+          .execute(
+            cql"SELECT now() FROM system.local"
+              .query[SystemLocalResponse]
+              .withAttributes(ExecutionAttributes.default.withConsistencyLevel(ConsistencyLevel.LocalOne))
           )
+          .runLast
           .map(result => assertTrue(result.flatMap(_.time.toOption).get > 0))
       } +
         testM("select") {
-          ZioCassandraSession
-            .select(
-              input = cql"SELECT prepared_id, logged_keyspace, query_string FROM system.prepared_statements"
-                .query[PreparedStatementsResponse],
-              config = ExecutionAttributes.default.withConsistencyLevel(ConsistencyLevel.LocalOne)
+          CQLExecutor
+            .execute(
+              cql"SELECT prepared_id, logged_keyspace, query_string FROM system.prepared_statements"
+                .query[PreparedStatementsResponse]
+                .withAttributes(ExecutionAttributes.default.withConsistencyLevel(ConsistencyLevel.LocalOne))
             )
             .runCollect
             .map(results =>
               assertTrue(results.forall { r =>
                 import r.{query_string => query}
+
                 query.contains("SELECT") ||
                 query.contains("UPDATE") ||
                 query.contains("CREATE") ||
@@ -61,11 +62,14 @@ object ZioCassandraSessionSpec {
           import SelectPageRow._
           checkM(Gen.chunkOfN(50)(gen)) { actual =>
             for {
-              _  <- ZioCassandraSession.execute(truncate)
-              _  <- ZIO.foreachPar_(actual.map(insert))(ZioCassandraSession.execute(_))
-              all = ZioCassandraSession.select(selectAll).runCollect
+              _  <- CQLExecutor.execute(truncate).runDrain
+              _  <- ZIO.foreachPar_(actual.map(insert))(CQLExecutor.execute(_).runDrain)
+              all = CQLExecutor.execute(selectAll).runCollect
               paged =
-                selectPageStream(selectAll, ExecutionAttributes.default.withPageSize(actual.length / 2)).runCollect
+                selectPageStream(
+                  selectAll
+                    .withAttributes(ExecutionAttributes.default.withPageSize(actual.length / 2))
+                ).runCollect
               result                        <- all.zipPar(paged)
               (dataFromSelect, dataFromPage) = result
             } yield assert(dataFromPage)(hasSameElements(dataFromSelect)) &&
@@ -74,21 +78,20 @@ object ZioCassandraSessionSpec {
         }
     }
 
-  def actions
-    : Spec[Has[ZioCassandraSession] with Random with Sized with TestConfig, TestFailure[Throwable], TestSuccess] =
+  def actions: Spec[Has[CQLExecutor] with Random with Sized with TestConfig, TestFailure[Throwable], TestSuccess] =
     suite("Actions") {
       testM("executeAction") {
         import ExecuteTestTable._
         checkM(Gen.listOfN(10)(gen)) { actual =>
-          val truncateData = ZioCassandraSession.execute(truncate(table))
+          val truncateData = CQLExecutor.execute(truncate(table)).runDrain
           val toInsert     = actual.map(insert(table))
-          val expected = ZioCassandraSession
-            .select(selectAllIn(table)(actual.map(_.id)))
+          val expected = CQLExecutor
+            .execute(selectAllIn(table)(actual.map(_.id)))
             .runCollect
 
           for {
             _        <- truncateData
-            _        <- ZIO.foreachPar_(toInsert)(ZioCassandraSession.execute(_))
+            _        <- ZIO.foreachPar_(toInsert)(CQLExecutor.execute(_).runDrain)
             expected <- expected
           } yield assert(actual)(hasSameElements(expected))
         }
@@ -96,18 +99,20 @@ object ZioCassandraSessionSpec {
         testM("executeBatchAction") {
           import ExecuteTestTable._
           checkM(Gen.listOfN(10)(gen)) { actual =>
-            val truncateData = ZioCassandraSession.execute(truncate(batchTable))
-            val toInsert: Batch = {
-              val inserts = actual.map(ExecuteTestTable.insert(batchTable))
-              Batch.unlogged(inserts.head, inserts.tail: _*)
-            }
-            val expected = ZioCassandraSession
-              .select(selectAllIn(batchTable)(actual.map(_.id)))
+            val truncateData = CQLExecutor.execute(truncate(batchTable))
+            val batchedInsert: CQL[MutationResult] =
+              actual
+                .map(ExecuteTestTable.insert(batchTable))
+                .reduce(_ + _)
+                .batchType(BatchType.Unlogged)
+
+            val expected = CQLExecutor
+              .execute(selectAllIn(batchTable)(actual.map(_.id)))
               .runCollect
 
             for {
-              _        <- truncateData
-              _        <- ZioCassandraSession.executeBatch(toInsert)
+              _        <- truncateData.runDrain
+              _        <- CQLExecutor.execute(batchedInsert).runDrain
               expected <- expected
             } yield assert(actual)(hasSameElements(expected))
           }
@@ -116,19 +121,20 @@ object ZioCassandraSessionSpec {
 
   // Used to provide a similar API as the `select` method
   private def selectPageStream[ScalaType](
-    query: Query[ScalaType],
-    executionAttributes: ExecutionAttributes
-  ): ZStream[Has[ZioCassandraSession], Throwable, ScalaType] =
+    query: CQL[ScalaType]
+  ): ZStream[Has[CQLExecutor], Throwable, ScalaType] =
     ZStream
-      .fromEffect(ZioCassandraSession.selectPage(input = query, page = None, config = executionAttributes))
+      .fromEffect(CQLExecutor.executePage(query))
       .flatMap {
-        case (chunk, Some(page)) =>
+        case Paged(chunk, Some(page)) =>
           ZStream.fromChunk(chunk) ++
             ZStream.paginateChunkM(page)(nextPage =>
-              ZioCassandraSession.selectPage(input = query, page = Some(nextPage), config = executionAttributes)
+              CQLExecutor
+                .executePage(in = query, pageState = Some(nextPage))
+                .map(r => (r.data, r.pageState))
             )
 
-        case (chunk, None) =>
+        case Paged(chunk, None) =>
           ZStream.fromChunk(chunk)
       }
 }
@@ -160,17 +166,17 @@ object ExecuteTestTable {
   val table      = "ziocassandrasessionspec_executeAction"
   val batchTable = "ziocassandrasessionspec_executeBatchAction"
 
-  def truncate(tbl: String): Mutation = Truncate(tbl)
+  def truncate(tbl: String): CQL[MutationResult] = CQL.truncate(tbl)
 
   val gen: Gen[Random with Sized, ExecuteTestTable] = for {
     id   <- Gen.int(1, 1000)
     info <- Gen.alphaNumericStringBounded(10, 15)
   } yield ExecuteTestTable(id, info)
 
-  def insert(table: String)(in: ExecuteTestTable): Mutation =
+  def insert(table: String)(in: ExecuteTestTable): CQL[MutationResult] =
     (cql"INSERT INTO ".appendString(table) ++ cql"(id, info) VALUES (${in.id}, ${in.info})").mutation
 
-  def selectAllIn(table: String)(ids: List[Int]): Query[ExecuteTestTable] =
+  def selectAllIn(table: String)(ids: List[Int]): CQL[ExecuteTestTable] =
     (cql"SELECT id, info FROM ".appendString(table) ++ cql" WHERE id IN $ids")
       .query[ExecuteTestTable]
 }
@@ -180,12 +186,12 @@ object SelectPageRow {
   implicit val readerForSelectPageRow: Reader[SelectPageRow] = Reader.derive[SelectPageRow]
   implicit val writerForSelectPageRow: Writer[SelectPageRow] = Writer.derive[SelectPageRow]
 
-  val truncate = s"TRUNCATE ziocassandrasessionspec_selectPage"
+  val truncate: CQL[MutationResult] = CQL.truncate("ziocassandrasessionspec_selectPage")
 
-  def insert(in: SelectPageRow): Mutation =
+  def insert(in: SelectPageRow): CQL[MutationResult] =
     cql"INSERT INTO ziocassandrasessionspec_selectPage (id, bucket, info) VALUES (${in.id}, ${in.bucket}, ${in.info})".mutation
 
-  def selectAll: Query[SelectPageRow] =
+  def selectAll: CQL[SelectPageRow] =
     cql"SELECT id, bucket, info FROM ziocassandrasessionspec_selectPage".query[SelectPageRow]
 
   val gen: Gen[Random with Sized, SelectPageRow] =

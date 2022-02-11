@@ -44,6 +44,8 @@ object BindMarker {
 }
 
 final case class BindMarkers(underlying: ListMap[BindMarkerName, BindMarker]) {
+  def isEmpty: Boolean = underlying.isEmpty
+
   def +(column: BindMarker): BindMarkers =
     copy(underlying = underlying + (column.name -> column))
 
