@@ -8,14 +8,14 @@ import zio.test.TestAspect.samples
 import zio.test._
 
 object CollectionsSpec {
-  def collectionsSpec: ZSpec[Has[ZioCassandraSession] with Random with Sized with TestConfig, Throwable] =
+  def collectionsSpec: ZSpec[Has[CQLExecutor] with Random with Sized with TestConfig, Throwable] =
     suite("Collections Specification") {
       testM("Read and write a row containing collections") {
         import SimpleCollectionRow._
         checkM(gen) { expected =>
           for {
-            _      <- ZioCassandraSession.execute(insert(expected))
-            result <- ZioCassandraSession.select(select(expected.id)).runCollect
+            _      <- CQLExecutor.execute(insert(expected)).runDrain
+            result <- CQLExecutor.execute(select(expected.id)).runCollect
             actual  = result.head
           } yield assertTrue(actual == expected) && assertTrue(result.length == 1)
         }
@@ -23,8 +23,8 @@ object CollectionsSpec {
         import NestedCollectionRow._
         checkM(gen) { expected =>
           for {
-            _      <- ZioCassandraSession.execute(insert(expected))
-            result <- ZioCassandraSession.select(select(expected.a)).runCollect
+            _      <- CQLExecutor.execute(insert(expected)).runDrain
+            result <- CQLExecutor.execute(select(expected.a)).runCollect
             actual  = result.head
           } yield assertTrue(actual == expected) && assertTrue(result.length == 1)
         }
@@ -42,17 +42,16 @@ object SimpleCollectionRow {
   implicit val readerForSimpleCollectionRow: Reader[SimpleCollectionRow] = Reader.derive[SimpleCollectionRow]
   implicit val writerForSimpleCollectionRow: Writer[SimpleCollectionRow] = Writer.derive[SimpleCollectionRow]
 
-  def insert(in: SimpleCollectionRow): Mutation =
-    Mutation.Insert
-      .into("collectionspec_simplecollectiontable")
+  def insert(in: SimpleCollectionRow): CQL[MutationResult] =
+    InsertBuilder("collectionspec_simplecollectiontable")
       .value("id", in.id)
       .value("mapTest", in.mapTest)
       .value("setTest", in.setTest)
       .value("listTest", in.listTest)
       .build
 
-  def select(id: Int) =
-    Query.select
+  def select(id: Int): CQL[SimpleCollectionRow] =
+    SelectBuilder
       .from("collectionspec_simplecollectiontable")
       .column("id")
       .column("mapTest")
@@ -79,16 +78,15 @@ object NestedCollectionRow {
   implicit val writerForNestedCollectionRow: Writer[NestedCollectionRow] = Writer.derive[NestedCollectionRow]
 
   def select(a: Int) =
-    Query.select
+    SelectBuilder
       .from("collectionspec_nestedcollectiontable")
       .column("a")
       .column("b")
       .where("a" === a)
       .build[NestedCollectionRow]
 
-  def insert(in: NestedCollectionRow): Mutation =
-    Mutation.Insert
-      .into("collectionspec_nestedcollectiontable")
+  def insert(in: NestedCollectionRow): CQL[MutationResult] =
+    InsertBuilder("collectionspec_nestedcollectiontable")
       .value("a", in.a)
       .value("b", in.b)
       .build

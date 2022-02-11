@@ -42,5 +42,7 @@ trait CqlInterpolatedStringSyntax {
         queryString = s"$self${that.queryString}",
         dataToBeBound = that.dataToBeBound
       )
+
+    def asCql: CqlInterpolatedString = CqlInterpolatedString(queryString = self, dataToBeBound = ListMap.empty)
   }
 }

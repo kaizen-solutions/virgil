@@ -1,8 +1,8 @@
 package io.kaizensolutions.virgil.dsl
 
 import com.datastax.oss.driver.api.core.cql.Row
+import io.kaizensolutions.virgil.CQL
 import io.kaizensolutions.virgil.codecs.Reader
-import io.kaizensolutions.virgil.{BindMarkerName, Query, QueryType}
 import zio.{Chunk, NonEmptyChunk}
 
 class SelectBuilder[State <: SelectState](
@@ -33,20 +33,21 @@ class SelectBuilder[State <: SelectState](
     new SelectBuilder(tableName, columnNames, relations :+ relation)
   }
 
-  def buildRow(implicit ev: State <:< SelectState.NonEmpty): Query[Row] = {
+  def buildRow(implicit ev: State <:< SelectState.NonEmpty): CQL[Row] = {
     val _       = ev
-    val columns = NonEmptyChunk.fromChunk(columnNames).get.map(BindMarkerName.make)
-    Query(
-      queryType = QueryType.Select(tableName, columns, relations),
-      reader = Reader.cassandraRowReader
+    val columns = NonEmptyChunk.fromChunk(columnNames).get
+    CQL.select[Row](
+      tableName = tableName,
+      columns = columns,
+      relations = relations
     )
   }
 
   def build[FromCassandra <: Product](implicit
     readerEv: Reader[FromCassandra],
     stateEv: State <:< SelectState.NonEmpty
-  ): Query[FromCassandra] =
-    buildRow(stateEv).withOutput[FromCassandra](readerEv)
+  ): CQL[FromCassandra] =
+    buildRow(stateEv).readAs[FromCassandra]
 }
 object SelectBuilder {
   def from(tableName: String): SelectBuilder[SelectState.Empty] =

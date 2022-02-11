@@ -1,5 +1,6 @@
 package io.kaizensolutions.virgil
 
+import io.kaizensolutions.virgil.Proofs._
 import io.kaizensolutions.virgil.codecs.Reader
 import io.kaizensolutions.virgil.configuration.ExecutionAttributes
 import io.kaizensolutions.virgil.dsl.{Assignment, Relation}
@@ -124,4 +125,19 @@ object CQL {
     relations: NonEmptyChunk[Relation]
   ): CQL[MutationResult] =
     CQL(CQLType.Mutation.Update(tableName, assignments, relations), ExecutionAttributes.default)
+
+  implicit class CQLQueryOps[A](in: CQL[A])(implicit ev: A <:!< MutationResult) {
+    def readAs[B](implicit reader: Reader[B]): CQL[B] =
+      in.cqlType match {
+        case CQLType.Query(queryType, _, pullMode) =>
+          CQL(CQLType.Query(queryType, reader, pullMode), in.executionAttributes)
+
+        // These are not possible due to type constraints
+        case _: CQLType.Mutation =>
+          sys.error("It is not possible to change a mutation to a query")
+
+        case _: CQLType.Batch =>
+          sys.error("It is not possible to change a batch mutation to a query")
+      }
+  }
 }
