@@ -9,50 +9,58 @@ trait CassandraContainer {
 }
 object CassandraContainer {
   def apply(cassType: CassandraType): UManaged[CassandraContainer] = {
-    val imageName  = "datastax/dse-server:6.8.19"
-    val nativePort = 9042
-    val env = Map(
+    val nativePort         = 9042
+    val datastaxEnterprise = "datastax/dse-server:6.8.19"
+    val datastaxEnv = Map(
       "DS_LICENSE"     -> "accept",
       "JVM_EXTRA_OPTS" -> "-Dcassandra.initial_token=0 -Dcassandra.skip_wait_for_gossip_to_settle=0"
+    )
+    val vanilla = "cassandra:4"
+    val vanillaEnv = Map(
+      "CASSANDRA_ENDPOINT_SNITCH" -> "GossipingPropertyFileSnitch",
+      "CASSANDRA_DC"              -> "dc1",
+      "CASSANDRA_NUM_TOKENS"      -> "1",
+      "CASSANDRA_START_RPC"       -> "false",
+      "JVM_OPTS"                  -> "-Dcassandra.skip_wait_for_gossip_to_settle=0 -Dcassandra.auto_bootstrap=false"
     )
 
     val container = cassType match {
       case CassandraType.Plain =>
         GenericContainer(
-          dockerImage = imageName,
-          env = env,
+          dockerImage = vanilla,
+          env = vanillaEnv,
           exposedPorts = Seq(nativePort)
         )
 
       case CassandraType.Search =>
         GenericContainer(
-          dockerImage = imageName,
+          dockerImage = datastaxEnterprise,
           command = Seq("-s"),
-          env = env,
+          env = datastaxEnv,
           exposedPorts = Seq(nativePort)
         )
 
       case CassandraType.Graph =>
         GenericContainer(
-          dockerImage = imageName,
+          dockerImage = datastaxEnterprise,
           command = Seq("-g"),
-          env = env,
+          env = datastaxEnv,
           exposedPorts = Seq(nativePort)
         )
 
       case CassandraType.Analytics =>
         GenericContainer(
-          dockerImage = imageName,
+          dockerImage = datastaxEnterprise,
           command = Seq("-k"),
-          env = env,
+          env = datastaxEnv,
           exposedPorts = Seq(nativePort)
         )
 
       case CassandraType.Full =>
         GenericContainer(
-          dockerImage = imageName,
+          dockerImage = datastaxEnterprise,
           command = Seq("-s -k -g"),
-          env = env,
+          env = datastaxEnv,
           exposedPorts = Seq(nativePort)
         )
     }

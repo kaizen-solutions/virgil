@@ -28,22 +28,18 @@ object CQLExecutorSpec {
   def queries: Spec[Has[CQLExecutor] with Random with Sized with TestConfig, TestFailure[Throwable], TestSuccess] =
     suite("Queries") {
       testM("selectFirst") {
-        CQLExecutor
-          .execute(
-            cql"SELECT now() FROM system.local"
-              .query[SystemLocalResponse]
-              .withAttributes(ExecutionAttributes.default.withConsistencyLevel(ConsistencyLevel.LocalOne))
-          )
+        cql"SELECT now() FROM system.local"
+          .query[SystemLocalResponse]
+          .withAttributes(ExecutionAttributes.default.withConsistencyLevel(ConsistencyLevel.LocalOne))
+          .execute
           .runLast
           .map(result => assertTrue(result.flatMap(_.time.toOption).get > 0))
       } +
         testM("select") {
-          CQLExecutor
-            .execute(
-              cql"SELECT prepared_id, logged_keyspace, query_string FROM system.prepared_statements"
-                .query[PreparedStatementsResponse]
-                .withAttributes(ExecutionAttributes.default.withConsistencyLevel(ConsistencyLevel.LocalOne))
-            )
+          cql"SELECT prepared_id, logged_keyspace, query_string FROM system.prepared_statements"
+            .query[PreparedStatementsResponse]
+            .withAttributes(ExecutionAttributes.default.withConsistencyLevel(ConsistencyLevel.LocalOne))
+            .execute
             .runCollect
             .map(results =>
               assertTrue(results.forall { r =>
@@ -62,9 +58,9 @@ object CQLExecutorSpec {
           import SelectPageRow._
           checkM(Gen.chunkOfN(50)(gen)) { actual =>
             for {
-              _  <- CQLExecutor.execute(truncate).runDrain
-              _  <- ZIO.foreachPar_(actual.map(insert))(CQLExecutor.execute(_).runDrain)
-              all = CQLExecutor.execute(selectAll).runCollect
+              _  <- truncate.execute.runDrain
+              _  <- ZIO.foreachPar_(actual.map(insert))(_.execute.runDrain)
+              all = selectAll.execute.runCollect
               paged =
                 selectPageStream(
                   selectAll
@@ -83,15 +79,13 @@ object CQLExecutorSpec {
       testM("executeAction") {
         import ExecuteTestTable._
         checkM(Gen.listOfN(10)(gen)) { actual =>
-          val truncateData = CQLExecutor.execute(truncate(table)).runDrain
+          val truncateData = truncate(table).execute.runDrain
           val toInsert     = actual.map(insert(table))
-          val expected = CQLExecutor
-            .execute(selectAllIn(table)(actual.map(_.id)))
-            .runCollect
+          val expected     = selectAllIn(table)(actual.map(_.id)).execute.runCollect
 
           for {
             _        <- truncateData
-            _        <- ZIO.foreachPar_(toInsert)(CQLExecutor.execute(_).runDrain)
+            _        <- ZIO.foreachPar_(toInsert)(_.execute.runDrain)
             expected <- expected
           } yield assert(actual)(hasSameElements(expected))
         }
@@ -99,21 +93,21 @@ object CQLExecutorSpec {
         testM("executeBatchAction") {
           import ExecuteTestTable._
           checkM(Gen.listOfN(10)(gen)) { actual =>
-            val truncateData = CQLExecutor.execute(truncate(batchTable))
-            val batchedInsert: CQL[MutationResult] =
+            val truncateData = truncate(batchTable).execute
+            val batchedInsert: ZStream[Has[CQLExecutor], Throwable, MutationResult] =
               actual
                 .map(ExecuteTestTable.insert(batchTable))
                 .reduce(_ + _)
                 .batchType(BatchType.Unlogged)
+                .execute
 
-            val expected = CQLExecutor
-              .execute(selectAllIn(batchTable)(actual.map(_.id)))
-              .runCollect
+            val expected: ZStream[Has[CQLExecutor], Throwable, ExecuteTestTable] =
+              selectAllIn(batchTable)(actual.map(_.id)).execute
 
             for {
               _        <- truncateData.runDrain
-              _        <- CQLExecutor.execute(batchedInsert).runDrain
-              expected <- expected
+              _        <- batchedInsert.runDrain
+              expected <- expected.runCollect
             } yield assert(actual)(hasSameElements(expected))
           }
         }
@@ -124,13 +118,13 @@ object CQLExecutorSpec {
     query: CQL[ScalaType]
   ): ZStream[Has[CQLExecutor], Throwable, ScalaType] =
     ZStream
-      .fromEffect(CQLExecutor.executePage(query))
+      .fromEffect(query.executePage())
       .flatMap {
         case Paged(chunk, Some(page)) =>
           ZStream.fromChunk(chunk) ++
             ZStream.paginateChunkM(page)(nextPage =>
-              CQLExecutor
-                .executePage(in = query, pageState = Some(nextPage))
+              query
+                .executePage(Some(nextPage))
                 .map(r => (r.data, r.pageState))
             )
 

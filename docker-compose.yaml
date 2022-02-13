@@ -6,6 +6,7 @@ services:
     command: -s
     hostname: datastax-enterprise
     container_name: datastax-enterprise
+    platform: linux/amd64
     environment:
       DS_LICENSE: accept
       JVM_EXTRA_OPTS: -Dcassandra.initial_token=0 -Dcassandra.skip_wait_for_gossip_to_settle=0

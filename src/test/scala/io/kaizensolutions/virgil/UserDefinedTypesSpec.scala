@@ -19,8 +19,8 @@ object UserDefinedTypesSpec {
       testM("Write and read Person rows containing UDTs which are nested") {
         import Row_Person._
         checkM(Row_Person.gen) { expected =>
-          val insertPeople = CQLExecutor.execute(insert(expected)).runDrain
-          val fetchActual  = CQLExecutor.execute(select(expected.id)).runCollect
+          val insertPeople = insert(expected).execute.runDrain
+          val fetchActual  = select(expected.id).execute.runCollect
 
           for {
             _      <- insertPeople
@@ -32,8 +32,8 @@ object UserDefinedTypesSpec {
       ) {
         import Row_HeavilyNestedUDTTable._
         checkM(gen) { expected =>
-          val insertPeople = CQLExecutor.execute(insert(expected)).runDrain
-          val fetchActual  = CQLExecutor.execute(select(expected.id)).runCollect
+          val insertPeople = insert(expected).execute.runDrain
+          val fetchActual  = select(expected.id).execute.runCollect
 
           for {
             _      <- insertPeople

@@ -1,9 +1,10 @@
 package io.kaizensolutions.virgil.renderer
 
 import io.kaizensolutions.virgil.CQLType.Mutation
+import io.kaizensolutions.virgil._
 import io.kaizensolutions.virgil.codecs.Writer
 import io.kaizensolutions.virgil.dsl.{Assignment, Relation}
-import io.kaizensolutions.virgil._
+import io.kaizensolutions.virgil.internal.QueryType
 import zio.{Chunk, NonEmptyChunk}
 
 object CqlStatement {

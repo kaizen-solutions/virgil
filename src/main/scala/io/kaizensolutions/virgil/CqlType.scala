@@ -2,6 +2,7 @@ package io.kaizensolutions.virgil
 
 import io.kaizensolutions.virgil.codecs.Reader
 import io.kaizensolutions.virgil.dsl.{Assignment, Relation}
+import io.kaizensolutions.virgil.internal.{PullMode, QueryType}
 import zio.NonEmptyChunk
 
 sealed trait CQLType[+Result]

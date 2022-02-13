@@ -14,8 +14,8 @@ object CollectionsSpec {
         import SimpleCollectionRow._
         checkM(gen) { expected =>
           for {
-            _      <- CQLExecutor.execute(insert(expected)).runDrain
-            result <- CQLExecutor.execute(select(expected.id)).runCollect
+            _      <- insert(expected).execute.runDrain
+            result <- select(expected.id).execute.runCollect
             actual  = result.head
           } yield assertTrue(actual == expected) && assertTrue(result.length == 1)
         }
@@ -23,8 +23,8 @@ object CollectionsSpec {
         import NestedCollectionRow._
         checkM(gen) { expected =>
           for {
-            _      <- CQLExecutor.execute(insert(expected)).runDrain
-            result <- CQLExecutor.execute(select(expected.a)).runCollect
+            _      <- insert(expected).execute.runDrain
+            result <- select(expected.a).execute.runCollect
             actual  = result.head
           } yield assertTrue(actual == expected) && assertTrue(result.length == 1)
         }
@@ -77,7 +77,7 @@ object NestedCollectionRow {
   implicit val readerForNestedCollectionRow: Reader[NestedCollectionRow] = Reader.derive[NestedCollectionRow]
   implicit val writerForNestedCollectionRow: Writer[NestedCollectionRow] = Writer.derive[NestedCollectionRow]
 
-  def select(a: Int) =
+  def select(a: Int): CQL[NestedCollectionRow] =
     SelectBuilder
       .from("collectionspec_nestedcollectiontable")
       .column("a")

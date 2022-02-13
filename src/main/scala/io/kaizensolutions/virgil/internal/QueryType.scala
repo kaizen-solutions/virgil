@@ -1,11 +1,12 @@
-package io.kaizensolutions.virgil
+package io.kaizensolutions.virgil.internal
 
+import io.kaizensolutions.virgil.BindMarkers
 import io.kaizensolutions.virgil.dsl.Relation
 import zio.{Chunk, NonEmptyChunk}
 
-sealed trait QueryType
+sealed private[virgil] trait QueryType
 object QueryType {
-  final case class Select[FromCassandra](
+  final private[virgil] case class Select[FromCassandra](
     tableName: String,
     columnNames: NonEmptyChunk[String],
     relations: Chunk[Relation]

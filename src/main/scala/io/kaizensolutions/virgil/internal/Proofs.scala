@@ -1,11 +1,11 @@
-package io.kaizensolutions.virgil
+package io.kaizensolutions.virgil.internal
 
 import scala.annotation.implicitNotFound
 
 /**
  * Credits to Shapeless
  */
-object Proofs {
+private[virgil] object Proofs {
   def unexpected: Nothing = sys.error("Unexpected invocation")
 
   @implicitNotFound("Cannot prove that ${A} is not the same type as ${B}")
