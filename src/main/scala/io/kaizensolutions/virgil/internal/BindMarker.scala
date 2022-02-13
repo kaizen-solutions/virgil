@@ -1,4 +1,4 @@
-package io.kaizensolutions.virgil
+package io.kaizensolutions.virgil.internal
 
 import io.kaizensolutions.virgil.codecs.Writer
 import io.kaizensolutions.virgil.cql.ValueInCql
@@ -9,7 +9,7 @@ import scala.collection.immutable.ListMap
  * A BindMarker consists of a name along with the data and the capability to
  * write the data to a DataStax statement.
  */
-trait BindMarker { self =>
+private[virgil] trait BindMarker { self =>
   type ScalaType
   def name: BindMarkerName
   def value: ScalaType
@@ -18,7 +18,7 @@ trait BindMarker { self =>
   override def toString: String =
     s"Column(name = ${name.name}, value = $value)"
 }
-object BindMarker {
+private[virgil] object BindMarker {
   def make[A](columnName: BindMarkerName, columnValue: A)(implicit evidence: Writer[A]): BindMarker =
     new BindMarker {
       type ScalaType = A

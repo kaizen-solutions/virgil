@@ -1,7 +1,7 @@
 package io.kaizensolutions.virgil.dsl
 
-import io.kaizensolutions.virgil.BindMarkerName
 import io.kaizensolutions.virgil.codecs.Writer
+import io.kaizensolutions.virgil.internal.BindMarkerName
 import zio.NonEmptyChunk
 
 sealed trait Assignment

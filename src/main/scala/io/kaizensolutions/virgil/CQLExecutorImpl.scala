@@ -4,7 +4,7 @@ import com.datastax.oss.driver.api.core.CqlSession
 import com.datastax.oss.driver.api.core.cql.{BatchType => _, _}
 import io.kaizensolutions.virgil.configuration.{ExecutionAttributes, PageState}
 import io.kaizensolutions.virgil.internal.Proofs._
-import io.kaizensolutions.virgil.internal.PullMode
+import io.kaizensolutions.virgil.internal.{BindMarkers, PullMode}
 import io.kaizensolutions.virgil.renderer.CqlStatement
 import zio._
 import zio.stream._

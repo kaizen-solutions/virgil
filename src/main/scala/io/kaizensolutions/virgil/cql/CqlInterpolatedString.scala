@@ -2,7 +2,8 @@ package io.kaizensolutions.virgil.cql
 
 import com.datastax.oss.driver.api.core.cql.Row
 import io.kaizensolutions.virgil.codecs.Reader
-import io.kaizensolutions.virgil.{BindMarkers, CQL, MutationResult}
+import io.kaizensolutions.virgil.internal.BindMarkers
+import io.kaizensolutions.virgil.{CQL, MutationResult}
 
 import scala.collection.immutable.ListMap
 

@@ -4,7 +4,7 @@ import io.kaizensolutions.virgil.internal.Proofs._
 import io.kaizensolutions.virgil.codecs.Reader
 import io.kaizensolutions.virgil.configuration.{ExecutionAttributes, PageState}
 import io.kaizensolutions.virgil.dsl.{Assignment, Relation}
-import io.kaizensolutions.virgil.internal.{PullMode, QueryType}
+import io.kaizensolutions.virgil.internal.{BindMarkers, PullMode, QueryType}
 import zio._
 import zio.stream.ZStream
 

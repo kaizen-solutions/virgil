@@ -1,6 +1,5 @@
 package io.kaizensolutions.virgil.internal
 
-import io.kaizensolutions.virgil.BindMarkers
 import io.kaizensolutions.virgil.dsl.Relation
 import zio.{Chunk, NonEmptyChunk}
 

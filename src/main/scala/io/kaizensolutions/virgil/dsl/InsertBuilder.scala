@@ -1,7 +1,8 @@
 package io.kaizensolutions.virgil.dsl
 
 import io.kaizensolutions.virgil.codecs.Writer
-import io.kaizensolutions.virgil.{BindMarker, BindMarkerName, BindMarkers, CQL, MutationResult}
+import io.kaizensolutions.virgil.internal.{BindMarker, BindMarkerName, BindMarkers}
+import io.kaizensolutions.virgil.{CQL, MutationResult}
 
 class InsertBuilder[State <: InsertState](
   private val table: String,
