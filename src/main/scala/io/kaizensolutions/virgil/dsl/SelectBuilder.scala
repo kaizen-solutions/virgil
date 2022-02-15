@@ -2,7 +2,7 @@ package io.kaizensolutions.virgil.dsl
 
 import com.datastax.oss.driver.api.core.cql.Row
 import io.kaizensolutions.virgil.CQL
-import io.kaizensolutions.virgil.codecs.Reader
+import io.kaizensolutions.virgil.codecs.RowReader
 import zio.{Chunk, NonEmptyChunk}
 
 class SelectBuilder[State <: SelectState](
@@ -44,7 +44,7 @@ class SelectBuilder[State <: SelectState](
   }
 
   def build[FromCassandra <: Product](implicit
-    readerEv: Reader[FromCassandra],
+    readerEv: RowReader[FromCassandra],
     stateEv: State <:< SelectState.NonEmpty
   ): CQL[FromCassandra] =
     buildRow(stateEv).readAs[FromCassandra]

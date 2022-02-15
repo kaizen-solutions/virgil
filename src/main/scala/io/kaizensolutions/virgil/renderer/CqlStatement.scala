@@ -84,7 +84,7 @@ object CqlStatement {
             val rawColumnName = columnName.name
             val parameter     = s":$rawColumnName"
             val queryString   = s"$rawColumnName $sign $parameter"
-            val column        = BindMarker.make(columnName, absOffset)(Writer.longWriter)
+            val column        = BindMarker.make(columnName, absOffset)(Writer.writerForLong)
             (queryString, BindMarkers.empty + column)
 
           case p: PrependListItems[a] =>
@@ -127,7 +127,7 @@ object CqlStatement {
             val valueParameter = s":$valueName"
 
             val queryString = s"$rawColumnName[$indexParameter] = $valueParameter"
-            val indexColumn = BindMarker.make(BindMarkerName.make(indexName), index)(Writer.intWriter)
+            val indexColumn = BindMarker.make(BindMarkerName.make(indexName), index)(Writer.writerForInt)
             val valueColumn = BindMarker.make(BindMarkerName.make(valueName), value)(ev)
             (queryString, BindMarkers.empty + indexColumn + valueColumn)
 

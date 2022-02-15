@@ -68,7 +68,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
       boundStatementWithPage = boundStatement.setPagingState(driverPageState)
       rp                    <- selectPage(boundStatementWithPage)
       (results, nextPage)    = rp
-      chunksToOutput         = results.map(reader.read("unused", _))
+      chunksToOutput         = results.map(reader.read(_, None))
     } yield Paged(chunksToOutput, nextPage)
   }
 
@@ -99,7 +99,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
     for {
       boundStatement <- ZStream.fromEffect(buildStatement(queryString, bindMarkers, config))
       reader          = input.reader
-      element        <- select(boundStatement).map(reader.read("unused", _))
+      element        <- select(boundStatement).map(reader.read(_, None))
     } yield element
   }
 
@@ -112,7 +112,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
       boundStatement <- buildStatement(queryString, bindMarkers, config)
       reader          = input.reader
       optRow         <- selectFirst(boundStatement)
-      element        <- Task.succeed(optRow.map(reader.read("unused", _)))
+      element        <- Task.succeed(optRow.map(reader.read(_, None)))
     } yield element
   }
 
@@ -171,8 +171,8 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
         val initial = preparedStatement.boundStatementBuilder()
         val boundColumns = columns.underlying.foldLeft(initial) { case (accBuilder, (colName, column)) =>
           column.write.write(
-            builder = accBuilder,
-            column = colName.name,
+            structure = accBuilder,
+            key = colName.name,
             value = column.value
           )
         }

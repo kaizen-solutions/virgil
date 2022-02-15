@@ -1,7 +1,7 @@
 package io.kaizensolutions.virgil
 
 import com.datastax.oss.driver.api.core.uuid.Uuids
-import io.kaizensolutions.virgil.codecs.{Reader, Writer}
+import io.kaizensolutions.virgil.codecs.RowReader
 import io.kaizensolutions.virgil.configuration.{ConsistencyLevel, ExecutionAttributes}
 import io.kaizensolutions.virgil.cql._
 import zio._
@@ -138,8 +138,8 @@ final case class SystemLocalResponse(`system.now()`: UUID) {
     Try(Uuids.unixTimestamp(`system.now()`)).toEither
 }
 object SystemLocalResponse {
-  implicit val readerForSystemLocalResponse: Reader[SystemLocalResponse] =
-    Reader.derive[SystemLocalResponse]
+  implicit val rowReaderForSystemLocalResponse: RowReader[SystemLocalResponse] =
+    RowReader.derive[SystemLocalResponse]
 }
 
 final case class PreparedStatementsResponse(
@@ -148,14 +148,14 @@ final case class PreparedStatementsResponse(
   query_string: String
 )
 object PreparedStatementsResponse {
-  implicit val readerForPreparedStatementsResponse: Reader[PreparedStatementsResponse] =
-    Reader.derive[PreparedStatementsResponse]
+  implicit val rowReaderForPreparedStatementsResponse: RowReader[PreparedStatementsResponse] =
+    RowReader.derive[PreparedStatementsResponse]
 }
 
 final case class ExecuteTestTable(id: Int, info: String)
 object ExecuteTestTable {
-  implicit val readerForExecuteTestTable: Reader[ExecuteTestTable] = Reader.derive[ExecuteTestTable]
-  implicit val writerForExecuteTestTable: Writer[ExecuteTestTable] = Writer.derive[ExecuteTestTable]
+  implicit val rowReaderForExecuteTestTable: RowReader[ExecuteTestTable] =
+    RowReader.derive[ExecuteTestTable]
 
   val table      = "ziocassandrasessionspec_executeAction"
   val batchTable = "ziocassandrasessionspec_executeBatchAction"
@@ -177,8 +177,8 @@ object ExecuteTestTable {
 
 final case class SelectPageRow(id: Int, bucket: Int, info: String)
 object SelectPageRow {
-  implicit val readerForSelectPageRow: Reader[SelectPageRow] = Reader.derive[SelectPageRow]
-  implicit val writerForSelectPageRow: Writer[SelectPageRow] = Writer.derive[SelectPageRow]
+  implicit val rowReaderForSelectPageRow: RowReader[SelectPageRow] =
+    RowReader.derive[SelectPageRow]
 
   val truncate: CQL[MutationResult] = CQL.truncate("ziocassandrasessionspec_selectPage")
 

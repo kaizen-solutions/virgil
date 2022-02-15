@@ -1,7 +1,7 @@
 package io.kaizensolutions.virgil.internal
 
-import io.kaizensolutions.virgil.codecs.Writer
 import io.kaizensolutions.virgil.cql.ValueInCql
+import io.kaizensolutions.virgil.codecs.Writer
 
 import scala.collection.immutable.ListMap
 
