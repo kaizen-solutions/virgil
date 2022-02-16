@@ -1,12 +1,17 @@
 package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.`type`._
-import com.datastax.oss.driver.api.core.cql.Row
-import com.datastax.oss.driver.api.core.data.{SettableByName, UdtValue}
+import com.datastax.oss.driver.api.core.data.{CqlDuration, SettableByName, TupleValue, UdtValue}
 import magnolia1._
 
 import scala.jdk.CollectionConverters._
 
+/**
+ * Writer for Cassandra data types.
+ * @see
+ *   https://docs.datastax.com/en/developer/java-driver/4.11/manual/core/#cql-to-java-type-mapping
+ * @tparam ScalaType
+ */
 trait Writer[ScalaType] { self =>
   type DriverType
 
@@ -62,6 +67,7 @@ object Writer extends UdtWriterMagnoliaDerivation {
       }
     }
 
+  // Primitives
   implicit val writerForString: Writer.WithDriver[String, java.lang.String] =
     new Writer[String] {
       override type DriverType = java.lang.String
@@ -158,6 +164,198 @@ object Writer extends UdtWriterMagnoliaDerivation {
         structure.setInstant(key, value)
     }
 
+  implicit val writerForByteBuffer: Writer.WithDriver[java.nio.ByteBuffer, java.nio.ByteBuffer] =
+    new Writer[java.nio.ByteBuffer] {
+      override type DriverType = java.nio.ByteBuffer
+
+      override def driverClass: Class[DriverType] = classOf[java.nio.ByteBuffer]
+
+      override def convertScalaToDriver(scalaValue: java.nio.ByteBuffer, dataType: DataType): DriverType = scalaValue
+
+      override def write[Structure <: SettableByName[Structure]](
+        key: String,
+        value: java.nio.ByteBuffer,
+        structure: Structure
+      ): Structure =
+        structure.setByteBuffer(key, value)
+    }
+
+  implicit val writerForBoolean: Writer.WithDriver[Boolean, java.lang.Boolean] =
+    new Writer[Boolean] {
+      override type DriverType = java.lang.Boolean
+
+      override def driverClass: Class[DriverType] = classOf[DriverType]
+
+      override def convertScalaToDriver(scalaValue: Boolean, dataType: DataType): DriverType = Boolean.box(scalaValue)
+
+      override def write[Structure <: SettableByName[Structure]](
+        key: String,
+        value: Boolean,
+        structure: Structure
+      ): Structure =
+        structure.setBoolean(key, value)
+    }
+
+  implicit val writerForBigDecimal: Writer.WithDriver[BigDecimal, java.math.BigDecimal] =
+    new Writer[BigDecimal] {
+      override type DriverType = java.math.BigDecimal
+
+      override def driverClass: Class[DriverType] = classOf[DriverType]
+
+      override def convertScalaToDriver(scalaValue: BigDecimal, dataType: DataType): DriverType = scalaValue.bigDecimal
+
+      override def write[Structure <: SettableByName[Structure]](
+        key: String,
+        value: BigDecimal,
+        structure: Structure
+      ): Structure =
+        structure.setBigDecimal(key, value.bigDecimal)
+    }
+
+  implicit val writerForDouble: Writer.WithDriver[Double, java.lang.Double] =
+    new Writer[Double] {
+      override type DriverType = java.lang.Double
+
+      override def driverClass: Class[DriverType] = classOf[DriverType]
+
+      override def convertScalaToDriver(scalaValue: Double, dataType: DataType): DriverType = Double.box(scalaValue)
+
+      override def write[Structure <: SettableByName[Structure]](
+        key: String,
+        value: Double,
+        structure: Structure
+      ): Structure =
+        structure.setDouble(key, value)
+    }
+
+  implicit val writerForCqlDuration: Writer.WithDriver[CqlDuration, CqlDuration] =
+    new Writer[CqlDuration] {
+      override type DriverType = CqlDuration
+
+      override def driverClass: Class[DriverType] = classOf[DriverType]
+
+      override def convertScalaToDriver(scalaValue: CqlDuration, dataType: DataType): DriverType = scalaValue
+
+      override def write[Structure <: SettableByName[Structure]](
+        key: String,
+        value: CqlDuration,
+        structure: Structure
+      ): Structure =
+        structure.setCqlDuration(key, value)
+    }
+
+  implicit val writerForFloat: Writer.WithDriver[Float, java.lang.Float] =
+    new Writer[Float] {
+      override type DriverType = java.lang.Float
+
+      override def driverClass: Class[DriverType] = classOf[DriverType]
+
+      override def convertScalaToDriver(scalaValue: Float, dataType: DataType): DriverType = Float.box(scalaValue)
+
+      override def write[Structure <: SettableByName[Structure]](
+        key: String,
+        value: Float,
+        structure: Structure
+      ): Structure =
+        structure.setFloat(key, value)
+    }
+
+  implicit val writerForInetAddress: Writer.WithDriver[java.net.InetAddress, java.net.InetAddress] =
+    new Writer[java.net.InetAddress] {
+      override type DriverType = java.net.InetAddress
+
+      override def driverClass: Class[DriverType] = classOf[DriverType]
+
+      override def convertScalaToDriver(scalaValue: java.net.InetAddress, dataType: DataType): DriverType = scalaValue
+
+      override def write[Structure <: SettableByName[Structure]](
+        key: String,
+        value: java.net.InetAddress,
+        structure: Structure
+      ): Structure =
+        structure.setInetAddress(key, value)
+    }
+
+  implicit val writerForShort: Writer.WithDriver[Short, java.lang.Short] =
+    new Writer[Short] {
+      override type DriverType = java.lang.Short
+
+      override def driverClass: Class[DriverType] = classOf[DriverType]
+
+      override def convertScalaToDriver(scalaValue: Short, dataType: DataType): DriverType = Short.box(scalaValue)
+
+      override def write[Structure <: SettableByName[Structure]](
+        key: String,
+        value: Short,
+        structure: Structure
+      ): Structure =
+        structure.setShort(key, value)
+    }
+
+  implicit val writerForUUID: Writer.WithDriver[java.util.UUID, java.util.UUID] =
+    new Writer[java.util.UUID] {
+      override type DriverType = java.util.UUID
+
+      override def driverClass: Class[DriverType] = classOf[DriverType]
+
+      override def convertScalaToDriver(scalaValue: java.util.UUID, dataType: DataType): DriverType = scalaValue
+
+      override def write[Structure <: SettableByName[Structure]](
+        key: String,
+        value: java.util.UUID,
+        structure: Structure
+      ): Structure =
+        structure.setUuid(key, value)
+    }
+
+  implicit val writerForByte: Writer.WithDriver[Byte, java.lang.Byte] =
+    new Writer[Byte] {
+      override type DriverType = java.lang.Byte
+
+      override def driverClass: Class[DriverType] = classOf[DriverType]
+
+      override def convertScalaToDriver(scalaValue: Byte, dataType: DataType): DriverType = Byte.box(scalaValue)
+
+      override def write[Structure <: SettableByName[Structure]](
+        key: String,
+        value: Byte,
+        structure: Structure
+      ): Structure =
+        structure.setByte(key, value)
+    }
+
+  implicit val writerForCqlTupleValue: Writer.WithDriver[TupleValue, TupleValue] = new Writer[TupleValue] {
+    override type DriverType = TupleValue
+
+    override def driverClass: Class[DriverType] = classOf[DriverType]
+
+    override def convertScalaToDriver(scalaValue: TupleValue, dataType: DataType): DriverType = scalaValue
+
+    override def write[Structure <: SettableByName[Structure]](
+      key: String,
+      value: TupleValue,
+      structure: Structure
+    ): Structure =
+      structure.setTupleValue(key, value)
+  }
+
+  implicit val writerForBigInteger: Writer.WithDriver[BigInt, java.math.BigInteger] =
+    new Writer[BigInt] {
+      override type DriverType = java.math.BigInteger
+
+      override def driverClass: Class[DriverType] = classOf[DriverType]
+
+      override def convertScalaToDriver(scalaValue: BigInt, dataType: DataType): DriverType = scalaValue.bigInteger
+
+      override def write[Structure <: SettableByName[Structure]](
+        key: String,
+        value: BigInt,
+        structure: Structure
+      ): Structure =
+        structure.setBigInteger(key, value.bigInteger)
+    }
+
+  // Collections
   implicit def writerForList[Elem](implicit ew: Writer[Elem]): Writer[List[Elem]] =
     new Writer[List[Elem]] {
       self =>
@@ -258,31 +456,11 @@ object Writer extends UdtWriterMagnoliaDerivation {
         }
     }
 }
-trait FieldWriterMagnoliaDerivation {
-  type Typeclass[T] = Writer[T]
-
-  def join[T](ctx: CaseClass[Writer, T]): Writer.WithDriver[T, Row] = new Writer[T] {
-    override type DriverType = Row
-
-    override def driverClass: Class[DriverType] = classOf[DriverType]
-
-    override def convertScalaToDriver(scalaValue: T, dataType: DataType): Row = null
-
-    override def write[Structure <: SettableByName[Structure]](
-      key: String,
-      value: T,
-      structure: Structure
-    ): Structure = ctx.parameters.foldLeft(structure) { case (s, p) =>
-      p.typeclass.write(p.label, p.dereference(value), s)
-    }
-  }
-
-  def deriveRow[T]: Writer[T] = macro Magnolia.gen[T]
-}
 
 trait UdtWriterMagnoliaDerivation {
   type Typeclass[T] = Writer[T]
 
+  // User Defined Types
   def join[T](ctx: CaseClass[Writer, T]): Writer.WithDriver[T, UdtValue] = new Writer[T] {
     override type DriverType = UdtValue
 

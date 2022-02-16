@@ -1,6 +1,6 @@
 package io.kaizensolutions.virgil
 
-import io.kaizensolutions.virgil.codecs.Reader
+import io.kaizensolutions.virgil.codecs.RowReader
 import io.kaizensolutions.virgil.dsl.{Assignment, Relation}
 import io.kaizensolutions.virgil.internal.{BindMarkers, PullMode, QueryType}
 import zio.NonEmptyChunk
@@ -30,6 +30,6 @@ object CQLType {
   final private[virgil] case class Batch(mutations: NonEmptyChunk[Mutation], batchType: BatchType)
       extends CQLType[MutationResult]
 
-  final private[virgil] case class Query[Result](queryType: QueryType, reader: Reader[Result], pullMode: PullMode)
+  final private[virgil] case class Query[Result](queryType: QueryType, reader: RowReader[Result], pullMode: PullMode)
       extends CQLType[Result]
 }

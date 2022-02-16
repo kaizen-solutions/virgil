@@ -68,7 +68,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
       boundStatementWithPage = boundStatement.setPagingState(driverPageState)
       rp                    <- selectPage(boundStatementWithPage)
       (results, nextPage)    = rp
-      chunksToOutput         = results.map(reader.read(_, None))
+      chunksToOutput         = results.map(reader.read(_, null))
     } yield Paged(chunksToOutput, nextPage)
   }
 
@@ -99,7 +99,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
     for {
       boundStatement <- ZStream.fromEffect(buildStatement(queryString, bindMarkers, config))
       reader          = input.reader
-      element        <- select(boundStatement).map(reader.read(_, None))
+      element        <- select(boundStatement).map(reader.read(_, null))
     } yield element
   }
 
@@ -112,7 +112,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
       boundStatement <- buildStatement(queryString, bindMarkers, config)
       reader          = input.reader
       optRow         <- selectFirst(boundStatement)
-      element        <- Task.succeed(optRow.map(reader.read(_, None)))
+      element        <- Task.succeed(optRow.map(reader.read(_, null)))
     } yield element
   }
 
