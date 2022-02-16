@@ -109,6 +109,12 @@ object CQL {
   ): CQL[MutationResult] =
     CQL(CQLType.Mutation.Insert(tableName, data), ExecutionAttributes.default)
 
+  def logged(cql: CQL[MutationResult]): CQL[MutationResult] = cql.batchType(BatchType.Logged)
+
+  def unlogged(cql: CQL[MutationResult]): CQL[MutationResult] = cql.batchType(BatchType.Unlogged)
+
+  def counter(cql: CQL[MutationResult]): CQL[MutationResult] = cql.batchType(BatchType.Counter)
+
   def select[Scala](
     tableName: String,
     columns: NonEmptyChunk[String],
