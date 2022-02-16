@@ -1,7 +1,7 @@
 package io.kaizensolutions.virgil
 
 import com.datastax.oss.driver.api.core.uuid.Uuids
-import io.kaizensolutions.virgil.codecs.RowReader
+import io.kaizensolutions.virgil.codecs.Decoder
 import io.kaizensolutions.virgil.configuration.{ConsistencyLevel, ExecutionAttributes}
 import io.kaizensolutions.virgil.cql._
 import zio._
@@ -138,8 +138,8 @@ final case class SystemLocalResponse(`system.now()`: UUID) {
     Try(Uuids.unixTimestamp(`system.now()`)).toEither
 }
 object SystemLocalResponse {
-  implicit val rowReaderForSystemLocalResponse: RowReader[SystemLocalResponse] =
-    RowReader.derive[SystemLocalResponse]
+  implicit val decoderForSystemLocalResponse: Decoder[SystemLocalResponse] =
+    Decoder.derive[SystemLocalResponse]
 }
 
 final case class PreparedStatementsResponse(
@@ -148,14 +148,14 @@ final case class PreparedStatementsResponse(
   query_string: String
 )
 object PreparedStatementsResponse {
-  implicit val rowReaderForPreparedStatementsResponse: RowReader[PreparedStatementsResponse] =
-    RowReader.derive[PreparedStatementsResponse]
+  implicit val decoderForPreparedStatementsResponse: Decoder[PreparedStatementsResponse] =
+    Decoder.derive[PreparedStatementsResponse]
 }
 
 final case class ExecuteTestTable(id: Int, info: String)
 object ExecuteTestTable {
-  implicit val rowReaderForExecuteTestTable: RowReader[ExecuteTestTable] =
-    RowReader.derive[ExecuteTestTable]
+  implicit val decoderForExecuteTestTable: Decoder[ExecuteTestTable] =
+    Decoder.derive[ExecuteTestTable]
 
   val table      = "ziocassandrasessionspec_executeAction"
   val batchTable = "ziocassandrasessionspec_executeBatchAction"
@@ -177,8 +177,8 @@ object ExecuteTestTable {
 
 final case class SelectPageRow(id: Int, bucket: Int, info: String)
 object SelectPageRow {
-  implicit val rowReaderForSelectPageRow: RowReader[SelectPageRow] =
-    RowReader.derive[SelectPageRow]
+  implicit val decoderForSelectPageRow: Decoder[SelectPageRow] =
+    Decoder.derive[SelectPageRow]
 
   val truncate: CQL[MutationResult] = CQL.truncate("ziocassandrasessionspec_selectPage")
 

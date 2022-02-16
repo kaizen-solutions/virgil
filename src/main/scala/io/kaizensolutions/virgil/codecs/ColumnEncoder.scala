@@ -12,21 +12,21 @@ import scala.jdk.CollectionConverters._
  *   https://docs.datastax.com/en/developer/java-driver/4.11/manual/core/#cql-to-java-type-mapping
  * @tparam ScalaType
  */
-trait Writer[ScalaType] { self =>
+trait ColumnEncoder[ScalaType] { self =>
   type DriverType
 
   def driverClass: Class[DriverType]
 
   def convertScalaToDriver(scalaValue: ScalaType, dataType: DataType): DriverType
 
-  def write[Structure <: SettableByName[Structure]](
-    key: String,
+  def encodeField[Structure <: SettableByName[Structure]](
+    fieldName: String,
     value: ScalaType,
     structure: Structure
   ): Structure
 
-  def contramap[ScalaType2](f: ScalaType2 => ScalaType): Writer[ScalaType2] =
-    new Writer[ScalaType2] {
+  def contramap[ScalaType2](f: ScalaType2 => ScalaType): ColumnEncoder[ScalaType2] =
+    new ColumnEncoder[ScalaType2] {
       type DriverType = self.DriverType
 
       def driverClass: Class[DriverType] = self.driverClass
@@ -34,21 +34,21 @@ trait Writer[ScalaType] { self =>
       def convertScalaToDriver(scalaValue: ScalaType2, dataType: DataType): DriverType =
         self.convertScalaToDriver(f(scalaValue), dataType)
 
-      def write[Structure <: SettableByName[Structure]](
-        key: String,
+      def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: ScalaType2,
         structure: Structure
       ): Structure =
-        self.write(key, f(value), structure)
+        self.encodeField(fieldName, f(value), structure)
     }
 }
-object Writer extends UdtWriterMagnoliaDerivation {
-  type WithDriver[Sc, Dr] = Writer[Sc] { type DriverType = Dr }
+object ColumnEncoder extends UdtWriterMagnoliaDerivation {
+  type WithDriver[Sc, Dr] = ColumnEncoder[Sc] { type DriverType = Dr }
 
-  def apply[ScalaType](implicit writer: Writer[ScalaType]): Writer[ScalaType] = writer
+  def apply[ScalaType](implicit writer: ColumnEncoder[ScalaType]): ColumnEncoder[ScalaType] = writer
 
-  def udt[A](f: (A, UdtValue) => UdtValue): Writer.WithDriver[A, UdtValue] =
-    new Writer[A] {
+  def udt[A](f: (A, UdtValue) => UdtValue): ColumnEncoder.WithDriver[A, UdtValue] =
+    new ColumnEncoder[A] {
       type DriverType = UdtValue
 
       def driverClass: Class[DriverType] = classOf[UdtValue]
@@ -56,308 +56,309 @@ object Writer extends UdtWriterMagnoliaDerivation {
       def convertScalaToDriver(scalaValue: A, dataType: DataType): DriverType =
         f(scalaValue, dataType.asInstanceOf[UserDefinedType].newValue())
 
-      override def write[Structure <: SettableByName[Structure]](
-        key: String,
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: A,
         structure: Structure
       ): Structure = {
-        val dataType    = structure.getType(key)
+        val dataType    = structure.getType(fieldName)
         val driverValue = convertScalaToDriver(value, dataType)
-        structure.setUdtValue(key, driverValue)
+        structure.setUdtValue(fieldName, driverValue)
       }
     }
 
   // Primitives
-  implicit val writerForString: Writer.WithDriver[String, java.lang.String] =
-    new Writer[String] {
+  implicit val writerForString: ColumnEncoder.WithDriver[String, java.lang.String] =
+    new ColumnEncoder[String] {
       override type DriverType = java.lang.String
 
       override def driverClass: Class[DriverType] = classOf[java.lang.String]
 
       override def convertScalaToDriver(scalaValue: String, dataType: DataType): DriverType = scalaValue
 
-      override def write[Structure <: SettableByName[Structure]](
-        key: String,
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: String,
         structure: Structure
       ): Structure =
-        structure.setString(key, value)
+        structure.setString(fieldName, value)
     }
 
-  implicit val writerForInt: Writer.WithDriver[Int, java.lang.Integer] =
-    new Writer[Int] {
+  implicit val writerForInt: ColumnEncoder.WithDriver[Int, java.lang.Integer] =
+    new ColumnEncoder[Int] {
       override type DriverType = java.lang.Integer
 
       override def driverClass: Class[DriverType] = classOf[java.lang.Integer]
 
       override def convertScalaToDriver(scalaValue: Int, dataType: DataType): DriverType = scalaValue
 
-      override def write[Structure <: SettableByName[Structure]](
-        key: String,
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: Int,
         structure: Structure
       ): Structure =
-        structure.setInt(key, value)
+        structure.setInt(fieldName, value)
     }
 
-  implicit val writerForLong: Writer.WithDriver[Long, java.lang.Long] =
-    new Writer[Long] {
+  implicit val writerForLong: ColumnEncoder.WithDriver[Long, java.lang.Long] =
+    new ColumnEncoder[Long] {
       override type DriverType = java.lang.Long
 
       override def driverClass: Class[DriverType] = classOf[java.lang.Long]
 
       override def convertScalaToDriver(scalaValue: Long, dataType: DataType): DriverType = scalaValue
 
-      override def write[Structure <: SettableByName[Structure]](
-        key: String,
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: Long,
         structure: Structure
       ): Structure =
-        structure.setLong(key, value)
+        structure.setLong(fieldName, value)
     }
 
-  implicit val writerForLocalDate: Writer.WithDriver[java.time.LocalDate, java.time.LocalDate] =
-    new Writer[java.time.LocalDate] {
+  implicit val writerForLocalDate: ColumnEncoder.WithDriver[java.time.LocalDate, java.time.LocalDate] =
+    new ColumnEncoder[java.time.LocalDate] {
       override type DriverType = java.time.LocalDate
 
       override def driverClass: Class[DriverType] = classOf[java.time.LocalDate]
 
       override def convertScalaToDriver(scalaValue: java.time.LocalDate, dataType: DataType): DriverType = scalaValue
 
-      override def write[Structure <: SettableByName[Structure]](
-        key: String,
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: java.time.LocalDate,
         structure: Structure
       ): Structure =
-        structure.setLocalDate(key, value)
+        structure.setLocalDate(fieldName, value)
     }
 
-  implicit val writerForLocalTime: Writer.WithDriver[java.time.LocalTime, java.time.LocalTime] =
-    new Writer[java.time.LocalTime] {
+  implicit val writerForLocalTime: ColumnEncoder.WithDriver[java.time.LocalTime, java.time.LocalTime] =
+    new ColumnEncoder[java.time.LocalTime] {
       override type DriverType = java.time.LocalTime
 
       override def driverClass: Class[DriverType] = classOf[java.time.LocalTime]
 
       override def convertScalaToDriver(scalaValue: java.time.LocalTime, dataType: DataType): DriverType = scalaValue
 
-      override def write[Structure <: SettableByName[Structure]](
-        key: String,
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: java.time.LocalTime,
         structure: Structure
       ): Structure =
-        structure.setLocalTime(key, value)
+        structure.setLocalTime(fieldName, value)
     }
 
-  implicit val writerForInstant: Writer.WithDriver[java.time.Instant, java.time.Instant] =
-    new Writer[java.time.Instant] {
+  implicit val writerForInstant: ColumnEncoder.WithDriver[java.time.Instant, java.time.Instant] =
+    new ColumnEncoder[java.time.Instant] {
       override type DriverType = java.time.Instant
 
       override def driverClass: Class[DriverType] = classOf[java.time.Instant]
 
       override def convertScalaToDriver(scalaValue: java.time.Instant, dataType: DataType): DriverType = scalaValue
 
-      override def write[Structure <: SettableByName[Structure]](
-        key: String,
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: java.time.Instant,
         structure: Structure
       ): Structure =
-        structure.setInstant(key, value)
+        structure.setInstant(fieldName, value)
     }
 
-  implicit val writerForByteBuffer: Writer.WithDriver[java.nio.ByteBuffer, java.nio.ByteBuffer] =
-    new Writer[java.nio.ByteBuffer] {
+  implicit val writerForByteBuffer: ColumnEncoder.WithDriver[java.nio.ByteBuffer, java.nio.ByteBuffer] =
+    new ColumnEncoder[java.nio.ByteBuffer] {
       override type DriverType = java.nio.ByteBuffer
 
       override def driverClass: Class[DriverType] = classOf[java.nio.ByteBuffer]
 
       override def convertScalaToDriver(scalaValue: java.nio.ByteBuffer, dataType: DataType): DriverType = scalaValue
 
-      override def write[Structure <: SettableByName[Structure]](
-        key: String,
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: java.nio.ByteBuffer,
         structure: Structure
       ): Structure =
-        structure.setByteBuffer(key, value)
+        structure.setByteBuffer(fieldName, value)
     }
 
-  implicit val writerForBoolean: Writer.WithDriver[Boolean, java.lang.Boolean] =
-    new Writer[Boolean] {
+  implicit val writerForBoolean: ColumnEncoder.WithDriver[Boolean, java.lang.Boolean] =
+    new ColumnEncoder[Boolean] {
       override type DriverType = java.lang.Boolean
 
       override def driverClass: Class[DriverType] = classOf[DriverType]
 
       override def convertScalaToDriver(scalaValue: Boolean, dataType: DataType): DriverType = Boolean.box(scalaValue)
 
-      override def write[Structure <: SettableByName[Structure]](
-        key: String,
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: Boolean,
         structure: Structure
       ): Structure =
-        structure.setBoolean(key, value)
+        structure.setBoolean(fieldName, value)
     }
 
-  implicit val writerForBigDecimal: Writer.WithDriver[BigDecimal, java.math.BigDecimal] =
-    new Writer[BigDecimal] {
+  implicit val writerForBigDecimal: ColumnEncoder.WithDriver[BigDecimal, java.math.BigDecimal] =
+    new ColumnEncoder[BigDecimal] {
       override type DriverType = java.math.BigDecimal
 
       override def driverClass: Class[DriverType] = classOf[DriverType]
 
       override def convertScalaToDriver(scalaValue: BigDecimal, dataType: DataType): DriverType = scalaValue.bigDecimal
 
-      override def write[Structure <: SettableByName[Structure]](
-        key: String,
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: BigDecimal,
         structure: Structure
       ): Structure =
-        structure.setBigDecimal(key, value.bigDecimal)
+        structure.setBigDecimal(fieldName, value.bigDecimal)
     }
 
-  implicit val writerForDouble: Writer.WithDriver[Double, java.lang.Double] =
-    new Writer[Double] {
+  implicit val writerForDouble: ColumnEncoder.WithDriver[Double, java.lang.Double] =
+    new ColumnEncoder[Double] {
       override type DriverType = java.lang.Double
 
       override def driverClass: Class[DriverType] = classOf[DriverType]
 
       override def convertScalaToDriver(scalaValue: Double, dataType: DataType): DriverType = Double.box(scalaValue)
 
-      override def write[Structure <: SettableByName[Structure]](
-        key: String,
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: Double,
         structure: Structure
       ): Structure =
-        structure.setDouble(key, value)
+        structure.setDouble(fieldName, value)
     }
 
-  implicit val writerForCqlDuration: Writer.WithDriver[CqlDuration, CqlDuration] =
-    new Writer[CqlDuration] {
+  implicit val writerForCqlDuration: ColumnEncoder.WithDriver[CqlDuration, CqlDuration] =
+    new ColumnEncoder[CqlDuration] {
       override type DriverType = CqlDuration
 
       override def driverClass: Class[DriverType] = classOf[DriverType]
 
       override def convertScalaToDriver(scalaValue: CqlDuration, dataType: DataType): DriverType = scalaValue
 
-      override def write[Structure <: SettableByName[Structure]](
-        key: String,
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: CqlDuration,
         structure: Structure
       ): Structure =
-        structure.setCqlDuration(key, value)
+        structure.setCqlDuration(fieldName, value)
     }
 
-  implicit val writerForFloat: Writer.WithDriver[Float, java.lang.Float] =
-    new Writer[Float] {
+  implicit val writerForFloat: ColumnEncoder.WithDriver[Float, java.lang.Float] =
+    new ColumnEncoder[Float] {
       override type DriverType = java.lang.Float
 
       override def driverClass: Class[DriverType] = classOf[DriverType]
 
       override def convertScalaToDriver(scalaValue: Float, dataType: DataType): DriverType = Float.box(scalaValue)
 
-      override def write[Structure <: SettableByName[Structure]](
-        key: String,
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: Float,
         structure: Structure
       ): Structure =
-        structure.setFloat(key, value)
+        structure.setFloat(fieldName, value)
     }
 
-  implicit val writerForInetAddress: Writer.WithDriver[java.net.InetAddress, java.net.InetAddress] =
-    new Writer[java.net.InetAddress] {
+  implicit val writerForInetAddress: ColumnEncoder.WithDriver[java.net.InetAddress, java.net.InetAddress] =
+    new ColumnEncoder[java.net.InetAddress] {
       override type DriverType = java.net.InetAddress
 
       override def driverClass: Class[DriverType] = classOf[DriverType]
 
       override def convertScalaToDriver(scalaValue: java.net.InetAddress, dataType: DataType): DriverType = scalaValue
 
-      override def write[Structure <: SettableByName[Structure]](
-        key: String,
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: java.net.InetAddress,
         structure: Structure
       ): Structure =
-        structure.setInetAddress(key, value)
+        structure.setInetAddress(fieldName, value)
     }
 
-  implicit val writerForShort: Writer.WithDriver[Short, java.lang.Short] =
-    new Writer[Short] {
+  implicit val writerForShort: ColumnEncoder.WithDriver[Short, java.lang.Short] =
+    new ColumnEncoder[Short] {
       override type DriverType = java.lang.Short
 
       override def driverClass: Class[DriverType] = classOf[DriverType]
 
       override def convertScalaToDriver(scalaValue: Short, dataType: DataType): DriverType = Short.box(scalaValue)
 
-      override def write[Structure <: SettableByName[Structure]](
-        key: String,
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: Short,
         structure: Structure
       ): Structure =
-        structure.setShort(key, value)
+        structure.setShort(fieldName, value)
     }
 
-  implicit val writerForUUID: Writer.WithDriver[java.util.UUID, java.util.UUID] =
-    new Writer[java.util.UUID] {
+  implicit val writerForUUID: ColumnEncoder.WithDriver[java.util.UUID, java.util.UUID] =
+    new ColumnEncoder[java.util.UUID] {
       override type DriverType = java.util.UUID
 
       override def driverClass: Class[DriverType] = classOf[DriverType]
 
       override def convertScalaToDriver(scalaValue: java.util.UUID, dataType: DataType): DriverType = scalaValue
 
-      override def write[Structure <: SettableByName[Structure]](
-        key: String,
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: java.util.UUID,
         structure: Structure
       ): Structure =
-        structure.setUuid(key, value)
+        structure.setUuid(fieldName, value)
     }
 
-  implicit val writerForByte: Writer.WithDriver[Byte, java.lang.Byte] =
-    new Writer[Byte] {
+  implicit val writerForByte: ColumnEncoder.WithDriver[Byte, java.lang.Byte] =
+    new ColumnEncoder[Byte] {
       override type DriverType = java.lang.Byte
 
       override def driverClass: Class[DriverType] = classOf[DriverType]
 
       override def convertScalaToDriver(scalaValue: Byte, dataType: DataType): DriverType = Byte.box(scalaValue)
 
-      override def write[Structure <: SettableByName[Structure]](
-        key: String,
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: Byte,
         structure: Structure
       ): Structure =
-        structure.setByte(key, value)
+        structure.setByte(fieldName, value)
     }
 
-  implicit val writerForCqlTupleValue: Writer.WithDriver[TupleValue, TupleValue] = new Writer[TupleValue] {
-    override type DriverType = TupleValue
+  implicit val writerForCqlTupleValue: ColumnEncoder.WithDriver[TupleValue, TupleValue] =
+    new ColumnEncoder[TupleValue] {
+      override type DriverType = TupleValue
 
-    override def driverClass: Class[DriverType] = classOf[DriverType]
+      override def driverClass: Class[DriverType] = classOf[DriverType]
 
-    override def convertScalaToDriver(scalaValue: TupleValue, dataType: DataType): DriverType = scalaValue
+      override def convertScalaToDriver(scalaValue: TupleValue, dataType: DataType): DriverType = scalaValue
 
-    override def write[Structure <: SettableByName[Structure]](
-      key: String,
-      value: TupleValue,
-      structure: Structure
-    ): Structure =
-      structure.setTupleValue(key, value)
-  }
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
+        value: TupleValue,
+        structure: Structure
+      ): Structure =
+        structure.setTupleValue(fieldName, value)
+    }
 
-  implicit val writerForBigInteger: Writer.WithDriver[BigInt, java.math.BigInteger] =
-    new Writer[BigInt] {
+  implicit val writerForBigInteger: ColumnEncoder.WithDriver[BigInt, java.math.BigInteger] =
+    new ColumnEncoder[BigInt] {
       override type DriverType = java.math.BigInteger
 
       override def driverClass: Class[DriverType] = classOf[DriverType]
 
       override def convertScalaToDriver(scalaValue: BigInt, dataType: DataType): DriverType = scalaValue.bigInteger
 
-      override def write[Structure <: SettableByName[Structure]](
-        key: String,
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: BigInt,
         structure: Structure
       ): Structure =
-        structure.setBigInteger(key, value.bigInteger)
+        structure.setBigInteger(fieldName, value.bigInteger)
     }
 
   // Collections
-  implicit def writerForList[Elem](implicit ew: Writer[Elem]): Writer[List[Elem]] =
-    new Writer[List[Elem]] {
+  implicit def writerForList[Elem](implicit ew: ColumnEncoder[Elem]): ColumnEncoder[List[Elem]] =
+    new ColumnEncoder[List[Elem]] {
       self =>
       override type DriverType = java.util.List[ew.DriverType]
 
@@ -368,18 +369,18 @@ object Writer extends UdtWriterMagnoliaDerivation {
         scalaValue.map(ew.convertScalaToDriver(_, elemType)).asJava
       }
 
-      override def write[Structure <: SettableByName[Structure]](
-        key: String,
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: List[Elem],
         structure: Structure
       ): Structure = {
-        val dataType = structure.getType(key)
-        structure.setList(key, convertScalaToDriver(value, dataType), ew.driverClass)
+        val dataType = structure.getType(fieldName)
+        structure.setList(fieldName, convertScalaToDriver(value, dataType), ew.driverClass)
       }
     }
 
-  implicit def writerForSet[Elem](implicit ew: Writer[Elem]): Writer[Set[Elem]] =
-    new Writer[Set[Elem]] {
+  implicit def writerForSet[Elem](implicit ew: ColumnEncoder[Elem]): ColumnEncoder[Set[Elem]] =
+    new ColumnEncoder[Set[Elem]] {
       self =>
       override type DriverType = java.util.Set[ew.DriverType]
 
@@ -390,20 +391,20 @@ object Writer extends UdtWriterMagnoliaDerivation {
         scalaValue.map(ew.convertScalaToDriver(_, elemType)).asJava
       }
 
-      override def write[Structure <: SettableByName[Structure]](
-        key: String,
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: Set[Elem],
         structure: Structure
       ): Structure = {
-        val dataType = structure.getType(key)
-        structure.setSet(key, convertScalaToDriver(value, dataType), ew.driverClass)
+        val dataType = structure.getType(fieldName)
+        structure.setSet(fieldName, convertScalaToDriver(value, dataType), ew.driverClass)
       }
     }
 
   implicit def writerForMap[Key, Value](implicit
-    kw: Writer[Key],
-    vw: Writer[Value]
-  ): Writer[Map[Key, Value]] = new Writer[Map[Key, Value]] {
+    kw: ColumnEncoder[Key],
+    vw: ColumnEncoder[Value]
+  ): ColumnEncoder[Map[Key, Value]] = new ColumnEncoder[Map[Key, Value]] {
     self =>
     override type DriverType = java.util.Map[kw.DriverType, vw.DriverType]
 
@@ -418,18 +419,18 @@ object Writer extends UdtWriterMagnoliaDerivation {
       }.asJava
     }
 
-    override def write[Structure <: SettableByName[Structure]](
-      key: String,
+    override def encodeField[Structure <: SettableByName[Structure]](
+      fieldName: String,
       value: Map[Key, Value],
       structure: Structure
     ): Structure = {
-      val dataType = structure.getType(key)
-      structure.setMap(key, convertScalaToDriver(value, dataType), kw.driverClass, vw.driverClass)
+      val dataType = structure.getType(fieldName)
+      structure.setMap(fieldName, convertScalaToDriver(value, dataType), kw.driverClass, vw.driverClass)
     }
   }
 
-  implicit def writerForOption[A](implicit ew: Writer[A]): Writer[Option[A]] =
-    new Writer[Option[A]] {
+  implicit def writerForOption[A](implicit ew: ColumnEncoder[A]): ColumnEncoder[Option[A]] =
+    new ColumnEncoder[Option[A]] {
       self =>
       override type DriverType = ew.DriverType
 
@@ -441,48 +442,48 @@ object Writer extends UdtWriterMagnoliaDerivation {
           case None        => null.asInstanceOf[DriverType]
         }
 
-      override def write[Structure <: SettableByName[Structure]](
-        key: String,
+      override def encodeField[Structure <: SettableByName[Structure]](
+        fieldName: String,
         value: Option[A],
         structure: Structure
       ): Structure =
         value match {
           case Some(value) =>
-            val dataType = structure.getType(key)
-            structure.set(key, ew.convertScalaToDriver(value, dataType), ew.driverClass)
+            val dataType = structure.getType(fieldName)
+            structure.set(fieldName, ew.convertScalaToDriver(value, dataType), ew.driverClass)
 
           case None =>
-            structure.setToNull(key)
+            structure.setToNull(fieldName)
         }
     }
 }
 
 trait UdtWriterMagnoliaDerivation {
-  type Typeclass[T] = Writer[T]
+  type Typeclass[T] = ColumnEncoder[T]
 
   // User Defined Types
-  def join[T](ctx: CaseClass[Writer, T]): Writer.WithDriver[T, UdtValue] = new Writer[T] {
+  def join[T](ctx: CaseClass[ColumnEncoder, T]): ColumnEncoder.WithDriver[T, UdtValue] = new ColumnEncoder[T] {
     override type DriverType = UdtValue
 
     override def driverClass: Class[DriverType] = classOf[UdtValue]
 
-    override def write[Structure <: SettableByName[Structure]](
-      key: String,
+    override def encodeField[Structure <: SettableByName[Structure]](
+      fieldName: String,
       value: T,
       structure: Structure
     ): Structure = {
-      val dataType     = structure.getType(key)
+      val dataType     = structure.getType(fieldName)
       val subStructure = convertScalaToDriver(value, dataType)
-      structure.setUdtValue(key, subStructure)
+      structure.setUdtValue(fieldName, subStructure)
     }
 
     override def convertScalaToDriver(scalaValue: T, dataType: DataType): UdtValue = {
       val subStructure = dataType.asInstanceOf[UserDefinedType].newValue()
       ctx.parameters.foldLeft(subStructure) { case (s, p) =>
-        p.typeclass.write(p.label, p.dereference(scalaValue), s)
+        p.typeclass.encodeField(p.label, p.dereference(scalaValue), s)
       }
     }
   }
 
-  implicit def derive[T]: Writer.WithDriver[T, UdtValue] = macro Magnolia.gen[T]
+  implicit def derive[T]: ColumnEncoder.WithDriver[T, UdtValue] = macro Magnolia.gen[T]
 }

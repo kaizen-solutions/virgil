@@ -1,6 +1,6 @@
 package io.kaizensolutions.virgil.dsl
 
-import io.kaizensolutions.virgil.codecs.Writer
+import io.kaizensolutions.virgil.codecs.ColumnEncoder
 import io.kaizensolutions.virgil.internal.{BindMarker, BindMarkerName, BindMarkers}
 import io.kaizensolutions.virgil.{CQL, MutationResult}
 
@@ -12,7 +12,7 @@ class InsertBuilder[State <: InsertState](
   private val ifNotExists: Boolean = false
 ) {
   def value[ScalaType](columnName: String, inputValue: ScalaType)(implicit
-    ev: Writer[ScalaType]
+    ev: ColumnEncoder[ScalaType]
   ): InsertBuilder[InsertState.ColumnAdded] = {
     val name   = BindMarkerName.make(columnName)
     val column = BindMarker.make(name, inputValue)(ev)

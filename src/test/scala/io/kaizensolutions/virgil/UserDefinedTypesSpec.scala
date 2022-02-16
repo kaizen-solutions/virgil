@@ -50,7 +50,7 @@ final case class Row_Person(
   data: UDT_Data
 )
 object Row_Person {
-  implicit val rowReaderForPerson: RowReader[Row_Person] = RowReader.derive[Row_Person]
+  implicit val decoderForPerson: Decoder[Row_Person] = Decoder.derive[Row_Person]
 
   def insert(person: Row_Person): CQL[MutationResult] =
     cql"INSERT INTO userdefinedtypesspec_person (id, name, age, data) VALUES (${person.id}, ${person.name}, ${person.age}, ${person.data})".mutation
@@ -72,7 +72,7 @@ final case class UDT_Data(
   email: Option[UDT_Email]
 )
 object UDT_Data {
-  implicit val udtReaderForUDT_Data: UdtReader[UDT_Data] = Reader.deriveUdtValue[UDT_Data]
+  implicit val udtDecoderForUDT_Data: UdtDecoder[UDT_Data] = ColumnDecoder.deriveUdtValue[UDT_Data]
 
   def gen: Gen[Random, UDT_Data] =
     for {
@@ -116,8 +116,8 @@ final case class Row_HeavilyNestedUDTTable(
   data: UDT_ExampleCollectionNestedUDTType
 )
 object Row_HeavilyNestedUDTTable {
-  implicit val readerForRow_HeavilyNestedUDTTable: RowReader[Row_HeavilyNestedUDTTable] =
-    RowReader.derive[Row_HeavilyNestedUDTTable]
+  implicit val decoderForRow_HeavilyNestedUDTTable: Decoder[Row_HeavilyNestedUDTTable] =
+    Decoder.derive[Row_HeavilyNestedUDTTable]
 
   def gen: Gen[Random with Sized, Row_HeavilyNestedUDTTable] =
     for {
@@ -190,8 +190,8 @@ final case class UDT_ExampleCollectionNestedUDTType(
   c: UDT_ExampleNestedType
 )
 object UDT_ExampleCollectionNestedUDTType {
-  implicit val udtReaderForUDT_ExampleCollectionNestedUDTType: UdtReader[UDT_ExampleCollectionNestedUDTType] =
-    Reader.deriveUdtValue[UDT_ExampleCollectionNestedUDTType]
+  implicit val udtDecoderForUDT_ExampleCollectionNestedUDTType: UdtDecoder[UDT_ExampleCollectionNestedUDTType] =
+    ColumnDecoder.deriveUdtValue[UDT_ExampleCollectionNestedUDTType]
 
   def gen: Gen[Random with Sized, UDT_ExampleCollectionNestedUDTType] =
     for {

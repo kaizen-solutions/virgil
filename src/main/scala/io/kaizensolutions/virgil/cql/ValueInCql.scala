@@ -1,6 +1,6 @@
 package io.kaizensolutions.virgil.cql
 
-import io.kaizensolutions.virgil.codecs.Writer
+import io.kaizensolutions.virgil.codecs.ColumnEncoder
 
 /**
  * Represents a Scala value present in a CQL interpolated string which
@@ -11,7 +11,7 @@ import io.kaizensolutions.virgil.codecs.Writer
 private[virgil] trait ValueInCql {
   type ScalaType
   def value: ScalaType
-  def writer: Writer[ScalaType]
+  def writer: ColumnEncoder[ScalaType]
 
   override def toString: String =
     value.toString
@@ -27,10 +27,10 @@ object ValueInCql {
    */
   implicit def scalaTypeToValueInCqlInterpolator[Scala](
     in: Scala
-  )(implicit evidence: Writer[Scala]): ValueInCql.WithScalaType[Scala] =
+  )(implicit evidence: ColumnEncoder[Scala]): ValueInCql.WithScalaType[Scala] =
     new ValueInCql {
       type ScalaType = Scala
-      val value: Scala          = in
-      val writer: Writer[Scala] = evidence
+      val value: Scala                 = in
+      val writer: ColumnEncoder[Scala] = evidence
     }
 }

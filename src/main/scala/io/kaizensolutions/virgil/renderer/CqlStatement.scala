@@ -2,7 +2,7 @@ package io.kaizensolutions.virgil.renderer
 
 import io.kaizensolutions.virgil.CQLType.Mutation
 import io.kaizensolutions.virgil._
-import io.kaizensolutions.virgil.codecs.Writer
+import io.kaizensolutions.virgil.codecs.ColumnEncoder
 import io.kaizensolutions.virgil.dsl.{Assignment, Relation}
 import io.kaizensolutions.virgil.internal.{BindMarker, BindMarkerName, BindMarkers, QueryType}
 import zio.{Chunk, NonEmptyChunk}
@@ -84,7 +84,7 @@ object CqlStatement {
             val rawColumnName = columnName.name
             val parameter     = s":$rawColumnName"
             val queryString   = s"$rawColumnName $sign $parameter"
-            val column        = BindMarker.make(columnName, absOffset)(Writer.writerForLong)
+            val column        = BindMarker.make(columnName, absOffset)(ColumnEncoder.writerForLong)
             (queryString, BindMarkers.empty + column)
 
           case p: PrependListItems[a] =>
@@ -127,7 +127,7 @@ object CqlStatement {
             val valueParameter = s":$valueName"
 
             val queryString = s"$rawColumnName[$indexParameter] = $valueParameter"
-            val indexColumn = BindMarker.make(BindMarkerName.make(indexName), index)(Writer.writerForInt)
+            val indexColumn = BindMarker.make(BindMarkerName.make(indexName), index)(ColumnEncoder.writerForInt)
             val valueColumn = BindMarker.make(BindMarkerName.make(valueName), value)(ev)
             (queryString, BindMarkers.empty + indexColumn + valueColumn)
 
