@@ -1,15 +1,14 @@
 package io.kaizensolutions.virgil
 
-import io.kaizensolutions.virgil.dsl._
-import io.kaizensolutions.virgil.codecs.{Reader, Writer}
-import io.kaizensolutions.virgil.codecs.userdefinedtypes.{UdtReader, UdtWriter}
 import io.kaizensolutions.virgil.cql._
+import io.kaizensolutions.virgil.dsl._
 import zio.Has
 import zio.duration._
 import zio.random.Random
 import zio.test.TestAspect._
 import zio.test._
 import zio.test.environment.Live
+import io.kaizensolutions.virgil.codecs._
 
 import java.time.{LocalDate, LocalTime}
 
@@ -51,7 +50,7 @@ final case class Row_Person(
   data: UDT_Data
 )
 object Row_Person {
-  implicit val readerForRowPerson: Reader[Row_Person] = Reader.derive[Row_Person]
+  implicit val decoderForPerson: Decoder[Row_Person] = Decoder.derive[Row_Person]
 
   def insert(person: Row_Person): CQL[MutationResult] =
     cql"INSERT INTO userdefinedtypesspec_person (id, name, age, data) VALUES (${person.id}, ${person.name}, ${person.age}, ${person.data})".mutation
@@ -73,7 +72,8 @@ final case class UDT_Data(
   email: Option[UDT_Email]
 )
 object UDT_Data {
-  implicit val readerForUdtData: Reader[UDT_Data] = UdtReader.deriveReader[UDT_Data]
+  implicit val udtDecoderForUDT_Data: UdtDecoder[UDT_Data] = ColumnDecoder.deriveUdtValue[UDT_Data]
+
   def gen: Gen[Random, UDT_Data] =
     for {
       addresses <- Gen.listOfBounded(10, 20)(UDT_Address.gen)
@@ -87,7 +87,6 @@ final case class UDT_Address(
   city: String
 )
 object UDT_Address {
-  implicit val readerForUDTAddress: Reader[UDT_Address] = UdtReader.deriveReader[UDT_Address]
 
   def gen: Gen[Random, UDT_Address] =
     for {
@@ -103,7 +102,6 @@ final case class UDT_Email(
   domain: String
 )
 object UDT_Email {
-  implicit val readerForUDTEmail: Reader[UDT_Email] = UdtReader.deriveReader[UDT_Email]
 
   def gen: Gen[Random, UDT_Email] =
     for {
@@ -118,11 +116,8 @@ final case class Row_HeavilyNestedUDTTable(
   data: UDT_ExampleCollectionNestedUDTType
 )
 object Row_HeavilyNestedUDTTable {
-  implicit val readerForRow_HeavilyNestedUDTTable: Reader[Row_HeavilyNestedUDTTable] =
-    Reader.derive[Row_HeavilyNestedUDTTable]
-
-  implicit val writerForRow_HeavilyNestedUDTTable: Writer[Row_HeavilyNestedUDTTable] =
-    Writer.derive[Row_HeavilyNestedUDTTable]
+  implicit val decoderForRow_HeavilyNestedUDTTable: Decoder[Row_HeavilyNestedUDTTable] =
+    Decoder.derive[Row_HeavilyNestedUDTTable]
 
   def gen: Gen[Random with Sized, Row_HeavilyNestedUDTTable] =
     for {
@@ -152,8 +147,8 @@ final case class UDT_ExampleType(
   time: LocalTime
 )
 object UDT_ExampleType {
-  implicit val readerForUDT_ExampleType: Reader[UDT_ExampleType] = UdtReader.deriveReader[UDT_ExampleType]
-  implicit val writerForUDT_ExampleType: Writer[UDT_ExampleType] = UdtWriter.deriveWriter[UDT_ExampleType]
+//  implicit val readerForUDT_ExampleType: Reader[UDT_ExampleType] = Reader.derive[UDT_ExampleType]
+//  implicit val writerForUDT_ExampleType: Writer[UDT_ExampleType] = Writer.deriveUdtValue[UDT_ExampleType]
 
   def gen: Gen[Random, UDT_ExampleType] =
     for {
@@ -181,11 +176,6 @@ final case class UDT_ExampleNestedType(
   c: UDT_ExampleType
 )
 object UDT_ExampleNestedType {
-  implicit val readerForUDT_ExampleNestedType: Reader[UDT_ExampleNestedType] =
-    UdtReader.deriveReader[UDT_ExampleNestedType]
-  implicit val writerForUDT_ExampleNestedType: Writer[UDT_ExampleNestedType] =
-    UdtWriter.deriveWriter[UDT_ExampleNestedType]
-
   def gen =
     for {
       a <- Gen.anyInt
@@ -200,10 +190,8 @@ final case class UDT_ExampleCollectionNestedUDTType(
   c: UDT_ExampleNestedType
 )
 object UDT_ExampleCollectionNestedUDTType {
-  implicit val readerForUDT_ExampleCollectionNestedUDTType: Reader[UDT_ExampleCollectionNestedUDTType] =
-    UdtReader.deriveReader[UDT_ExampleCollectionNestedUDTType]
-  implicit val writerForUDT_ExampleCollectionNestedUDTType: Writer[UDT_ExampleCollectionNestedUDTType] =
-    UdtWriter.deriveWriter[UDT_ExampleCollectionNestedUDTType]
+  implicit val udtDecoderForUDT_ExampleCollectionNestedUDTType: UdtDecoder[UDT_ExampleCollectionNestedUDTType] =
+    ColumnDecoder.deriveUdtValue[UDT_ExampleCollectionNestedUDTType]
 
   def gen: Gen[Random with Sized, UDT_ExampleCollectionNestedUDTType] =
     for {

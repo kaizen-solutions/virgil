@@ -1,6 +1,6 @@
 package io.kaizensolutions.virgil.dsl
 
-import io.kaizensolutions.virgil.codecs.Writer
+import io.kaizensolutions.virgil.codecs.ColumnEncoder
 import io.kaizensolutions.virgil.internal.BindMarkerName
 
 sealed trait Relation
@@ -9,7 +9,7 @@ object Relation extends RelationSyntax {
     columnName: BindMarkerName,
     operator: BinaryOperator,
     value: A,
-    writer: Writer[A]
+    writer: ColumnEncoder[A]
   ) extends Relation
   final case class IsNotNull(columnName: BindMarkerName) extends Relation
   final case class IsNull(columnName: BindMarkerName)    extends Relation
@@ -31,28 +31,28 @@ trait RelationSyntax {
   implicit class RelationOps(rawColumn: String) {
     private val column = BindMarkerName.make(rawColumn)
 
-    def ===[A](value: A)(implicit ev: Writer[A]): Relation.Binary[A] =
+    def ===[A](value: A)(implicit ev: ColumnEncoder[A]): Relation.Binary[A] =
       Relation.Binary(column, BinaryOperator.Equal, value, ev)
 
-    def =!=[A](value: A)(implicit ev: Writer[A]): Relation.Binary[A] =
+    def =!=[A](value: A)(implicit ev: ColumnEncoder[A]): Relation.Binary[A] =
       Relation.Binary(column, BinaryOperator.NotEqual, value, ev)
 
-    def >[A](value: A)(implicit ev: Writer[A]): Relation.Binary[A] =
+    def >[A](value: A)(implicit ev: ColumnEncoder[A]): Relation.Binary[A] =
       Relation.Binary(column, BinaryOperator.GreaterThan, value, ev)
 
-    def >=[A](value: A)(implicit ev: Writer[A]): Relation.Binary[A] =
+    def >=[A](value: A)(implicit ev: ColumnEncoder[A]): Relation.Binary[A] =
       Relation.Binary(column, BinaryOperator.GreaterThanOrEqual, value, ev)
 
-    def <[A](value: A)(implicit ev: Writer[A]): Relation.Binary[A] =
+    def <[A](value: A)(implicit ev: ColumnEncoder[A]): Relation.Binary[A] =
       Relation.Binary(column, BinaryOperator.LessThan, value, ev)
 
-    def <=[A](value: A)(implicit ev: Writer[A]): Relation.Binary[A] =
+    def <=[A](value: A)(implicit ev: ColumnEncoder[A]): Relation.Binary[A] =
       Relation.Binary(column, BinaryOperator.LessThanOrEqual, value, ev)
 
-    def like[A](value: A)(implicit ev: Writer[A]): Relation.Binary[A] =
+    def like[A](value: A)(implicit ev: ColumnEncoder[A]): Relation.Binary[A] =
       Relation.Binary(column, BinaryOperator.Like, value, ev)
 
-    def in[A](value: A)(implicit ev: Writer[A]): Relation.Binary[A] =
+    def in[A](value: A)(implicit ev: ColumnEncoder[A]): Relation.Binary[A] =
       Relation.Binary(column, BinaryOperator.In, value, ev)
 
     def isNotNull: Relation.IsNotNull =
