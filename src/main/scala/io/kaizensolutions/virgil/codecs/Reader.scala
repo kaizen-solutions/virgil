@@ -1,6 +1,5 @@
 package io.kaizensolutions.virgil.codecs
 
-import com.datastax.oss.driver.api.core.`type`._
 import com.datastax.oss.driver.api.core.cql.Row
 import com.datastax.oss.driver.api.core.data.{GettableByName => CassandraStructure, UdtValue}
 import magnolia1.{CaseClass, Magnolia}
@@ -16,23 +15,20 @@ trait Reader[ScalaType] { self =>
 
   def driverClass: Class[DriverType]
 
-  def convertDriverToScala(driverValue: DriverType, dataType: DataType): ScalaType
+  def convertDriverToScala(driverValue: DriverType): ScalaType
 
   def readFromDriver[Structure <: CassandraStructure](structure: Structure, fieldName: Option[String]): DriverType
 
   final def read[Structure <: CassandraStructure](structure: Structure, fieldName: Option[String]): ScalaType =
-    convertDriverToScala(
-      driverValue = readFromDriver(structure, fieldName),
-      dataType = fieldName.fold(DataTypes.custom("fieldName-not-provided"))(structure.getType)
-    )
+    convertDriverToScala(driverValue = readFromDriver(structure, fieldName))
 
   def map[ScalaType2](f: ScalaType => ScalaType2): Reader[ScalaType2] = new Reader[ScalaType2] {
     override type DriverType = self.DriverType
 
     override def driverClass: Class[DriverType] = self.driverClass
 
-    override def convertDriverToScala(driverValue: DriverType, dataType: DataType): ScalaType2 =
-      f(self.convertDriverToScala(driverValue, dataType))
+    override def convertDriverToScala(driverValue: DriverType): ScalaType2 =
+      f(self.convertDriverToScala(driverValue))
 
     def readFromDriver[Structure <: CassandraStructure](structure: Structure, fieldName: Option[String]): DriverType =
       self.readFromDriver(structure, fieldName)
@@ -43,15 +39,13 @@ object Reader extends UdtReaderMagnoliaDerivation {
 
   def make[Scala, Driver](
     driverClassInfo: Class[Driver]
-  )(
-    convert: (Driver, DataType) => Scala
-  )(fn: (CassandraStructure, String) => Driver): Reader.WithDriver[Scala, Driver] =
+  )(convert: Driver => Scala)(fn: (CassandraStructure, String) => Driver): Reader.WithDriver[Scala, Driver] =
     new Reader[Scala] {
       override type DriverType = Driver
 
       override def driverClass: Class[DriverType] = driverClassInfo
 
-      override def convertDriverToScala(driverValue: Driver, dataType: DataType): Scala = convert(driverValue, dataType)
+      override def convertDriverToScala(driverValue: Driver): Scala = convert(driverValue)
 
       override def readFromDriver[Structure <: CassandraStructure](
         structure: Structure,
@@ -63,58 +57,80 @@ object Reader extends UdtReaderMagnoliaDerivation {
         }
     }
 
+  def fromUdtValue[A](f: UdtValue => A): Reader.WithDriver[A, UdtValue] = new Reader[A] {
+    override type DriverType = UdtValue
+
+    override def driverClass: Class[DriverType] = classOf[UdtValue]
+
+    override def convertDriverToScala(driverValue: DriverType): A = f(driverValue)
+
+    override def readFromDriver[Structure <: CassandraStructure](
+      structure: Structure,
+      fieldName: Option[String]
+    ): DriverType = structure.getUdtValue(fieldName.get)
+  }
+
+  def fromRow[A](f: Row => A): Reader.WithDriver[A, Row] = new Reader[A] {
+    override type DriverType = Row
+
+    override def driverClass: Class[DriverType] = classOf[Row]
+
+    override def convertDriverToScala(driverValue: DriverType): A = f(driverValue)
+
+    override def readFromDriver[Structure <: CassandraStructure](
+      structure: Structure,
+      fieldName: Option[String]
+    ): DriverType = structure.asInstanceOf[Row]
+  }
+
   implicit val bigDecimalReader: Reader.WithDriver[BigDecimal, java.math.BigDecimal] =
-    make(classOf[java.math.BigDecimal])((d, _) => BigDecimal.javaBigDecimal2bigDecimal(d))((structure, columnName) =>
+    make(classOf[java.math.BigDecimal])(BigDecimal.javaBigDecimal2bigDecimal)((structure, columnName) =>
       structure.getBigDecimal(columnName)
     )
 
   implicit val bigIntReader: Reader.WithDriver[BigInt, java.math.BigInteger] =
-    make(classOf[java.math.BigInteger])((b, _) => BigInt.javaBigInteger2bigInt(b))((structure, columnName) =>
+    make(classOf[java.math.BigInteger])(BigInt.javaBigInteger2bigInt)((structure, columnName) =>
       structure.getBigInteger(columnName)
     )
 
   implicit val booleanReader: Reader.WithDriver[Boolean, java.lang.Boolean] =
-    make(classOf[java.lang.Boolean])((b, _) => Boolean.unbox(b))((structure, columnName) =>
-      structure.getBoolean(columnName)
-    )
+    make(classOf[java.lang.Boolean])(Boolean.unbox)((structure, columnName) => structure.getBoolean(columnName))
 
   implicit val byteBufferReader: Reader.WithDriver[java.nio.ByteBuffer, java.nio.ByteBuffer] =
-    make(classOf[java.nio.ByteBuffer])(identityDatatype)((structure, columnName) => structure.getByteBuffer(columnName))
+    make(classOf[java.nio.ByteBuffer])(identity)((structure, columnName) => structure.getByteBuffer(columnName))
 
   implicit val byteReader: Reader.WithDriver[Byte, java.lang.Byte] =
-    make(classOf[java.lang.Byte])((b, _) => Byte.unbox(b))((structure, columnName) => structure.getByte(columnName))
+    make(classOf[java.lang.Byte])(Byte.unbox)((structure, columnName) => structure.getByte(columnName))
 
   implicit val doubleReader: Reader.WithDriver[Double, java.lang.Double] =
-    make(classOf[java.lang.Double])((d, _) => Double.unbox(d))((structure, columnName) =>
-      structure.getDouble(columnName)
-    )
+    make(classOf[java.lang.Double])(Double.unbox)((structure, columnName) => structure.getDouble(columnName))
 
   implicit val instantReader: Reader.WithDriver[java.time.Instant, java.time.Instant] =
-    make(classOf[java.time.Instant])(identityDatatype)((structure, columnName) => structure.getInstant(columnName))
+    make(classOf[java.time.Instant])(identity)((structure, columnName) => structure.getInstant(columnName))
 
   implicit val intReader: Reader.WithDriver[Int, Integer] =
-    make(classOf[java.lang.Integer])((i, _) => Int.unbox(i))((structure, columnName) => structure.getInt(columnName))
+    make(classOf[java.lang.Integer])(Int.unbox)((structure, columnName) => structure.getInt(columnName))
 
   implicit val localDateReader: Reader.WithDriver[java.time.LocalDate, java.time.LocalDate] =
-    make(classOf[java.time.LocalDate])(identityDatatype)((structure, columnName) => structure.getLocalDate(columnName))
+    make(classOf[java.time.LocalDate])(identity)((structure, columnName) => structure.getLocalDate(columnName))
 
   implicit val localTimeReader: Reader.WithDriver[java.time.LocalTime, java.time.LocalTime] =
-    make(classOf[java.time.LocalTime])(identityDatatype)((structure, columnName) => structure.getLocalTime(columnName))
+    make(classOf[java.time.LocalTime])(identity)((structure, columnName) => structure.getLocalTime(columnName))
 
   implicit val longReader: Reader.WithDriver[Long, java.lang.Long] =
-    make(classOf[java.lang.Long])((l, _) => Long.unbox(l))((structure, columnName) => structure.getLong(columnName))
+    make(classOf[java.lang.Long])(Long.unbox)((structure, columnName) => structure.getLong(columnName))
 
   implicit val shortReader: Reader.WithDriver[Short, java.lang.Short] =
-    make(classOf[java.lang.Short])((s, _) => Short.unbox(s))((structure, columnName) => structure.getShort(columnName))
+    make(classOf[java.lang.Short])(s => Short.unbox(s))((structure, columnName) => structure.getShort(columnName))
 
   implicit val stringReader: Reader.WithDriver[String, java.lang.String] =
-    make(classOf[java.lang.String])(identityDatatype)((structure, columnName) => structure.getString(columnName))
+    make(classOf[java.lang.String])(identity)((structure, columnName) => structure.getString(columnName))
 
   implicit val uuidReader: Reader.WithDriver[java.util.UUID, java.util.UUID] =
-    make(classOf[java.util.UUID])(identityDatatype)((structure, columnName) => structure.getUuid(columnName))
+    make(classOf[java.util.UUID])(identity)((structure, columnName) => structure.getUuid(columnName))
 
   implicit val rowReader: Reader.WithDriver[Row, Row] =
-    make(classOf[Row])(identityDatatype)((structure, _) => structure.asInstanceOf[Row])
+    make(classOf[Row])(identity)((structure, _) => structure.asInstanceOf[Row])
 
   implicit def listReader[A](implicit elementReader: Reader[A]): Reader[List[A]] =
     new Reader[List[A]] {
@@ -123,13 +139,9 @@ object Reader extends UdtReaderMagnoliaDerivation {
       override def driverClass: Class[DriverType] = classOf[java.util.List[elementReader.DriverType]]
 
       override def convertDriverToScala(
-        driverValue: java.util.List[elementReader.DriverType],
-        dataType: DataType
-      ): List[A] = {
-        println("Calling listReader.convertDriverToScala")
-        val elemDataType = dataType.asInstanceOf[ListType].getElementType
-        driverValue.asScala.map(elementReader.convertDriverToScala(_, elemDataType)).toList
-      }
+        driverValue: java.util.List[elementReader.DriverType]
+      ): List[A] =
+        driverValue.asScala.map(elementReader.convertDriverToScala(_)).toList
 
       override def readFromDriver[Structure <: CassandraStructure](
         structure: Structure,
@@ -145,12 +157,9 @@ object Reader extends UdtReaderMagnoliaDerivation {
       override def driverClass: Class[DriverType] = classOf[java.util.Set[elementReader.DriverType]]
 
       override def convertDriverToScala(
-        driverValue: java.util.Set[elementReader.DriverType],
-        dataType: DataType
-      ): Set[A] = {
-        val elemType = dataType.asInstanceOf[SetType].getElementType
-        driverValue.asScala.map(elementReader.convertDriverToScala(_, elemType)).toSet
-      }
+        driverValue: java.util.Set[elementReader.DriverType]
+      ): Set[A] =
+        driverValue.asScala.map(elementReader.convertDriverToScala(_)).toSet
 
       override def readFromDriver[Structure <: CassandraStructure](
         structure: Structure,
@@ -169,15 +178,11 @@ object Reader extends UdtReaderMagnoliaDerivation {
       override def driverClass: Class[DriverType] = classOf[java.util.Map[keyReader.DriverType, valueReader.DriverType]]
 
       override def convertDriverToScala(
-        driverValue: java.util.Map[keyReader.DriverType, valueReader.DriverType],
-        dataType: DataType
-      ): Map[K, V] = {
-        val keyType   = dataType.asInstanceOf[MapType].getKeyType
-        val valueType = dataType.asInstanceOf[MapType].getValueType
+        driverValue: java.util.Map[keyReader.DriverType, valueReader.DriverType]
+      ): Map[K, V] =
         driverValue.asScala.map { case (key, value) =>
-          keyReader.convertDriverToScala(key, keyType) -> valueReader.convertDriverToScala(value, valueType)
+          keyReader.convertDriverToScala(key) -> valueReader.convertDriverToScala(value)
         }.toMap
-      }
 
       override def readFromDriver[Structure <: CassandraStructure](
         structure: Structure,
@@ -192,8 +197,8 @@ object Reader extends UdtReaderMagnoliaDerivation {
 
       override def driverClass: Class[DriverType] = elementReader.driverClass
 
-      override def convertDriverToScala(driverValue: DriverType, dataType: DataType): Option[A] =
-        Option(driverValue).map(elementReader.convertDriverToScala(_, dataType))
+      override def convertDriverToScala(driverValue: DriverType): Option[A] =
+        Option(driverValue).map(elementReader.convertDriverToScala(_))
 
       override def readFromDriver[Structure <: CassandraStructure](
         structure: Structure,
@@ -201,41 +206,18 @@ object Reader extends UdtReaderMagnoliaDerivation {
       ): DriverType =
         structure.get(fieldName.get, elementReader.driverClass)
     }
-
-  private def identityDatatype[A](value: A, dataType: DataType): A = {
-    val _ = dataType
-    value
-  }
 }
 
 trait UdtReaderMagnoliaDerivation {
   type Typeclass[T] = Reader[T]
 
   def join[T](ctx: CaseClass[Reader, T]): Reader.WithDriver[T, UdtValue] =
-    new Typeclass[T] {
-      override type DriverType = UdtValue
-
-      override def driverClass: Class[DriverType] = classOf[UdtValue]
-
-      override def convertDriverToScala(driverValue: DriverType, dataType: DataType): T =
-        ctx.construct { param =>
-          val fieldName   = param.label
-          val fieldReader = param.typeclass
-          val output      = fieldReader.read(driverValue, Option(fieldName))
-          output
-        }
-
-      override def readFromDriver[Structure <: CassandraStructure](
-        structure: Structure,
-        fieldName: Option[String]
-      ): DriverType =
-        fieldName match {
-          case Some(field) =>
-            structure.getUdtValue(field)
-
-          case None =>
-            throw new RuntimeException("Cannot read a UDT Value from the root (Row), Please use a RowReader instead")
-        }
+    Reader.fromUdtValue { udtValue =>
+      ctx.construct { param =>
+        val fieldName = param.label
+        val reader    = param.typeclass
+        reader.read(udtValue, Option(fieldName))
+      }
     }
 
   implicit def deriveUdtValue[T]: Reader.WithDriver[T, UdtValue] = macro Magnolia.gen[T]

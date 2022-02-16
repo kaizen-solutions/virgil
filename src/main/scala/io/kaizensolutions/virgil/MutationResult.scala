@@ -40,8 +40,8 @@ object MutationResult {
     }
 
   implicit val readerAmbiguous1: Reader[MutationResult] =
-    Reader.make(classOf[MutationResult])((a, _) => a)((_, _) => MutationResult(true))
+    Reader.make(classOf[MutationResult])(identity)((_, _) => MutationResult(true))
 
   implicit val readerAmbiguous2: Reader[MutationResult] =
-    Reader.make(classOf[MutationResult])((a, _) => a)((_, _) => MutationResult(true))
+    Reader.make(classOf[MutationResult])(identity)((_, _) => MutationResult(true))
 }
