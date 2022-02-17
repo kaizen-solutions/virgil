@@ -462,28 +462,12 @@ trait UdtWriterMagnoliaDerivation {
   type Typeclass[T] = ColumnEncoder[T]
 
   // User Defined Types
-  def join[T](ctx: CaseClass[ColumnEncoder, T]): ColumnEncoder.WithDriver[T, UdtValue] = new ColumnEncoder[T] {
-    override type DriverType = UdtValue
-
-    override def driverClass: Class[DriverType] = classOf[UdtValue]
-
-    override def encodeField[Structure <: SettableByName[Structure]](
-      fieldName: String,
-      value: T,
-      structure: Structure
-    ): Structure = {
-      val dataType     = structure.getType(fieldName)
-      val subStructure = convertScalaToDriver(value, dataType)
-      structure.setUdtValue(fieldName, subStructure)
-    }
-
-    override def convertScalaToDriver(scalaValue: T, dataType: DataType): UdtValue = {
-      val subStructure = dataType.asInstanceOf[UserDefinedType].newValue()
-      ctx.parameters.foldLeft(subStructure) { case (s, p) =>
-        p.typeclass.encodeField(p.label, p.dereference(scalaValue), s)
+  def join[T](ctx: CaseClass[ColumnEncoder, T]): ColumnEncoder.WithDriver[T, UdtValue] =
+    ColumnEncoder.udt[T] { (scalaValue, udtValue) =>
+      ctx.parameters.foldLeft(udtValue) { case (acc, p) =>
+        p.typeclass.encodeField(p.label, p.dereference(scalaValue), acc)
       }
     }
-  }
 
   implicit def deriveUdtValue[T]: ColumnEncoder.WithDriver[T, UdtValue] = macro Magnolia.gen[T]
 }
