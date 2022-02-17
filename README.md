@@ -18,7 +18,18 @@ libraryDependencies += "com.github.kaizen-solutions" % "virgil" % "<please-see-j
 ## Introduction
 
 You can follow along by checking out this repository and running `docker-compose up` which will bring up 
-Datastax Enterprise along with Datastax Studio which provides a nice UI to interact with Cassandra.
+Datastax Enterprise Cassandra node along with Datastax Studio which provides a nice UI to interact with Cassandra. You 
+have to create a new connection in Datastax Studio where you point to the container (since this is running in the same 
+Docker network, we utilize the Docker DNS to resolve the hostname to the container IP and the hostname of the Cassandra 
+cluster is `datastax-enterprise`):
+
+<img src="https://user-images.githubusercontent.com/14280155/154575887-d568cd9e-54d8-4354-8c3f-11a417b63d40.png" width="400">
+<br>
+<img src="https://user-images.githubusercontent.com/14280155/154576357-7966f124-2f3c-4195-a746-412b3bbe257f.png" width="400">
+<br>
+<img src="https://user-images.githubusercontent.com/14280155/154576610-4f49fe72-9461-4c1f-873b-c3b2b93f1d32.png" width="400">
+
+Please keep reading if you want to follow along 👇
 
 ### Keyspace setup
 
