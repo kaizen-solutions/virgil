@@ -9,11 +9,18 @@ _Virgil is a functional Cassandra client built using ZIO, Magnolia and the Datas
 
 ## Quick Start
 
-Import Virgil (this will transitively import the Datastax Java Driver, Magnolia and ZIO 1.x):
+Add the JitPack resolver and import Virgil (this will transitively import the Datastax Java Driver, Magnolia and ZIO 1.x):
 ```sbt
 resolvers           += "jitpack" at "https://jitpack.io"
-libraryDependencies += "com.github.kaizen-solutions" % "virgil" % "<please-see-badge-for-latest-version>"
+libraryDependencies += "com.github.kaizen-solutions" % "virgil" % "<please-see-jitpack-badge-for-latest-version>"
 ```
+
+## Introduction
+
+You can follow along by checking out this repository and running `docker-compose up` which will bring up 
+Datastax Enterprise along with Datastax Studio which provides a nice UI to interact with Cassandra.
+
+### Keyspace setup
 
 Given the following Cassandra keyspace:
 ```cql
@@ -24,7 +31,9 @@ CREATE KEYSPACE IF NOT EXISTS virgil
 }
 ```
 
-Make sure we are using the keyspace with `USE virgil` and the following Casandra table along with its User Defined Types (UDTs):
+### Table setup
+
+And the following Casandra table along with its User Defined Types (UDTs) (Make sure we are using the keyspace with `USE virgil`):
 ```cql
 CREATE TYPE info (
   favorite BOOLEAN,
@@ -47,6 +56,8 @@ CREATE TABLE IF NOT EXISTS persons (
   PRIMARY KEY ((id), age)
 );
 ```
+
+### Scala data-types 
 
 If we want to read and write data to this table, we create case classes that mirror the table and UDTs in Scala through 
 along with adding codecs for each datatype:
@@ -75,7 +86,9 @@ object Person {
 }
 ```
 
-Now that all the datatypes are in place, we can write some data:
+### Writing data
+
+Now that all the data-types are in place, we can write some data:
 ```scala
 import io.kaizensolutions.virgil._
 import io.kaizensolutions.virgil.dsl._
@@ -108,6 +121,8 @@ def select(personId: String, personAge: Int): CQL[Person] =
     .take(1)
 ```
 
+## Low level API
+
 If you find that you have a complex query that cannot be expressed with the DSL yet, then you can use the lower level cql 
 interpolator to express your query or mutation:
 ```scala
@@ -127,6 +142,8 @@ passed through configuration, then you can use `s"I am a String ${forExample}".a
 or `cql"SELECT * FROM ".appendString(s"$myTable")`). Doing interpolation in cql is different from string interpolation
 as it will cause bind markers to be created.
 
+### Cassandra batches
+
 You can also batch (i.e. Cassandra's definition of the word) mutations together by using `+`:
 ```scala
 val batch: CQL[MutationResult]         = insert(p1) + update(p2.id, newPInfo) + insert(p3)
@@ -134,6 +151,8 @@ val unloggedBatch: CQL[MutationResult] = CQL.unlogged(batch)
 ```
 
 Note: You cannot batch together queries and mutations as this is not allowed by Cassandra.
+
+### Compiling CQL queries and mutations into streaming effects
 
 Now that we have built our CQL queries and mutations, we can execute them:
 ```scala
@@ -146,6 +165,8 @@ val insertResult: ZStream[Has[CQLExecutor], Throwable, MutationResult] = insert(
 // A stream of results is returned
 val queryResult: ZStream[Has[CQLExecutor], Throwable, Person] = selectAll.execute
 ```
+
+### Executing queries and mutations
 
 Running CQL queries and mutations is done through the `CQLExecutor`, which produces a `ZStream` that contains the 
 results. You can obtain a `CQLExecutor` layer provided you have a `CqlSessionBuilder` from the Datastax Java Driver:
