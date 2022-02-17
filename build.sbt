@@ -32,7 +32,8 @@ lazy val root =
         )
       },
       testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
-      Test / fork := true,
+      Test / fork                 := true,
+      releaseIgnoreUntrackedFiles := true,
       releaseProcess := Seq[ReleaseStep](
         checkSnapshotDependencies,
         inquireVersions,
