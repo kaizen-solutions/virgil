@@ -1,6 +1,7 @@
 package io.kaizensolutions.virgil
 import com.datastax.oss.driver.api.core.{CqlSession, CqlSessionBuilder}
 import io.kaizensolutions.virgil.configuration.PageState
+import io.kaizensolutions.virgil.internal.CQLExecutorImpl
 import io.kaizensolutions.virgil.internal.Proofs.=:!=
 import zio.stream._
 import zio.{Has, RIO, RLayer, Task, TaskManaged, ZIO, ZLayer, ZManaged}

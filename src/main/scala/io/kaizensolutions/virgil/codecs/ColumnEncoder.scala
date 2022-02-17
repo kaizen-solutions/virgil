@@ -485,5 +485,5 @@ trait UdtWriterMagnoliaDerivation {
     }
   }
 
-  implicit def derive[T]: ColumnEncoder.WithDriver[T, UdtValue] = macro Magnolia.gen[T]
+  implicit def deriveUdtValue[T]: ColumnEncoder.WithDriver[T, UdtValue] = macro Magnolia.gen[T]
 }

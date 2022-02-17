@@ -66,13 +66,18 @@ final case class CQL[+Result] private (
   def executePage[Result1 >: Result](state: Option[PageState] = None): RIO[Has[CQLExecutor], Paged[Result1]] =
     CQLExecutor.executePage(self, state)
 
-  def take[Result1 >: Result](n: Long)(implicit ev: CQLType[Result1] <:< CQLType.Query[Result1]): CQL[Result1] = {
+  def take[Result1 >: Result](n: Long)(implicit ev: Result1 <:!< MutationResult): CQL[Result1] = {
+    val _ = ev
     val adjustN = n match {
       case invalid if invalid <= 0 => 1
       case _                       => n
     }
-    val query = ev(cqlType)
-    copy(cqlType = CQLType.Query(query.queryType, query.reader, PullMode.TakeUpto(adjustN)))
+    cqlType match {
+      case q @ CQLType.Query(_, _, _) => self.copy(cqlType = q.copy(pullMode = PullMode.TakeUpto(adjustN)))
+      // The following matches are not possible due to type constraints expressed above
+      case _: CQLType.Mutation => sys.error("It is not possible to take a mutation")
+      case _: CQLType.Batch    => sys.error("It is not possible to take a batch")
+    }
   }
 
   def withAttributes(in: ExecutionAttributes): CQL[Result] =
