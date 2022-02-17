@@ -1,11 +1,10 @@
-package io.kaizensolutions.virgil
+package io.kaizensolutions.virgil.internal
 
 import com.datastax.oss.driver.api.core.CqlSession
 import com.datastax.oss.driver.api.core.cql.{BatchType => _, _}
 import io.kaizensolutions.virgil.configuration.{ExecutionAttributes, PageState}
 import io.kaizensolutions.virgil.internal.Proofs._
-import io.kaizensolutions.virgil.internal.{BindMarkers, PullMode}
-import io.kaizensolutions.virgil.renderer.CqlStatement
+import io.kaizensolutions.virgil._
 import zio._
 import zio.stream._
 
@@ -60,7 +59,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
     pageState: Option[PageState],
     attr: ExecutionAttributes
   ): Task[Paged[A]] = {
-    val (queryString, bindMarkers) = CqlStatement.render(q)
+    val (queryString, bindMarkers) = CqlStatementRenderer.render(q)
     for {
       boundStatement        <- buildStatement(queryString, bindMarkers, attr)
       reader                 = q.reader
@@ -95,7 +94,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
     input: CQLType.Query[Output],
     config: ExecutionAttributes
   ): ZStream[Any, Throwable, Output] = {
-    val (queryString, bindMarkers) = CqlStatement.render(input)
+    val (queryString, bindMarkers) = CqlStatementRenderer.render(input)
     for {
       boundStatement <- ZStream.fromEffect(buildStatement(queryString, bindMarkers, config))
       reader          = input.reader
@@ -107,7 +106,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
     input: CQLType.Query[Output],
     config: ExecutionAttributes
   ): ZIO[Any, Throwable, Option[Output]] = {
-    val (queryString, bindMarkers) = CqlStatement.render(input)
+    val (queryString, bindMarkers) = CqlStatementRenderer.render(input)
     for {
       boundStatement <- buildStatement(queryString, bindMarkers, config)
       reader          = input.reader
@@ -123,7 +122,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
     in: CQLType.Mutation,
     attr: ExecutionAttributes = ExecutionAttributes.default
   ): Task[BatchableStatement[_]] = {
-    val (queryString, bindMarkers) = CqlStatement.render(in)
+    val (queryString, bindMarkers) = CqlStatementRenderer.render(in)
 
     if (bindMarkers.isEmpty) Task.succeed(SimpleStatement.newInstance(queryString))
     else buildStatement(queryString, bindMarkers, attr)

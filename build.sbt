@@ -1,4 +1,5 @@
-ThisBuild / version                             := "0.1.0-SNAPSHOT"
+import ReleaseTransformations._
+
 ThisBuild / scalaVersion                        := "2.13.8"
 ThisBuild / crossScalaVersions                  := Seq("2.13.8", "2.12.15")
 ThisBuild / githubWorkflowPublishTargetBranches := Seq.empty
@@ -31,5 +32,17 @@ lazy val root =
         )
       },
       testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
-      Test / fork := true
+      Test / fork := true,
+      releaseProcess := Seq[ReleaseStep](
+        checkSnapshotDependencies,
+        inquireVersions,
+        runClean,
+        runTest,
+        setReleaseVersion,
+        commitReleaseVersion,
+        tagRelease,
+        setNextVersion,
+        commitNextVersion,
+        pushChanges
+      )
     )

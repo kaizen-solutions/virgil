@@ -1,13 +1,12 @@
-package io.kaizensolutions.virgil.renderer
+package io.kaizensolutions.virgil.internal
 
+import io.kaizensolutions.virgil.CQLType
 import io.kaizensolutions.virgil.CQLType.Mutation
-import io.kaizensolutions.virgil._
 import io.kaizensolutions.virgil.codecs.ColumnEncoder
 import io.kaizensolutions.virgil.dsl.{Assignment, Relation}
-import io.kaizensolutions.virgil.internal.{BindMarker, BindMarkerName, BindMarkers, QueryType}
 import zio.{Chunk, NonEmptyChunk}
 
-object CqlStatement {
+private[virgil] object CqlStatementRenderer {
   def render(in: CQLType.Mutation): (String, BindMarkers) =
     in match {
       case Mutation.Insert(tableName, columns) =>
@@ -93,7 +92,7 @@ object CqlStatement {
             val rawColumnName = columnName.name
             val valuesToAdd   = values.toList
             val parameter     = s":$rawColumnName"
-            val queryString   = s"$parameter + :$rawColumnName"
+            val queryString   = s"$rawColumnName = $parameter + :$rawColumnName"
             val column        = BindMarker.make(columnName, valuesToAdd)(ev)
             (queryString, BindMarkers.empty + column)
 
@@ -102,7 +101,7 @@ object CqlStatement {
             val rawColumnName  = columnName.name
             val valuesToRemove = values.toList
             val parameter      = s":$rawColumnName"
-            val queryString    = s"$rawColumnName - $parameter"
+            val queryString    = s"$rawColumnName = $rawColumnName - $parameter"
             val column         = BindMarker.make(columnName, valuesToRemove)(ev)
             (queryString, BindMarkers.empty + column)
 
@@ -112,7 +111,7 @@ object CqlStatement {
             val rawColumnName = columnName.name
             val valuesToAdd   = values.toList
             val parameter     = s":$rawColumnName"
-            val queryString   = s"$rawColumnName + $parameter"
+            val queryString   = s"$rawColumnName = $rawColumnName + $parameter"
             val column        = BindMarker.make(columnName, valuesToAdd)(ev)
             (queryString, BindMarkers.empty + column)
 
@@ -132,34 +131,34 @@ object CqlStatement {
             (queryString, BindMarkers.empty + indexColumn + valueColumn)
 
           case AddSetItems(columnName, value, ev) =>
-            // example_column + :example_column
+            // example_column = example_column + :example_column
             val rawColumnName = columnName.name
             val parameter     = s":$rawColumnName"
-            val queryString   = s"$rawColumnName + $parameter"
+            val queryString   = s"$rawColumnName = $rawColumnName + $parameter"
             val column        = BindMarker.make(columnName, value.toSet)(ev)
             (queryString, BindMarkers.empty + column)
 
           case RemoveSetItems(columnName, value, ev) =>
-            // example_column - :example_column
+            // example_column = example_column - :example_column
             val rawColumnName = columnName.name
             val parameter     = s":$rawColumnName"
-            val queryString   = s"$rawColumnName - $parameter"
+            val queryString   = s"$rawColumnName = $rawColumnName - $parameter"
             val column        = BindMarker.make(columnName, value.toSet)(ev)
             (queryString, BindMarkers.empty + column)
 
           case AppendMapItems(columnName, entries, ev) =>
-            // example_column + :example_column
+            // example_column = example_column + :example_column
             val rawColumnName = columnName.name
             val parameter     = s":$rawColumnName"
-            val queryString   = s"$rawColumnName + $parameter"
+            val queryString   = s"$rawColumnName = $rawColumnName + $parameter"
             val column        = BindMarker.make(columnName, entries.toMap)(ev)
             (queryString, BindMarkers.empty + column)
 
           case RemoveMapItemsByKey(columnName, keys, evK) =>
-            // example_column - :example_column
+            // example_column = example_column - :example_column
             val rawColumnName = columnName.name
             val parameter     = s":$rawColumnName"
-            val queryString   = s"$rawColumnName - $parameter"
+            val queryString   = s"$rawColumnName = $rawColumnName - $parameter"
             val column        = BindMarker.make(columnName, keys.toList)(evK)
             (queryString, BindMarkers.empty + column)
 
