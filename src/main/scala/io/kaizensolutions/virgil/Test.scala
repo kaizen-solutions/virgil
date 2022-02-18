@@ -23,9 +23,10 @@ object Test extends App {
         CUdt(udtFields.zip(udtFields.map(iterate(udt, _))))
       }
       else {
-        // be bad for now until we figure out what to do
-        val codec = CassandraType.getCodecFor(dt).getOrElse(throw new Exception("type unsupported"))
-        gettableByName.get(field, codec)
+        CassandraType
+          .getCodecFor(dt)
+          .flatMap(codec => Option(gettableByName.get(field, codec)))
+          .getOrElse(CNull)
       }
     }
 
