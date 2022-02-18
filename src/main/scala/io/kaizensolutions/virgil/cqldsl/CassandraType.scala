@@ -9,9 +9,11 @@ sealed trait CassandraType extends Product with Serializable
 
 case object CNull extends CassandraType
 
-sealed trait CPrimative extends CassandraType
-case class CBool(value: Boolean) extends CPrimative
-case class CInt(value: Int) extends CPrimative
+sealed trait CPrimitive extends CassandraType
+case class CBool(value: Boolean) extends CPrimitive
+case class CInt(value: Int) extends CPrimitive
+
+case class CList[A <: CassandraType](value: List[A]) extends CassandraType
 
 case class CUdt(values: List[(String, CassandraType)]) extends CassandraType
 

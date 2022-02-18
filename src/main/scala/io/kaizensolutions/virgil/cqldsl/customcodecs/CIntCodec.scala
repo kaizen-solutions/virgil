@@ -1,16 +1,15 @@
 package io.kaizensolutions.virgil.cqldsl.customcodecs
 
 import com.datastax.oss.driver.api.core.ProtocolVersion
-import com.datastax.oss.driver.api.core.`type`.codec.TypeCodec
+import com.datastax.oss.driver.api.core.`type`.codec.{TypeCodec, TypeCodecs}
 import com.datastax.oss.driver.api.core.`type`.reflect.GenericType
 import com.datastax.oss.driver.api.core.`type`.{DataType, DataTypes}
-import com.datastax.oss.driver.internal.core.`type`.codec.IntCodec
 import io.kaizensolutions.virgil.cqldsl.CInt
 
 import java.nio.ByteBuffer
 
 object CIntCodec extends TypeCodec[CInt] {
-  private final val intCodec = new IntCodec()
+  private final val intCodec = TypeCodecs.INT
 
   override def getJavaType: GenericType[CInt] = GenericType.of(classOf[CInt])
 

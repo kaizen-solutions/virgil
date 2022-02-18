@@ -6,6 +6,7 @@ import com.datastax.oss.driver.api.core.data.GettableByName
 import com.datastax.oss.driver.api.core.{CqlIdentifier, CqlSession}
 import com.datastax.oss.protocol.internal.ProtocolConstants
 import io.kaizensolutions.virgil.cqldsl._
+import io.kaizensolutions.virgil.cqldsl.customcodecs.CListCodec
 
 import java.nio.ByteBuffer
 import scala.jdk.CollectionConverters.{CollectionHasAsScala, IteratorHasAsScala}
@@ -21,6 +22,17 @@ object Test extends App {
         val udtFields: List[String] = userdt.getFieldNames.asScala.toList.map(_.asInternal())
 
         CUdt(udtFields.zip(udtFields.map(iterate(udt, _))))
+      }
+      else if (dt.getProtocolCode == ProtocolConstants.DataType.LIST) {
+        val eType = gettableByName.getType(0)
+
+        CassandraType
+          .getCodecFor(eType)
+          .flatMap { eCodec =>
+            val lstCodec = new CListCodec(eCodec)
+            Option(gettableByName.get(field, lstCodec))
+          }
+          .getOrElse(CNull)
       }
       else {
         CassandraType

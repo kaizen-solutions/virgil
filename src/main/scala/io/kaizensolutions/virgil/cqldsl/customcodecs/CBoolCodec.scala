@@ -1,16 +1,15 @@
 package io.kaizensolutions.virgil.cqldsl.customcodecs
 
 import com.datastax.oss.driver.api.core.ProtocolVersion
-import com.datastax.oss.driver.api.core.`type`.{DataType, DataTypes}
-import com.datastax.oss.driver.api.core.`type`.codec.TypeCodec
+import com.datastax.oss.driver.api.core.`type`.codec.{TypeCodec, TypeCodecs}
 import com.datastax.oss.driver.api.core.`type`.reflect.GenericType
+import com.datastax.oss.driver.api.core.`type`.{DataType, DataTypes}
 import io.kaizensolutions.virgil.cqldsl.CBool
-import com.datastax.oss.driver.internal.core.`type`.codec.BooleanCodec
 
 import java.nio.ByteBuffer
 
 object CBoolCodec extends TypeCodec[CBool] {
-  private final val boolCodec = new BooleanCodec()
+  private final val boolCodec = TypeCodecs.BOOLEAN
 
   override def getJavaType: GenericType[CBool] = GenericType.of(classOf[CBool])
 
