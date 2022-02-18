@@ -3,13 +3,14 @@ package io.kaizensolutions.virgil.cqldsl
 import com.datastax.oss.driver.api.core.`type`.DataType
 import com.datastax.oss.driver.api.core.`type`.codec.TypeCodec
 import com.datastax.oss.protocol.internal.ProtocolConstants
-import io.kaizensolutions.virgil.cqldsl.customcodecs.CIntCodec
+import io.kaizensolutions.virgil.cqldsl.customcodecs.{CBoolCodec, CIntCodec}
 
 sealed trait CassandraType extends Product with Serializable
 
 case object CNull extends CassandraType
 
 sealed trait CPrimative extends CassandraType
+case class CBool(value: Boolean) extends CPrimative
 case class CInt(value: Int) extends CPrimative
 
 case class CUdt(values: List[(String, CassandraType)]) extends CassandraType
@@ -20,7 +21,7 @@ object CassandraType {
     case ProtocolConstants.DataType.ASCII     => None
     case ProtocolConstants.DataType.BIGINT    => None
     case ProtocolConstants.DataType.BLOB      => None
-    case ProtocolConstants.DataType.BOOLEAN   => None
+    case ProtocolConstants.DataType.BOOLEAN   => Some(CBoolCodec)
     case ProtocolConstants.DataType.COUNTER   => None
     case ProtocolConstants.DataType.DECIMAL   => None
     case ProtocolConstants.DataType.DOUBLE    => None
