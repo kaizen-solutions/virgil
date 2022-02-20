@@ -12,7 +12,7 @@ _Virgil is a functional Cassandra client built using ZIO, Magnolia and the Datas
 Add the JitPack resolver and import Virgil (this will transitively import the Datastax Java Driver, Magnolia and ZIO 1.x):
 ```sbt
 resolvers           += "jitpack" at "https://jitpack.io"
-libraryDependencies += "com.github.kaizen-solutions" % "virgil" % "<please-see-jitpack-badge-for-latest-version>"
+libraryDependencies += "com.github.kaizen-solutions" %% "virgil" % "<please-see-jitpack-badge-for-latest-version>"
 ```
 
 ## Introduction
