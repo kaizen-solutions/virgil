@@ -17,11 +17,18 @@ object MutationResult {
 
       override def convertScalaToDriver(scalaValue: MutationResult, dataType: DataType): DriverType = scalaValue
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: MutationResult,
         structure: Structure
       ): Structure = structure
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: MutationResult,
+        structure: Structure
+      ): Structure =
+        structure
     }
 
   implicit val writerAmbiguous2: ColumnEncoder[MutationResult] =
@@ -32,16 +39,26 @@ object MutationResult {
 
       override def convertScalaToDriver(scalaValue: MutationResult, dataType: DataType): DriverType = scalaValue
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
+        value: MutationResult,
+        structure: Structure
+      ): Structure = structure
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
         value: MutationResult,
         structure: Structure
       ): Structure = structure
     }
 
   implicit val readerAmbiguous1: ColumnDecoder[MutationResult] =
-    ColumnDecoder.make(classOf[MutationResult])(identity)((_, _) => MutationResult(true))
+    ColumnDecoder.make(classOf[MutationResult])(identity)((_, _) => MutationResult(true))((_, _) =>
+      MutationResult(true)
+    )
 
   implicit val readerAmbiguous2: ColumnDecoder[MutationResult] =
-    ColumnDecoder.make(classOf[MutationResult])(identity)((_, _) => MutationResult(true))
+    ColumnDecoder.make(classOf[MutationResult])(identity)((_, _) => MutationResult(true))((_, _) =>
+      MutationResult(true)
+    )
 }

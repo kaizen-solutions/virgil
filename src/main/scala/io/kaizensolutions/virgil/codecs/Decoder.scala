@@ -23,7 +23,7 @@ object Decoder {
       ctx.construct { param =>
         val fieldName = param.label
         val reader    = param.typeclass
-        reader.decodeField(row, fieldName)
+        reader.decodeFieldByName(row, fieldName)
       }
     }
 

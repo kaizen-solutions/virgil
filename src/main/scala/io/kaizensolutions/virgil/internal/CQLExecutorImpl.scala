@@ -67,7 +67,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
       boundStatementWithPage = boundStatement.setPagingState(driverPageState)
       rp                    <- selectPage(boundStatementWithPage)
       (results, nextPage)    = rp
-      chunksToOutput         = results.map(reader.decodeField(_, null))
+      chunksToOutput         = results.map(reader.decodeFieldByName(_, null))
     } yield Paged(chunksToOutput, nextPage)
   }
 
@@ -98,7 +98,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
     for {
       boundStatement <- ZStream.fromEffect(buildStatement(queryString, bindMarkers, config))
       reader          = input.reader
-      element        <- select(boundStatement).map(reader.decodeField(_, null))
+      element        <- select(boundStatement).map(reader.decodeFieldByName(_, null))
     } yield element
   }
 
@@ -111,7 +111,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
       boundStatement <- buildStatement(queryString, bindMarkers, config)
       reader          = input.reader
       optRow         <- selectFirst(boundStatement)
-      element        <- Task.succeed(optRow.map(reader.decodeField(_, null)))
+      element        <- Task.succeed(optRow.map(reader.decodeFieldByName(_, null)))
     } yield element
   }
 
@@ -169,7 +169,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
       val result: BoundStatementBuilder = {
         val initial = preparedStatement.boundStatementBuilder()
         val boundColumns = columns.underlying.foldLeft(initial) { case (accBuilder, (colName, column)) =>
-          column.write.encodeField(
+          column.write.encodeFieldByName(
             structure = accBuilder,
             fieldName = colName.name,
             value = column.value

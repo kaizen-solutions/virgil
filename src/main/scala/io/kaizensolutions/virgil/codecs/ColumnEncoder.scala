@@ -4,6 +4,10 @@ import com.datastax.oss.driver.api.core.`type`._
 import com.datastax.oss.driver.api.core.data.{CqlDuration, SettableByName, TupleValue, UdtValue}
 import magnolia1._
 
+import java.net.InetAddress
+import java.nio.ByteBuffer
+import java.time.{Instant, LocalDate, LocalTime}
+import java.util.UUID
 import scala.jdk.CollectionConverters._
 
 /**
@@ -19,8 +23,14 @@ trait ColumnEncoder[ScalaType] { self =>
 
   def convertScalaToDriver(scalaValue: ScalaType, dataType: DataType): DriverType
 
-  def encodeField[Structure <: SettableByName[Structure]](
+  def encodeFieldByName[Structure <: SettableByName[Structure]](
     fieldName: String,
+    value: ScalaType,
+    structure: Structure
+  ): Structure
+
+  def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+    index: Int,
     value: ScalaType,
     structure: Structure
   ): Structure
@@ -34,12 +44,19 @@ trait ColumnEncoder[ScalaType] { self =>
       def convertScalaToDriver(scalaValue: ScalaType2, dataType: DataType): DriverType =
         self.convertScalaToDriver(f(scalaValue), dataType)
 
-      def encodeField[Structure <: SettableByName[Structure]](
+      def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: ScalaType2,
         structure: Structure
       ): Structure =
-        self.encodeField(fieldName, f(value), structure)
+        self.encodeFieldByName(fieldName, f(value), structure)
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: ScalaType2,
+        structure: Structure
+      ): Structure =
+        self.encodeFieldByIndex(index, f(value), structure)
     }
 }
 object ColumnEncoder extends UdtWriterMagnoliaDerivation {
@@ -56,7 +73,7 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
       def convertScalaToDriver(scalaValue: A, dataType: DataType): DriverType =
         f(scalaValue, dataType.asInstanceOf[UserDefinedType].newValue())
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: A,
         structure: Structure
@@ -64,6 +81,16 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
         val dataType    = structure.getType(fieldName)
         val driverValue = convertScalaToDriver(value, dataType)
         structure.setUdtValue(fieldName, driverValue)
+      }
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: A,
+        structure: Structure
+      ): Structure = {
+        val dataType    = structure.getType(index)
+        val driverValue = convertScalaToDriver(value, dataType)
+        structure.setUdtValue(index, driverValue)
       }
     }
 
@@ -76,12 +103,19 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
 
       override def convertScalaToDriver(scalaValue: String, dataType: DataType): DriverType = scalaValue
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: String,
         structure: Structure
       ): Structure =
         structure.setString(fieldName, value)
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: String,
+        structure: Structure
+      ): Structure =
+        structure.setString(index, value)
     }
 
   implicit val writerForInt: ColumnEncoder.WithDriver[Int, java.lang.Integer] =
@@ -92,12 +126,19 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
 
       override def convertScalaToDriver(scalaValue: Int, dataType: DataType): DriverType = scalaValue
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: Int,
         structure: Structure
       ): Structure =
         structure.setInt(fieldName, value)
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: Int,
+        structure: Structure
+      ): Structure =
+        structure.setInt(index, value)
     }
 
   implicit val writerForLong: ColumnEncoder.WithDriver[Long, java.lang.Long] =
@@ -108,12 +149,19 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
 
       override def convertScalaToDriver(scalaValue: Long, dataType: DataType): DriverType = scalaValue
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: Long,
         structure: Structure
       ): Structure =
         structure.setLong(fieldName, value)
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: Long,
+        structure: Structure
+      ): Structure =
+        structure.setLong(index, value)
     }
 
   implicit val writerForLocalDate: ColumnEncoder.WithDriver[java.time.LocalDate, java.time.LocalDate] =
@@ -124,12 +172,19 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
 
       override def convertScalaToDriver(scalaValue: java.time.LocalDate, dataType: DataType): DriverType = scalaValue
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: java.time.LocalDate,
         structure: Structure
       ): Structure =
         structure.setLocalDate(fieldName, value)
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: LocalDate,
+        structure: Structure
+      ): Structure =
+        structure.setLocalDate(index, value)
     }
 
   implicit val writerForLocalTime: ColumnEncoder.WithDriver[java.time.LocalTime, java.time.LocalTime] =
@@ -140,12 +195,18 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
 
       override def convertScalaToDriver(scalaValue: java.time.LocalTime, dataType: DataType): DriverType = scalaValue
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: java.time.LocalTime,
         structure: Structure
       ): Structure =
         structure.setLocalTime(fieldName, value)
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: LocalTime,
+        structure: Structure
+      ): Structure = structure.setLocalTime(index, value)
     }
 
   implicit val writerForInstant: ColumnEncoder.WithDriver[java.time.Instant, java.time.Instant] =
@@ -156,12 +217,18 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
 
       override def convertScalaToDriver(scalaValue: java.time.Instant, dataType: DataType): DriverType = scalaValue
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: java.time.Instant,
         structure: Structure
       ): Structure =
         structure.setInstant(fieldName, value)
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: Instant,
+        structure: Structure
+      ): Structure = structure.setInstant(index, value)
     }
 
   implicit val writerForByteBuffer: ColumnEncoder.WithDriver[java.nio.ByteBuffer, java.nio.ByteBuffer] =
@@ -172,12 +239,18 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
 
       override def convertScalaToDriver(scalaValue: java.nio.ByteBuffer, dataType: DataType): DriverType = scalaValue
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: java.nio.ByteBuffer,
         structure: Structure
       ): Structure =
         structure.setByteBuffer(fieldName, value)
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: ByteBuffer,
+        structure: Structure
+      ): Structure = structure.setByteBuffer(index, value)
     }
 
   implicit val writerForBoolean: ColumnEncoder.WithDriver[Boolean, java.lang.Boolean] =
@@ -188,12 +261,17 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
 
       override def convertScalaToDriver(scalaValue: Boolean, dataType: DataType): DriverType = Boolean.box(scalaValue)
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: Boolean,
         structure: Structure
-      ): Structure =
-        structure.setBoolean(fieldName, value)
+      ): Structure = structure.setBoolean(fieldName, value)
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: Boolean,
+        structure: Structure
+      ): Structure = structure.setBoolean(index, value)
     }
 
   implicit val writerForBigDecimal: ColumnEncoder.WithDriver[BigDecimal, java.math.BigDecimal] =
@@ -204,12 +282,19 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
 
       override def convertScalaToDriver(scalaValue: BigDecimal, dataType: DataType): DriverType = scalaValue.bigDecimal
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: BigDecimal,
         structure: Structure
       ): Structure =
         structure.setBigDecimal(fieldName, value.bigDecimal)
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: BigDecimal,
+        structure: Structure
+      ): Structure =
+        structure.setBigDecimal(index, value.bigDecimal)
     }
 
   implicit val writerForDouble: ColumnEncoder.WithDriver[Double, java.lang.Double] =
@@ -220,12 +305,19 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
 
       override def convertScalaToDriver(scalaValue: Double, dataType: DataType): DriverType = Double.box(scalaValue)
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: Double,
         structure: Structure
       ): Structure =
         structure.setDouble(fieldName, value)
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: Double,
+        structure: Structure
+      ): Structure =
+        structure.setDouble(index, value)
     }
 
   implicit val writerForCqlDuration: ColumnEncoder.WithDriver[CqlDuration, CqlDuration] =
@@ -236,12 +328,19 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
 
       override def convertScalaToDriver(scalaValue: CqlDuration, dataType: DataType): DriverType = scalaValue
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: CqlDuration,
         structure: Structure
       ): Structure =
         structure.setCqlDuration(fieldName, value)
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: CqlDuration,
+        structure: Structure
+      ): Structure =
+        structure.setCqlDuration(index, value)
     }
 
   implicit val writerForFloat: ColumnEncoder.WithDriver[Float, java.lang.Float] =
@@ -252,12 +351,19 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
 
       override def convertScalaToDriver(scalaValue: Float, dataType: DataType): DriverType = Float.box(scalaValue)
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: Float,
         structure: Structure
       ): Structure =
         structure.setFloat(fieldName, value)
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: Float,
+        structure: Structure
+      ): Structure =
+        structure.setFloat(index, value)
     }
 
   implicit val writerForInetAddress: ColumnEncoder.WithDriver[java.net.InetAddress, java.net.InetAddress] =
@@ -268,12 +374,19 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
 
       override def convertScalaToDriver(scalaValue: java.net.InetAddress, dataType: DataType): DriverType = scalaValue
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: java.net.InetAddress,
         structure: Structure
       ): Structure =
         structure.setInetAddress(fieldName, value)
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: InetAddress,
+        structure: Structure
+      ): Structure =
+        structure.setInetAddress(index, value)
     }
 
   implicit val writerForShort: ColumnEncoder.WithDriver[Short, java.lang.Short] =
@@ -284,12 +397,18 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
 
       override def convertScalaToDriver(scalaValue: Short, dataType: DataType): DriverType = Short.box(scalaValue)
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: Short,
         structure: Structure
       ): Structure =
         structure.setShort(fieldName, value)
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: Short,
+        structure: Structure
+      ): Structure = structure.setShort(index, value)
     }
 
   implicit val writerForUUID: ColumnEncoder.WithDriver[java.util.UUID, java.util.UUID] =
@@ -300,12 +419,19 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
 
       override def convertScalaToDriver(scalaValue: java.util.UUID, dataType: DataType): DriverType = scalaValue
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: java.util.UUID,
         structure: Structure
       ): Structure =
         structure.setUuid(fieldName, value)
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: UUID,
+        structure: Structure
+      ): Structure =
+        structure.setUuid(index, value)
     }
 
   implicit val writerForByte: ColumnEncoder.WithDriver[Byte, java.lang.Byte] =
@@ -316,12 +442,19 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
 
       override def convertScalaToDriver(scalaValue: Byte, dataType: DataType): DriverType = Byte.box(scalaValue)
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: Byte,
         structure: Structure
       ): Structure =
         structure.setByte(fieldName, value)
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: Byte,
+        structure: Structure
+      ): Structure =
+        structure.setByte(index, value)
     }
 
   implicit val writerForCqlTupleValue: ColumnEncoder.WithDriver[TupleValue, TupleValue] =
@@ -332,12 +465,19 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
 
       override def convertScalaToDriver(scalaValue: TupleValue, dataType: DataType): DriverType = scalaValue
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: TupleValue,
         structure: Structure
       ): Structure =
         structure.setTupleValue(fieldName, value)
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: TupleValue,
+        structure: Structure
+      ): Structure =
+        structure.setTupleValue(index, value)
     }
 
   implicit val writerForBigInteger: ColumnEncoder.WithDriver[BigInt, java.math.BigInteger] =
@@ -348,12 +488,19 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
 
       override def convertScalaToDriver(scalaValue: BigInt, dataType: DataType): DriverType = scalaValue.bigInteger
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: BigInt,
         structure: Structure
       ): Structure =
         structure.setBigInteger(fieldName, value.bigInteger)
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: BigInt,
+        structure: Structure
+      ): Structure =
+        structure.setBigInteger(index, value.bigInteger)
     }
 
   // Collections
@@ -369,13 +516,22 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
         scalaValue.map(ew.convertScalaToDriver(_, elemType)).asJava
       }
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: List[Elem],
         structure: Structure
       ): Structure = {
         val dataType = structure.getType(fieldName)
         structure.setList(fieldName, convertScalaToDriver(value, dataType), ew.driverClass)
+      }
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: List[Elem],
+        structure: Structure
+      ): Structure = {
+        val dataType = structure.getType(index)
+        structure.setList(index, convertScalaToDriver(value, dataType), ew.driverClass)
       }
     }
 
@@ -391,13 +547,22 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
         scalaValue.map(ew.convertScalaToDriver(_, elemType)).asJava
       }
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: Set[Elem],
         structure: Structure
       ): Structure = {
         val dataType = structure.getType(fieldName)
         structure.setSet(fieldName, convertScalaToDriver(value, dataType), ew.driverClass)
+      }
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: Set[Elem],
+        structure: Structure
+      ): Structure = {
+        val dataType = structure.getType(index)
+        structure.setSet(index, convertScalaToDriver(value, dataType), ew.driverClass)
       }
     }
 
@@ -419,13 +584,22 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
       }.asJava
     }
 
-    override def encodeField[Structure <: SettableByName[Structure]](
+    override def encodeFieldByName[Structure <: SettableByName[Structure]](
       fieldName: String,
       value: Map[Key, Value],
       structure: Structure
     ): Structure = {
       val dataType = structure.getType(fieldName)
       structure.setMap(fieldName, convertScalaToDriver(value, dataType), kw.driverClass, vw.driverClass)
+    }
+
+    override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+      index: Int,
+      value: Map[Key, Value],
+      structure: Structure
+    ): Structure = {
+      val dataType = structure.getType(index)
+      structure.setMap(index, convertScalaToDriver(value, dataType), kw.driverClass, vw.driverClass)
     }
   }
 
@@ -442,7 +616,7 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
           case None        => null.asInstanceOf[DriverType]
         }
 
-      override def encodeField[Structure <: SettableByName[Structure]](
+      override def encodeFieldByName[Structure <: SettableByName[Structure]](
         fieldName: String,
         value: Option[A],
         structure: Structure
@@ -455,6 +629,20 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
           case None =>
             structure.setToNull(fieldName)
         }
+
+      override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+        index: Int,
+        value: Option[A],
+        structure: Structure
+      ): Structure =
+        value match {
+          case Some(value) =>
+            val dataType = structure.getType(index)
+            structure.set(index, ew.convertScalaToDriver(value, dataType), ew.driverClass)
+
+          case None =>
+            structure.setToNull(index)
+        }
     }
 }
 
@@ -465,7 +653,7 @@ trait UdtWriterMagnoliaDerivation {
   def join[T](ctx: CaseClass[ColumnEncoder, T]): ColumnEncoder.WithDriver[T, UdtValue] =
     ColumnEncoder.udt[T] { (scalaValue, udtValue) =>
       ctx.parameters.foldLeft(udtValue) { case (acc, p) =>
-        p.typeclass.encodeField(p.label, p.dereference(scalaValue), acc)
+        p.typeclass.encodeFieldByName(p.label, p.dereference(scalaValue), acc)
       }
     }
 
