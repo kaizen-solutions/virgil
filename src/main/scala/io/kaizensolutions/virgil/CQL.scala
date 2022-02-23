@@ -1,6 +1,6 @@
 package io.kaizensolutions.virgil
 
-import io.kaizensolutions.virgil.codecs.Decoder
+import io.kaizensolutions.virgil.codecs.CqlDecoder
 import io.kaizensolutions.virgil.configuration.{ExecutionAttributes, PageState}
 import io.kaizensolutions.virgil.dsl.{Assignment, Relation}
 import io.kaizensolutions.virgil.internal.Proofs._
@@ -101,7 +101,7 @@ object CQL {
     CQL(CQLType.Mutation.RawCql(queryString, bindMarkers), ExecutionAttributes.default)
 
   def cqlQuery[Scala](queryString: String, bindMarkers: BindMarkers, pullMode: PullMode = PullMode.All)(implicit
-    reader: Decoder[Scala]
+    reader: CqlDecoder[Scala]
   ): CQL[Scala] =
     CQL(CQLType.Query(QueryType.RawCql(queryString, bindMarkers), reader, pullMode), ExecutionAttributes.default)
 
@@ -125,7 +125,7 @@ object CQL {
     columns: NonEmptyChunk[String],
     relations: Chunk[Relation]
   )(implicit
-    reader: Decoder[Scala]
+    reader: CqlDecoder[Scala]
   ): CQL[Scala] =
     CQL(
       CQLType
@@ -148,7 +148,7 @@ object CQL {
     CQL(CQLType.Mutation.Update(tableName, assignments, relations), ExecutionAttributes.default)
 
   implicit class CQLQueryOps[A](in: CQL[A])(implicit ev: A <:!< MutationResult) {
-    def readAs[B](implicit reader: Decoder[B]): CQL[B] =
+    def readAs[B](implicit reader: CqlDecoder[B]): CQL[B] =
       in.cqlType match {
         case CQLType.Query(queryType, _, pullMode) =>
           CQL(CQLType.Query(queryType, reader, pullMode), in.executionAttributes)

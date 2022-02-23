@@ -2,15 +2,15 @@ package io.kaizensolutions.virgil
 
 import com.datastax.oss.driver.api.core.`type`.DataType
 import com.datastax.oss.driver.api.core.data.SettableByName
-import io.kaizensolutions.virgil.codecs.{ColumnDecoder, ColumnEncoder}
+import io.kaizensolutions.virgil.codecs.{CqlColumnDecoder, CqlColumnEncoder}
 
 final case class MutationResult private (result: Boolean) extends AnyVal
 object MutationResult {
   def make(result: Boolean): MutationResult = MutationResult(result)
 
   // Make it such that you cannot accidentally create a Query of a MutationResult because this is an invalid state
-  implicit val writerAmbiguous1: ColumnEncoder[MutationResult] =
-    new ColumnEncoder[MutationResult] {
+  implicit val cqlColumnEncoderForMutationResultAmbiguous1: CqlColumnEncoder[MutationResult] =
+    new CqlColumnEncoder[MutationResult] {
       override type DriverType = MutationResult
 
       override def driverClass: Class[MutationResult] = classOf[DriverType]
@@ -31,8 +31,8 @@ object MutationResult {
         structure
     }
 
-  implicit val writerAmbiguous2: ColumnEncoder[MutationResult] =
-    new ColumnEncoder[MutationResult] {
+  implicit val cqlColumnEncoderForMutationResultAmbiguous2: CqlColumnEncoder[MutationResult] =
+    new CqlColumnEncoder[MutationResult] {
       override type DriverType = MutationResult
 
       override def driverClass: Class[MutationResult] = classOf[DriverType]
@@ -52,13 +52,13 @@ object MutationResult {
       ): Structure = structure
     }
 
-  implicit val readerAmbiguous1: ColumnDecoder[MutationResult] =
-    ColumnDecoder.make(classOf[MutationResult])(identity)((_, _) => MutationResult(true))((_, _) =>
+  implicit val cqlColumnDecoderForMutationResultIsAmbiguous1: CqlColumnDecoder[MutationResult] =
+    CqlColumnDecoder.make(classOf[MutationResult])(identity)((_, _) => MutationResult(true))((_, _) =>
       MutationResult(true)
     )
 
-  implicit val readerAmbiguous2: ColumnDecoder[MutationResult] =
-    ColumnDecoder.make(classOf[MutationResult])(identity)((_, _) => MutationResult(true))((_, _) =>
+  implicit val cqlColumnDecoderForMutationResultIsAmbiguous2: CqlColumnDecoder[MutationResult] =
+    CqlColumnDecoder.make(classOf[MutationResult])(identity)((_, _) => MutationResult(true))((_, _) =>
       MutationResult(true)
     )
 }

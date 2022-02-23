@@ -2,7 +2,7 @@ package io.kaizensolutions.virgil.internal
 
 import io.kaizensolutions.virgil.CQLType
 import io.kaizensolutions.virgil.CQLType.Mutation
-import io.kaizensolutions.virgil.codecs.ColumnEncoder
+import io.kaizensolutions.virgil.codecs.CqlColumnEncoder
 import io.kaizensolutions.virgil.dsl.{Assignment, Relation}
 import zio.{Chunk, NonEmptyChunk}
 
@@ -83,7 +83,7 @@ private[virgil] object CqlStatementRenderer {
             val rawColumnName = columnName.name
             val parameter     = s":$rawColumnName"
             val queryString   = s"$rawColumnName $sign $parameter"
-            val column        = BindMarker.make(columnName, absOffset)(ColumnEncoder.writerForLong)
+            val column        = BindMarker.make(columnName, absOffset)(CqlColumnEncoder.encoderForLong)
             (queryString, BindMarkers.empty + column)
 
           case p: PrependListItems[a] =>
@@ -126,7 +126,7 @@ private[virgil] object CqlStatementRenderer {
             val valueParameter = s":$valueName"
 
             val queryString = s"$rawColumnName[$indexParameter] = $valueParameter"
-            val indexColumn = BindMarker.make(BindMarkerName.make(indexName), index)(ColumnEncoder.writerForInt)
+            val indexColumn = BindMarker.make(BindMarkerName.make(indexName), index)(CqlColumnEncoder.encoderForInt)
             val valueColumn = BindMarker.make(BindMarkerName.make(valueName), value)(ev)
             (queryString, BindMarkers.empty + indexColumn + valueColumn)
 
@@ -226,11 +226,11 @@ private[virgil] object CqlStatementRenderer {
     val (exprChunk, columns) =
       relations.foldLeft(initial) { case ((accExpr, accColumns), relation) =>
         relation match {
-          case Relation.Binary(columnName, operator, value, writer) =>
+          case Relation.Binary(columnName, operator, value, encoder) =>
             // For example, where("col1" >= 1) becomes
             // "col1 >= :col1_relation" along with Columns("col1_relation" -> 1 with write capabilities)
             val param      = s"${columnName.name}_relation"
-            val column     = BindMarker.make(BindMarkerName.make(param), value)(writer)
+            val column     = BindMarker.make(BindMarkerName.make(param), value)(encoder)
             val expression = s"${columnName.name} ${operator.render} :$param"
             (accExpr :+ expression, accColumns + column)
 

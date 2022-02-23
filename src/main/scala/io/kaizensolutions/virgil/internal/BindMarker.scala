@@ -1,7 +1,7 @@
 package io.kaizensolutions.virgil.internal
 
 import io.kaizensolutions.virgil.cql.ValueInCql
-import io.kaizensolutions.virgil.codecs.ColumnEncoder
+import io.kaizensolutions.virgil.codecs.CqlColumnEncoder
 
 import scala.collection.immutable.ListMap
 
@@ -13,33 +13,33 @@ private[virgil] trait BindMarker { self =>
   type ScalaType
   def name: BindMarkerName
   def value: ScalaType
-  def write: ColumnEncoder[ScalaType]
+  def write: CqlColumnEncoder[ScalaType]
 
   override def toString: String =
     s"Column(name = ${name.name}, value = $value)"
 }
 private[virgil] object BindMarker {
-  def make[A](columnName: BindMarkerName, columnValue: A)(implicit evidence: ColumnEncoder[A]): BindMarker =
+  def make[A](columnName: BindMarkerName, columnValue: A)(implicit evidence: CqlColumnEncoder[A]): BindMarker =
     new BindMarker {
       type ScalaType = A
-      def name: BindMarkerName    = columnName
-      def value: A                = columnValue
-      def write: ColumnEncoder[A] = evidence
+      def name: BindMarkerName       = columnName
+      def value: A                   = columnValue
+      def write: CqlColumnEncoder[A] = evidence
     }
 
   def from(valueInCql: ValueInCql, columnName: BindMarkerName): BindMarker =
     new BindMarker {
       type ScalaType = valueInCql.ScalaType
-      def name: BindMarkerName            = columnName
-      def value: ScalaType                = valueInCql.value
-      def write: ColumnEncoder[ScalaType] = valueInCql.writer
+      def name: BindMarkerName               = columnName
+      def value: ScalaType                   = valueInCql.value
+      def write: CqlColumnEncoder[ScalaType] = valueInCql.writer
     }
 
   def withName(columnName: BindMarkerName, existing: BindMarker): BindMarker = new BindMarker {
     override type ScalaType = existing.ScalaType
-    override def name: BindMarkerName            = columnName
-    override def value: ScalaType                = existing.value
-    override def write: ColumnEncoder[ScalaType] = existing.write
+    override def name: BindMarkerName               = columnName
+    override def value: ScalaType                   = existing.value
+    override def write: CqlColumnEncoder[ScalaType] = existing.write
   }
 }
 

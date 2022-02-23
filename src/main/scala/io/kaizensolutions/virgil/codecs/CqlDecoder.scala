@@ -4,8 +4,8 @@ import com.datastax.oss.driver.api.core.cql.Row
 import magnolia1._
 
 /**
- * Decoder gives us the ability to read from a Cassandra row and convert it to a
- * case class.
+ * CQL Decoder gives us the ability to read from a Cassandra row and convert it
+ * to a case class.
  *
  * Usage:
  * {{{
@@ -15,11 +15,11 @@ import magnolia1._
  *    }
  * }}}
  */
-object Decoder {
-  type Typeclass[T] = ColumnDecoder[T]
+object CqlDecoder {
+  type Typeclass[T] = CqlColumnDecoder[T]
 
-  def join[T](ctx: CaseClass[ColumnDecoder, T]): ColumnDecoder.WithDriver[T, Row] =
-    ColumnDecoder.fromRow { row =>
+  def join[T](ctx: CaseClass[CqlColumnDecoder, T]): CqlColumnDecoder.WithDriver[T, Row] =
+    CqlColumnDecoder.fromRow { row =>
       ctx.construct { param =>
         val fieldName = param.label
         val reader    = param.typeclass
@@ -29,5 +29,5 @@ object Decoder {
 
   // We cannot make this implicit as it would produce incorrect nested Readers choosing Row instead of UdtValue as the DriverType
   // causing the driver to break as it depends heavily on class types
-  def derive[T]: ColumnDecoder.WithDriver[T, Row] = macro Magnolia.gen[T]
+  def derive[T]: CqlColumnDecoder.WithDriver[T, Row] = macro Magnolia.gen[T]
 }

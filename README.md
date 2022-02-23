@@ -81,21 +81,22 @@ import io.kaizensolutions.virgil.codecs._
 final case class Info(favorite: Boolean, comment: String)
 
 object Info {
-  implicit val decoderInfo: UdtDecoder[Info] = ColumnDecoder.deriveUdtValue[Info]
-  implicit val encoderInfo: UdtEncoder[Info] = ColumnEncoder.deriveUdtValue[Info]
+  implicit val decoderInfo: UdtDecoder[Info] = CqlColumnDecoder.deriveUdtValue[Info]
+  implicit val encoderInfo: UdtEncoder[Info] = CqlColumnEncoder.deriveUdtValue[Info]
 }
 
 final case class Address(street: String, city: String, state: String, zip: Int, data: List[Info])
 
 object Address {
-  implicit val decoderAddress: UdtDecoder[Address] = ColumnDecoder.deriveUdtValue[Address]
-  implicit val encoderAddress: UdtEncoder[Address] = ColumnEncoder.deriveUdtValue[Address]
+  implicit val decoderAddress: UdtDecoder[Address] = CqlColumnDecoder.deriveUdtValue[Address]
+  implicit val encoderAddress: UdtEncoder[Address] = CqlColumnEncoder.deriveUdtValue[Address]
 }
 
 // Note: This is the top level row, we write out its components so we don't need an Encoder for the whole Person
 final case class Person(id: String, name: String, age: Int, addresses: Set[Address])
+
 object Person {
-  implicit val decoderPerson: Decoder[Person] = Decoder.derive[Person]
+  implicit val decoderPerson: CqlDecoder[Person] = CqlDecoder.derive[Person]
 }
 ```
 

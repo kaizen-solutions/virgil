@@ -15,9 +15,9 @@ import scala.jdk.CollectionConverters._
  * @tparam ScalaType
  */
 @implicitNotFound(
-  "No ColumnDecoder found for ${ScalaType}, please use Decoder.derive for a top level (Row) decoder and ColumnDecoder.deriveUdtValue for a User Defined Type decoder"
+  "No CqlColumnDecoder found for ${ScalaType}, please use CqlDecoder.derive for a top level (Row) decoder and CqlColumnDecoder.deriveUdtValue for a User Defined Type decoder"
 )
-trait ColumnDecoder[ScalaType] { self =>
+trait CqlColumnDecoder[ScalaType] { self =>
   type DriverType
 
   def driverClass: Class[DriverType]
@@ -34,8 +34,8 @@ trait ColumnDecoder[ScalaType] { self =>
   final def decodeFieldByIndex[Structure <: GettableByName](structure: Structure, fieldIndex: Int): ScalaType =
     convertDriverToScala(driverValue = readIndexFromDriver(structure, fieldIndex))
 
-  final def map[ScalaType2](f: ScalaType => ScalaType2): ColumnDecoder.WithDriver[ScalaType2, DriverType] =
-    new ColumnDecoder[ScalaType2] {
+  final def map[ScalaType2](f: ScalaType => ScalaType2): CqlColumnDecoder.WithDriver[ScalaType2, DriverType] =
+    new CqlColumnDecoder[ScalaType2] {
       override type DriverType = self.DriverType
 
       override def driverClass: Class[DriverType] = self.driverClass
@@ -49,11 +49,11 @@ trait ColumnDecoder[ScalaType] { self =>
       override def readIndexFromDriver[Structure <: GettableByName](
         structure: Structure,
         index: Int
-      ): ColumnDecoder.this.DriverType =
+      ): CqlColumnDecoder.this.DriverType =
         self.readIndexFromDriver(structure, index)
     }
 
-  final def orDie[L, R](implicit ev: ScalaType =:= Either[L, R]): ColumnDecoder.WithDriver[R, DriverType] =
+  final def orDie[L, R](implicit ev: ScalaType =:= Either[L, R]): CqlColumnDecoder.WithDriver[R, DriverType] =
     self.map { in =>
       ev(in) match {
         case Left(error)  => throw new RuntimeException(s"Failed to map input to ${driverClass.getName}: $error")
@@ -61,17 +61,17 @@ trait ColumnDecoder[ScalaType] { self =>
       }
     }
 }
-object ColumnDecoder extends UdtColumnDecoderMagnoliaDerivation {
-  type WithDriver[Scala, Driver] = ColumnDecoder[Scala] { type DriverType = Driver }
+object CqlColumnDecoder extends UdtColumnDecoderMagnoliaDerivation {
+  type WithDriver[Scala, Driver] = CqlColumnDecoder[Scala] { type DriverType = Driver }
 
-  def apply[A](implicit ev: ColumnDecoder[A]): ColumnDecoder[A] = ev
+  def apply[A](implicit ev: CqlColumnDecoder[A]): CqlColumnDecoder[A] = ev
 
   def make[Scala, Driver](
     driverClassInfo: Class[Driver]
   )(convert: Driver => Scala)(
     fieldFn: (GettableByName, String) => Driver
-  )(indexFn: (GettableByName, Int) => Driver): ColumnDecoder.WithDriver[Scala, Driver] =
-    new ColumnDecoder[Scala] {
+  )(indexFn: (GettableByName, Int) => Driver): CqlColumnDecoder.WithDriver[Scala, Driver] =
+    new CqlColumnDecoder[Scala] {
       override type DriverType = Driver
 
       override def driverClass: Class[DriverType] = driverClassInfo
@@ -87,7 +87,7 @@ object ColumnDecoder extends UdtColumnDecoderMagnoliaDerivation {
         indexFn(structure, index)
     }
 
-  def fromUdtValue[A](f: UdtValue => A): ColumnDecoder.WithDriver[A, UdtValue] = new ColumnDecoder[A] {
+  def fromUdtValue[A](f: UdtValue => A): CqlColumnDecoder.WithDriver[A, UdtValue] = new CqlColumnDecoder[A] {
     override type DriverType = UdtValue
 
     override def driverClass: Class[DriverType] = classOf[UdtValue]
@@ -103,7 +103,7 @@ object ColumnDecoder extends UdtColumnDecoderMagnoliaDerivation {
       structure.getUdtValue(index)
   }
 
-  def fromRow[A](f: Row => A): ColumnDecoder.WithDriver[A, Row] = new ColumnDecoder[A] {
+  def fromRow[A](f: Row => A): CqlColumnDecoder.WithDriver[A, Row] = new CqlColumnDecoder[A] {
     override type DriverType = Row
 
     override def driverClass: Class[DriverType] = classOf[Row]
@@ -119,108 +119,108 @@ object ColumnDecoder extends UdtColumnDecoderMagnoliaDerivation {
       structure.asInstanceOf[Row]
   }
 
-  implicit val bigDecimalColumnDecoder: ColumnDecoder.WithDriver[BigDecimal, java.math.BigDecimal] =
+  implicit val bigDecimalColumnDecoder: CqlColumnDecoder.WithDriver[BigDecimal, java.math.BigDecimal] =
     make(classOf[java.math.BigDecimal])(BigDecimal.javaBigDecimal2bigDecimal)((structure, columnName) =>
       structure.getBigDecimal(columnName)
     )((structure, index) => structure.getBigDecimal(index))
 
-  implicit val bigIntColumnDecoder: ColumnDecoder.WithDriver[BigInt, java.math.BigInteger] =
+  implicit val bigIntColumnDecoder: CqlColumnDecoder.WithDriver[BigInt, java.math.BigInteger] =
     make(classOf[java.math.BigInteger])(BigInt.javaBigInteger2bigInt)((structure, columnName) =>
       structure.getBigInteger(columnName)
     )((structure, index) => structure.getBigInteger(index))
 
-  implicit val booleanColumnDecoder: ColumnDecoder.WithDriver[Boolean, java.lang.Boolean] =
+  implicit val booleanColumnDecoder: CqlColumnDecoder.WithDriver[Boolean, java.lang.Boolean] =
     make(classOf[java.lang.Boolean])(Boolean.unbox)((structure, columnName) => structure.getBoolean(columnName))(
       (structure, index) => structure.getBoolean(index)
     )
 
-  implicit val byteBufferColumnDecoder: ColumnDecoder.WithDriver[java.nio.ByteBuffer, java.nio.ByteBuffer] =
+  implicit val byteBufferColumnDecoder: CqlColumnDecoder.WithDriver[java.nio.ByteBuffer, java.nio.ByteBuffer] =
     make(classOf[java.nio.ByteBuffer])(identity)((structure, columnName) => structure.getByteBuffer(columnName))(
       (structure, index) => structure.getByteBuffer(index)
     )
 
-  implicit val byteColumnDecoder: ColumnDecoder.WithDriver[Byte, java.lang.Byte] =
+  implicit val byteColumnDecoder: CqlColumnDecoder.WithDriver[Byte, java.lang.Byte] =
     make(classOf[java.lang.Byte])(Byte.unbox)((structure, columnName) => structure.getByte(columnName))(
       (structure, index) => structure.getByte(index)
     )
 
-  implicit val cqlTupleValueColumnDecoder: ColumnDecoder.WithDriver[TupleValue, TupleValue] =
+  implicit val cqlTupleValueColumnDecoder: CqlColumnDecoder.WithDriver[TupleValue, TupleValue] =
     make(classOf[TupleValue])(identity)((structure, columnName) => structure.getTupleValue(columnName))(
       (structure, index) => structure.getTupleValue(index)
     )
 
-  implicit val doubleColumnDecoder: ColumnDecoder.WithDriver[Double, java.lang.Double] =
+  implicit val doubleColumnDecoder: CqlColumnDecoder.WithDriver[Double, java.lang.Double] =
     make(classOf[java.lang.Double])(Double.unbox)((structure, columnName) => structure.getDouble(columnName))(
       (structure, index) => structure.getDouble(index)
     )
 
-  implicit val cqlDurationColumnDecoder: ColumnDecoder.WithDriver[CqlDuration, CqlDuration] =
+  implicit val cqlDurationColumnDecoder: CqlColumnDecoder.WithDriver[CqlDuration, CqlDuration] =
     make(classOf[CqlDuration])(identity)((structure, columnName) => structure.getCqlDuration(columnName))(
       (structure, index) => structure.getCqlDuration(index)
     )
 
-  implicit val floatColumnDecoder: ColumnDecoder.WithDriver[Float, java.lang.Float] =
+  implicit val floatColumnDecoder: CqlColumnDecoder.WithDriver[Float, java.lang.Float] =
     make(classOf[java.lang.Float])(Float.unbox)((structure, columnName) => structure.getFloat(columnName))(
       (structure, index) => structure.getFloat(index)
     )
 
-  implicit val inetAddressColumnDecoder: ColumnDecoder.WithDriver[java.net.InetAddress, java.net.InetAddress] =
+  implicit val inetAddressColumnDecoder: CqlColumnDecoder.WithDriver[java.net.InetAddress, java.net.InetAddress] =
     make(classOf[java.net.InetAddress])(identity)((structure, columnName) => structure.getInetAddress(columnName))(
       (structure, index) => structure.getInetAddress(index)
     )
 
-  implicit val instantColumnDecoder: ColumnDecoder.WithDriver[java.time.Instant, java.time.Instant] =
+  implicit val instantColumnDecoder: CqlColumnDecoder.WithDriver[java.time.Instant, java.time.Instant] =
     make(classOf[java.time.Instant])(identity)((structure, columnName) => structure.getInstant(columnName))(
       (structure, index) => structure.getInstant(index)
     )
 
-  implicit val intColumnDecoder: ColumnDecoder.WithDriver[Int, Integer] =
+  implicit val intColumnDecoder: CqlColumnDecoder.WithDriver[Int, Integer] =
     make(classOf[java.lang.Integer])(Int.unbox)((structure, columnName) => structure.getInt(columnName))(
       (structure, index) => structure.getInt(index)
     )
 
-  implicit val localDateColumnDecoder: ColumnDecoder.WithDriver[java.time.LocalDate, java.time.LocalDate] =
+  implicit val localDateColumnDecoder: CqlColumnDecoder.WithDriver[java.time.LocalDate, java.time.LocalDate] =
     make(classOf[java.time.LocalDate])(identity)((structure, columnName) => structure.getLocalDate(columnName))(
       (structure, index) => structure.getLocalDate(index)
     )
 
-  implicit val localTimeColumnDecoder: ColumnDecoder.WithDriver[java.time.LocalTime, java.time.LocalTime] =
+  implicit val localTimeColumnDecoder: CqlColumnDecoder.WithDriver[java.time.LocalTime, java.time.LocalTime] =
     make(classOf[java.time.LocalTime])(identity)((structure, columnName) => structure.getLocalTime(columnName))(
       (structure, index) => structure.getLocalTime(index)
     )
 
-  implicit val longColumnDecoder: ColumnDecoder.WithDriver[Long, java.lang.Long] =
+  implicit val longColumnDecoder: CqlColumnDecoder.WithDriver[Long, java.lang.Long] =
     make(classOf[java.lang.Long])(Long.unbox)((structure, columnName) => structure.getLong(columnName))(
       (structure, index) => structure.getLong(index)
     )
 
-  implicit val shortColumnDecoder: ColumnDecoder.WithDriver[Short, java.lang.Short] =
+  implicit val shortColumnDecoder: CqlColumnDecoder.WithDriver[Short, java.lang.Short] =
     make(classOf[java.lang.Short])(s => Short.unbox(s))((structure, columnName) => structure.getShort(columnName))(
       (structure, index) => structure.getShort(index)
     )
 
-  implicit val stringColumnDecoder: ColumnDecoder.WithDriver[String, java.lang.String] =
+  implicit val stringColumnDecoder: CqlColumnDecoder.WithDriver[String, java.lang.String] =
     make(classOf[java.lang.String])(identity)((structure, columnName) => structure.getString(columnName))(
       (structure, index) => structure.getString(index)
     )
 
-  implicit val uuidColumnDecoder: ColumnDecoder.WithDriver[java.util.UUID, java.util.UUID] =
+  implicit val uuidColumnDecoder: CqlColumnDecoder.WithDriver[java.util.UUID, java.util.UUID] =
     make(classOf[java.util.UUID])(identity)((structure, columnName) => structure.getUuid(columnName))(
       (structure, index) => structure.getUuid(index)
     )
 
-  implicit val rowColumnDecoder: ColumnDecoder.WithDriver[Row, Row] =
+  implicit val rowColumnDecoder: CqlColumnDecoder.WithDriver[Row, Row] =
     make(classOf[Row])(identity)((structure, _) => structure.asInstanceOf[Row])((structure, _) =>
       structure.asInstanceOf[Row]
     )
 
-  implicit val udtValueDecoder: ColumnDecoder.WithDriver[UdtValue, UdtValue] =
+  implicit val udtValueDecoder: CqlColumnDecoder.WithDriver[UdtValue, UdtValue] =
     make(classOf[UdtValue])(identity)((structure, columnName) => structure.getUdtValue(columnName))(
       (structure, index) => structure.getUdtValue(index)
     )
 
-  implicit def listColumnDecoder[A](implicit elementColumnDecoder: ColumnDecoder[A]): ColumnDecoder[List[A]] =
-    new ColumnDecoder[List[A]] {
+  implicit def listColumnDecoder[A](implicit elementColumnDecoder: CqlColumnDecoder[A]): CqlColumnDecoder[List[A]] =
+    new CqlColumnDecoder[List[A]] {
       override type DriverType = java.util.List[elementColumnDecoder.DriverType]
 
       override def driverClass: Class[DriverType] = classOf[java.util.List[elementColumnDecoder.DriverType]]
@@ -243,8 +243,8 @@ object ColumnDecoder extends UdtColumnDecoderMagnoliaDerivation {
         structure.getList(index, elementColumnDecoder.driverClass)
     }
 
-  implicit def setColumnDecoder[A](implicit elementColumnDecoder: ColumnDecoder[A]): ColumnDecoder[Set[A]] =
-    new ColumnDecoder[Set[A]] {
+  implicit def setColumnDecoder[A](implicit elementColumnDecoder: CqlColumnDecoder[A]): CqlColumnDecoder[Set[A]] =
+    new CqlColumnDecoder[Set[A]] {
       override type DriverType = java.util.Set[elementColumnDecoder.DriverType]
 
       override def driverClass: Class[DriverType] = classOf[java.util.Set[elementColumnDecoder.DriverType]]
@@ -268,10 +268,10 @@ object ColumnDecoder extends UdtColumnDecoderMagnoliaDerivation {
     }
 
   implicit def mapColumnDecoder[K, V](implicit
-    keyColumnDecoder: ColumnDecoder[K],
-    valueColumnDecoder: ColumnDecoder[V]
-  ): ColumnDecoder[Map[K, V]] =
-    new ColumnDecoder[Map[K, V]] {
+    keyColumnDecoder: CqlColumnDecoder[K],
+    valueColumnDecoder: CqlColumnDecoder[V]
+  ): CqlColumnDecoder[Map[K, V]] =
+    new CqlColumnDecoder[Map[K, V]] {
       override type DriverType = java.util.Map[keyColumnDecoder.DriverType, valueColumnDecoder.DriverType]
 
       override def driverClass: Class[DriverType] =
@@ -297,8 +297,8 @@ object ColumnDecoder extends UdtColumnDecoderMagnoliaDerivation {
         structure.getMap(index, keyColumnDecoder.driverClass, valueColumnDecoder.driverClass)
     }
 
-  implicit def optionColumnDecoder[A](implicit elementColumnDecoder: ColumnDecoder[A]): ColumnDecoder[Option[A]] =
-    new ColumnDecoder[Option[A]] {
+  implicit def optionColumnDecoder[A](implicit elementColumnDecoder: CqlColumnDecoder[A]): CqlColumnDecoder[Option[A]] =
+    new CqlColumnDecoder[Option[A]] {
       override type DriverType = elementColumnDecoder.DriverType
 
       override def driverClass: Class[DriverType] = elementColumnDecoder.driverClass
@@ -321,11 +321,11 @@ object ColumnDecoder extends UdtColumnDecoderMagnoliaDerivation {
 }
 
 trait UdtColumnDecoderMagnoliaDerivation {
-  type Typeclass[T] = ColumnDecoder[T]
+  type Typeclass[T] = CqlColumnDecoder[T]
 
   // Automatic derivation of Reader instances for UDTs
-  def join[T](ctx: CaseClass[ColumnDecoder, T]): ColumnDecoder.WithDriver[T, UdtValue] =
-    ColumnDecoder.fromUdtValue { udtValue =>
+  def join[T](ctx: CaseClass[CqlColumnDecoder, T]): CqlColumnDecoder.WithDriver[T, UdtValue] =
+    CqlColumnDecoder.fromUdtValue { udtValue =>
       ctx.construct { param =>
         val fieldName = param.label
         val reader    = param.typeclass
@@ -333,5 +333,5 @@ trait UdtColumnDecoderMagnoliaDerivation {
       }
     }
 
-  implicit def deriveUdtValue[T]: ColumnDecoder.WithDriver[T, UdtValue] = macro Magnolia.gen[T]
+  implicit def deriveUdtValue[T]: CqlColumnDecoder.WithDriver[T, UdtValue] = macro Magnolia.gen[T]
 }

@@ -1,6 +1,6 @@
 package io.kaizensolutions.virgil
 
-import io.kaizensolutions.virgil.codecs.Decoder
+import io.kaizensolutions.virgil.codecs.CqlDecoder
 import io.kaizensolutions.virgil.dsl._
 import zio.Has
 import zio.random.Random
@@ -39,8 +39,8 @@ final case class SimpleCollectionRow(
   listTest: List[String]
 )
 object SimpleCollectionRow {
-  implicit val decoderForSimpleCollectionRow: Decoder[SimpleCollectionRow] =
-    Decoder.derive[SimpleCollectionRow]
+  implicit val decoderForSimpleCollectionRow: CqlDecoder[SimpleCollectionRow] =
+    CqlDecoder.derive[SimpleCollectionRow]
 
   def insert(in: SimpleCollectionRow): CQL[MutationResult] =
     InsertBuilder("collectionspec_simplecollectiontable")
@@ -74,8 +74,8 @@ final case class NestedCollectionRow(
   b: Map[Int, Set[Set[Set[Set[Int]]]]]
 )
 object NestedCollectionRow {
-  implicit val decoderForNestedCollectionRow: Decoder[NestedCollectionRow] =
-    Decoder.derive[NestedCollectionRow]
+  implicit val decoderForNestedCollectionRow: CqlDecoder[NestedCollectionRow] =
+    CqlDecoder.derive[NestedCollectionRow]
 
   def select(a: Int): CQL[NestedCollectionRow] =
     SelectBuilder

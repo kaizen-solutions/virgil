@@ -8,15 +8,19 @@ import java.net.InetAddress
 import java.nio.ByteBuffer
 import java.time.{Instant, LocalDate, LocalTime}
 import java.util.UUID
+import scala.annotation.implicitNotFound
 import scala.jdk.CollectionConverters._
 
 /**
- * Writer for Cassandra data types.
+ * Column Encoder for Cassandra data types.
  * @see
  *   https://docs.datastax.com/en/developer/java-driver/4.11/manual/core/#cql-to-java-type-mapping
  * @tparam ScalaType
  */
-trait ColumnEncoder[ScalaType] { self =>
+@implicitNotFound(
+  "No CqlColumnEncoder found for ${ScalaType}, please use UdtEncoder.derive for a User Defined Type or make use of <existingEncoderType>.contramap if you have a new type"
+)
+trait CqlColumnEncoder[ScalaType] { self =>
   type DriverType
 
   def driverClass: Class[DriverType]
@@ -35,8 +39,8 @@ trait ColumnEncoder[ScalaType] { self =>
     structure: Structure
   ): Structure
 
-  def contramap[ScalaType2](f: ScalaType2 => ScalaType): ColumnEncoder[ScalaType2] =
-    new ColumnEncoder[ScalaType2] {
+  def contramap[ScalaType2](f: ScalaType2 => ScalaType): CqlColumnEncoder[ScalaType2] =
+    new CqlColumnEncoder[ScalaType2] {
       type DriverType = self.DriverType
 
       def driverClass: Class[DriverType] = self.driverClass
@@ -59,13 +63,13 @@ trait ColumnEncoder[ScalaType] { self =>
         self.encodeFieldByIndex(index, f(value), structure)
     }
 }
-object ColumnEncoder extends UdtWriterMagnoliaDerivation {
-  type WithDriver[Sc, Dr] = ColumnEncoder[Sc] { type DriverType = Dr }
+object CqlColumnEncoder extends UdtEncoderMagnoliaDerivation {
+  type WithDriver[Sc, Dr] = CqlColumnEncoder[Sc] { type DriverType = Dr }
 
-  def apply[ScalaType](implicit writer: ColumnEncoder[ScalaType]): ColumnEncoder[ScalaType] = writer
+  def apply[ScalaType](implicit encoder: CqlColumnEncoder[ScalaType]): CqlColumnEncoder[ScalaType] = encoder
 
-  def udt[A](f: (A, UdtValue) => UdtValue): ColumnEncoder.WithDriver[A, UdtValue] =
-    new ColumnEncoder[A] {
+  def udt[A](f: (A, UdtValue) => UdtValue): CqlColumnEncoder.WithDriver[A, UdtValue] =
+    new CqlColumnEncoder[A] {
       type DriverType = UdtValue
 
       def driverClass: Class[DriverType] = classOf[UdtValue]
@@ -95,8 +99,8 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
     }
 
   // Primitives
-  implicit val writerForString: ColumnEncoder.WithDriver[String, java.lang.String] =
-    new ColumnEncoder[String] {
+  implicit val encoderForString: CqlColumnEncoder.WithDriver[String, java.lang.String] =
+    new CqlColumnEncoder[String] {
       override type DriverType = java.lang.String
 
       override def driverClass: Class[DriverType] = classOf[java.lang.String]
@@ -118,8 +122,8 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
         structure.setString(index, value)
     }
 
-  implicit val writerForInt: ColumnEncoder.WithDriver[Int, java.lang.Integer] =
-    new ColumnEncoder[Int] {
+  implicit val encoderForInt: CqlColumnEncoder.WithDriver[Int, java.lang.Integer] =
+    new CqlColumnEncoder[Int] {
       override type DriverType = java.lang.Integer
 
       override def driverClass: Class[DriverType] = classOf[java.lang.Integer]
@@ -141,8 +145,8 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
         structure.setInt(index, value)
     }
 
-  implicit val writerForLong: ColumnEncoder.WithDriver[Long, java.lang.Long] =
-    new ColumnEncoder[Long] {
+  implicit val encoderForLong: CqlColumnEncoder.WithDriver[Long, java.lang.Long] =
+    new CqlColumnEncoder[Long] {
       override type DriverType = java.lang.Long
 
       override def driverClass: Class[DriverType] = classOf[java.lang.Long]
@@ -164,8 +168,8 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
         structure.setLong(index, value)
     }
 
-  implicit val writerForLocalDate: ColumnEncoder.WithDriver[java.time.LocalDate, java.time.LocalDate] =
-    new ColumnEncoder[java.time.LocalDate] {
+  implicit val encoderForLocalDate: CqlColumnEncoder.WithDriver[java.time.LocalDate, java.time.LocalDate] =
+    new CqlColumnEncoder[java.time.LocalDate] {
       override type DriverType = java.time.LocalDate
 
       override def driverClass: Class[DriverType] = classOf[java.time.LocalDate]
@@ -187,8 +191,8 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
         structure.setLocalDate(index, value)
     }
 
-  implicit val writerForLocalTime: ColumnEncoder.WithDriver[java.time.LocalTime, java.time.LocalTime] =
-    new ColumnEncoder[java.time.LocalTime] {
+  implicit val encoderForLocalTime: CqlColumnEncoder.WithDriver[java.time.LocalTime, java.time.LocalTime] =
+    new CqlColumnEncoder[java.time.LocalTime] {
       override type DriverType = java.time.LocalTime
 
       override def driverClass: Class[DriverType] = classOf[java.time.LocalTime]
@@ -209,8 +213,8 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
       ): Structure = structure.setLocalTime(index, value)
     }
 
-  implicit val writerForInstant: ColumnEncoder.WithDriver[java.time.Instant, java.time.Instant] =
-    new ColumnEncoder[java.time.Instant] {
+  implicit val encoderForInstant: CqlColumnEncoder.WithDriver[java.time.Instant, java.time.Instant] =
+    new CqlColumnEncoder[java.time.Instant] {
       override type DriverType = java.time.Instant
 
       override def driverClass: Class[DriverType] = classOf[java.time.Instant]
@@ -231,8 +235,8 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
       ): Structure = structure.setInstant(index, value)
     }
 
-  implicit val writerForByteBuffer: ColumnEncoder.WithDriver[java.nio.ByteBuffer, java.nio.ByteBuffer] =
-    new ColumnEncoder[java.nio.ByteBuffer] {
+  implicit val encoderForByteBuffer: CqlColumnEncoder.WithDriver[java.nio.ByteBuffer, java.nio.ByteBuffer] =
+    new CqlColumnEncoder[java.nio.ByteBuffer] {
       override type DriverType = java.nio.ByteBuffer
 
       override def driverClass: Class[DriverType] = classOf[java.nio.ByteBuffer]
@@ -253,8 +257,8 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
       ): Structure = structure.setByteBuffer(index, value)
     }
 
-  implicit val writerForBoolean: ColumnEncoder.WithDriver[Boolean, java.lang.Boolean] =
-    new ColumnEncoder[Boolean] {
+  implicit val encoderForBoolean: CqlColumnEncoder.WithDriver[Boolean, java.lang.Boolean] =
+    new CqlColumnEncoder[Boolean] {
       override type DriverType = java.lang.Boolean
 
       override def driverClass: Class[DriverType] = classOf[DriverType]
@@ -274,8 +278,8 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
       ): Structure = structure.setBoolean(index, value)
     }
 
-  implicit val writerForBigDecimal: ColumnEncoder.WithDriver[BigDecimal, java.math.BigDecimal] =
-    new ColumnEncoder[BigDecimal] {
+  implicit val encoderForBigDecimal: CqlColumnEncoder.WithDriver[BigDecimal, java.math.BigDecimal] =
+    new CqlColumnEncoder[BigDecimal] {
       override type DriverType = java.math.BigDecimal
 
       override def driverClass: Class[DriverType] = classOf[DriverType]
@@ -297,8 +301,8 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
         structure.setBigDecimal(index, value.bigDecimal)
     }
 
-  implicit val writerForDouble: ColumnEncoder.WithDriver[Double, java.lang.Double] =
-    new ColumnEncoder[Double] {
+  implicit val encoderForDouble: CqlColumnEncoder.WithDriver[Double, java.lang.Double] =
+    new CqlColumnEncoder[Double] {
       override type DriverType = java.lang.Double
 
       override def driverClass: Class[DriverType] = classOf[DriverType]
@@ -320,8 +324,8 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
         structure.setDouble(index, value)
     }
 
-  implicit val writerForCqlDuration: ColumnEncoder.WithDriver[CqlDuration, CqlDuration] =
-    new ColumnEncoder[CqlDuration] {
+  implicit val encoderForCqlDuration: CqlColumnEncoder.WithDriver[CqlDuration, CqlDuration] =
+    new CqlColumnEncoder[CqlDuration] {
       override type DriverType = CqlDuration
 
       override def driverClass: Class[DriverType] = classOf[DriverType]
@@ -343,8 +347,8 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
         structure.setCqlDuration(index, value)
     }
 
-  implicit val writerForFloat: ColumnEncoder.WithDriver[Float, java.lang.Float] =
-    new ColumnEncoder[Float] {
+  implicit val encoderForFloat: CqlColumnEncoder.WithDriver[Float, java.lang.Float] =
+    new CqlColumnEncoder[Float] {
       override type DriverType = java.lang.Float
 
       override def driverClass: Class[DriverType] = classOf[DriverType]
@@ -366,8 +370,8 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
         structure.setFloat(index, value)
     }
 
-  implicit val writerForInetAddress: ColumnEncoder.WithDriver[java.net.InetAddress, java.net.InetAddress] =
-    new ColumnEncoder[java.net.InetAddress] {
+  implicit val encoderForInetAddress: CqlColumnEncoder.WithDriver[java.net.InetAddress, java.net.InetAddress] =
+    new CqlColumnEncoder[java.net.InetAddress] {
       override type DriverType = java.net.InetAddress
 
       override def driverClass: Class[DriverType] = classOf[DriverType]
@@ -389,8 +393,8 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
         structure.setInetAddress(index, value)
     }
 
-  implicit val writerForShort: ColumnEncoder.WithDriver[Short, java.lang.Short] =
-    new ColumnEncoder[Short] {
+  implicit val encoderForShort: CqlColumnEncoder.WithDriver[Short, java.lang.Short] =
+    new CqlColumnEncoder[Short] {
       override type DriverType = java.lang.Short
 
       override def driverClass: Class[DriverType] = classOf[DriverType]
@@ -411,8 +415,8 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
       ): Structure = structure.setShort(index, value)
     }
 
-  implicit val writerForUUID: ColumnEncoder.WithDriver[java.util.UUID, java.util.UUID] =
-    new ColumnEncoder[java.util.UUID] {
+  implicit val encoderForUUID: CqlColumnEncoder.WithDriver[java.util.UUID, java.util.UUID] =
+    new CqlColumnEncoder[java.util.UUID] {
       override type DriverType = java.util.UUID
 
       override def driverClass: Class[DriverType] = classOf[DriverType]
@@ -434,8 +438,8 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
         structure.setUuid(index, value)
     }
 
-  implicit val writerForByte: ColumnEncoder.WithDriver[Byte, java.lang.Byte] =
-    new ColumnEncoder[Byte] {
+  implicit val encoderForByte: CqlColumnEncoder.WithDriver[Byte, java.lang.Byte] =
+    new CqlColumnEncoder[Byte] {
       override type DriverType = java.lang.Byte
 
       override def driverClass: Class[DriverType] = classOf[DriverType]
@@ -457,8 +461,8 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
         structure.setByte(index, value)
     }
 
-  implicit val writerForCqlTupleValue: ColumnEncoder.WithDriver[TupleValue, TupleValue] =
-    new ColumnEncoder[TupleValue] {
+  implicit val encoderForCqlTupleValue: CqlColumnEncoder.WithDriver[TupleValue, TupleValue] =
+    new CqlColumnEncoder[TupleValue] {
       override type DriverType = TupleValue
 
       override def driverClass: Class[DriverType] = classOf[DriverType]
@@ -480,8 +484,8 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
         structure.setTupleValue(index, value)
     }
 
-  implicit val writerForBigInteger: ColumnEncoder.WithDriver[BigInt, java.math.BigInteger] =
-    new ColumnEncoder[BigInt] {
+  implicit val encoderForBigInteger: CqlColumnEncoder.WithDriver[BigInt, java.math.BigInteger] =
+    new CqlColumnEncoder[BigInt] {
       override type DriverType = java.math.BigInteger
 
       override def driverClass: Class[DriverType] = classOf[DriverType]
@@ -504,8 +508,8 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
     }
 
   // Collections
-  implicit def writerForList[Elem](implicit ew: ColumnEncoder[Elem]): ColumnEncoder[List[Elem]] =
-    new ColumnEncoder[List[Elem]] {
+  implicit def encoderForList[Elem](implicit ew: CqlColumnEncoder[Elem]): CqlColumnEncoder[List[Elem]] =
+    new CqlColumnEncoder[List[Elem]] {
       self =>
       override type DriverType = java.util.List[ew.DriverType]
 
@@ -535,8 +539,8 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
       }
     }
 
-  implicit def writerForSet[Elem](implicit ew: ColumnEncoder[Elem]): ColumnEncoder[Set[Elem]] =
-    new ColumnEncoder[Set[Elem]] {
+  implicit def encoderForSet[Elem](implicit ew: CqlColumnEncoder[Elem]): CqlColumnEncoder[Set[Elem]] =
+    new CqlColumnEncoder[Set[Elem]] {
       self =>
       override type DriverType = java.util.Set[ew.DriverType]
 
@@ -566,10 +570,10 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
       }
     }
 
-  implicit def writerForMap[Key, Value](implicit
-    kw: ColumnEncoder[Key],
-    vw: ColumnEncoder[Value]
-  ): ColumnEncoder[Map[Key, Value]] = new ColumnEncoder[Map[Key, Value]] {
+  implicit def encoderForMap[Key, Value](implicit
+    kw: CqlColumnEncoder[Key],
+    vw: CqlColumnEncoder[Value]
+  ): CqlColumnEncoder[Map[Key, Value]] = new CqlColumnEncoder[Map[Key, Value]] {
     self =>
     override type DriverType = java.util.Map[kw.DriverType, vw.DriverType]
 
@@ -603,8 +607,8 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
     }
   }
 
-  implicit def writerForOption[A](implicit ew: ColumnEncoder[A]): ColumnEncoder[Option[A]] =
-    new ColumnEncoder[Option[A]] {
+  implicit def encoderForOption[A](implicit ew: CqlColumnEncoder[A]): CqlColumnEncoder[Option[A]] =
+    new CqlColumnEncoder[Option[A]] {
       self =>
       override type DriverType = ew.DriverType
 
@@ -646,16 +650,16 @@ object ColumnEncoder extends UdtWriterMagnoliaDerivation {
     }
 }
 
-trait UdtWriterMagnoliaDerivation {
-  type Typeclass[T] = ColumnEncoder[T]
+trait UdtEncoderMagnoliaDerivation {
+  type Typeclass[T] = CqlColumnEncoder[T]
 
   // User Defined Types
-  def join[T](ctx: CaseClass[ColumnEncoder, T]): ColumnEncoder.WithDriver[T, UdtValue] =
-    ColumnEncoder.udt[T] { (scalaValue, udtValue) =>
+  def join[T](ctx: CaseClass[CqlColumnEncoder, T]): CqlColumnEncoder.WithDriver[T, UdtValue] =
+    CqlColumnEncoder.udt[T] { (scalaValue, udtValue) =>
       ctx.parameters.foldLeft(udtValue) { case (acc, p) =>
         p.typeclass.encodeFieldByName(p.label, p.dereference(scalaValue), acc)
       }
     }
 
-  implicit def deriveUdtValue[T]: ColumnEncoder.WithDriver[T, UdtValue] = macro Magnolia.gen[T]
+  implicit def deriveUdtValue[T]: CqlColumnEncoder.WithDriver[T, UdtValue] = macro Magnolia.gen[T]
 }
