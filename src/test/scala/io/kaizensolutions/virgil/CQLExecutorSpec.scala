@@ -1,6 +1,7 @@
 package io.kaizensolutions.virgil
 
 import com.datastax.oss.driver.api.core.uuid.Uuids
+import io.kaizensolutions.virgil.annotations.CqlColumn
 import io.kaizensolutions.virgil.codecs.CqlDecoder
 import io.kaizensolutions.virgil.configuration.{ConsistencyLevel, ExecutionAttributes}
 import io.kaizensolutions.virgil.cql._
@@ -43,7 +44,7 @@ object CQLExecutorSpec {
             .runCollect
             .map(results =>
               assertTrue(results.forall { r =>
-                import r.{query_string => query}
+                import r._
 
                 query.contains("SELECT") ||
                 query.contains("UPDATE") ||
@@ -133,9 +134,11 @@ object CQLExecutorSpec {
       }
 }
 
-final case class SystemLocalResponse(`system.now()`: UUID) {
+final case class SystemLocalResponse(
+  @CqlColumn("system.now()") now: UUID
+) {
   def time: Either[Throwable, Long] =
-    Try(Uuids.unixTimestamp(`system.now()`)).toEither
+    Try(Uuids.unixTimestamp(now)).toEither
 }
 object SystemLocalResponse {
   implicit val decoderForSystemLocalResponse: CqlDecoder[SystemLocalResponse] =
@@ -143,9 +146,9 @@ object SystemLocalResponse {
 }
 
 final case class PreparedStatementsResponse(
-  prepared_id: ByteBuffer,
-  logged_keyspace: Option[String],
-  query_string: String
+  @CqlColumn("prepared_id") preparedId: ByteBuffer,
+  @CqlColumn("logged_keyspace") keyspace: Option[String],
+  @CqlColumn("query_string") query: String
 )
 object PreparedStatementsResponse {
   implicit val decoderForPreparedStatementsResponse: CqlDecoder[PreparedStatementsResponse] =

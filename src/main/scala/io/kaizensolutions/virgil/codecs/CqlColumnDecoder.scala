@@ -2,6 +2,7 @@ package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.cql.Row
 import com.datastax.oss.driver.api.core.data.{CqlDuration, GettableByName, TupleValue, UdtValue}
+import io.kaizensolutions.virgil.annotations
 import magnolia1.{CaseClass, Magnolia}
 
 import java.util
@@ -327,8 +328,11 @@ trait UdtColumnDecoderMagnoliaDerivation {
   def join[T](ctx: CaseClass[CqlColumnDecoder, T]): CqlColumnDecoder.WithDriver[T, UdtValue] =
     CqlColumnDecoder.fromUdtValue { udtValue =>
       ctx.construct { param =>
-        val fieldName = param.label
-        val reader    = param.typeclass
+        val fieldName = {
+          val default = param.label
+          annotations.CqlColumn.extractFieldName(param.annotations).getOrElse(default)
+        }
+        val reader = param.typeclass
         reader.decodeFieldByName(udtValue, fieldName)
       }
     }

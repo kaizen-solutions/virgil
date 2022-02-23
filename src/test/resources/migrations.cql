@@ -73,9 +73,9 @@ CREATE TABLE userdefinedtypesspec_heavilynestedudttable
 CREATE TABLE collectionspec_simplecollectiontable
 (
     id       INT PRIMARY KEY,
-    mapTest  FROZEN<MAP<INT,TEXT>>,
-    setTest  FROZEN<SET<BIGINT>>,
-    listTest FROZEN<LIST<TEXT>>
+    map_test  FROZEN<MAP<INT,TEXT>>,
+    set_test  FROZEN<SET<BIGINT>>,
+    list_test FROZEN<LIST<TEXT>>
 );
 
 CREATE TABLE collectionspec_nestedcollectiontable

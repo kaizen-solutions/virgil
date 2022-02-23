@@ -1,5 +1,6 @@
 package io.kaizensolutions.virgil
 
+import io.kaizensolutions.virgil.annotations.CqlColumn
 import io.kaizensolutions.virgil.codecs.CqlDecoder
 import io.kaizensolutions.virgil.dsl._
 import zio.Has
@@ -34,9 +35,9 @@ object CollectionsSpec {
 
 final case class SimpleCollectionRow(
   id: Int,
-  mapTest: Map[Int, String],
-  setTest: Set[Long],
-  listTest: List[String]
+  @CqlColumn("map_test") mapTest: Map[Int, String],
+  @CqlColumn("set_test") setTest: Set[Long],
+  @CqlColumn("list_test") listTest: List[String]
 )
 object SimpleCollectionRow {
   implicit val decoderForSimpleCollectionRow: CqlDecoder[SimpleCollectionRow] =
@@ -45,18 +46,18 @@ object SimpleCollectionRow {
   def insert(in: SimpleCollectionRow): CQL[MutationResult] =
     InsertBuilder("collectionspec_simplecollectiontable")
       .value("id", in.id)
-      .value("mapTest", in.mapTest)
-      .value("setTest", in.setTest)
-      .value("listTest", in.listTest)
+      .value("map_test", in.mapTest)
+      .value("set_test", in.setTest)
+      .value("list_test", in.listTest)
       .build
 
   def select(id: Int): CQL[SimpleCollectionRow] =
     SelectBuilder
       .from("collectionspec_simplecollectiontable")
       .column("id")
-      .column("mapTest")
-      .column("setTest")
-      .column("listTest")
+      .column("map_test")
+      .column("set_test")
+      .column("list_test")
       .where("id" === id)
       .build[SimpleCollectionRow]
 
