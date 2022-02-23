@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS persons (
   id TEXT,
   name TEXT,
   age INT,
-  addresses frozen<set<address>>,
+  past_addresses frozen<set<address>>,
   PRIMARY KEY ((id), age)
 );
 ```
@@ -76,6 +76,7 @@ If we want to read and write data to this table, we create case classes that mir
 along with adding codecs for each datatype:
 
 ```scala
+import io.kaizensolutions.virgil.annotations.CqlColumn
 import io.kaizensolutions.virgil.codecs._
 
 final case class Info(favorite: Boolean, comment: String)
@@ -93,12 +94,20 @@ object Address {
 }
 
 // Note: This is the top level row, we write out its components so we don't need an Encoder for the whole Person
-final case class Person(id: String, name: String, age: Int, addresses: Set[Address])
+final case class Person(
+  id: String, 
+  name: String, 
+  age: Int, 
+  @CqlColumn("past_addresses") addresses: Set[Address]
+)
 
 object Person {
   implicit val decoderPerson: CqlDecoder[Person] = CqlDecoder.derive[Person]
 }
 ```
+
+Note that the `CqlColumn` annotation can be used if the column/field name in the Cassandra table is different from the 
+Scala representation. This can also be used inside User Defined Types as well.
 
 ### Writing data
 

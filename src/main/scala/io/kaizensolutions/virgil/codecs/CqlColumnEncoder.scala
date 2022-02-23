@@ -2,6 +2,7 @@ package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.`type`._
 import com.datastax.oss.driver.api.core.data.{CqlDuration, SettableByName, TupleValue, UdtValue}
+import io.kaizensolutions.virgil.annotations
 import magnolia1._
 
 import java.net.InetAddress
@@ -657,7 +658,11 @@ trait UdtEncoderMagnoliaDerivation {
   def join[T](ctx: CaseClass[CqlColumnEncoder, T]): CqlColumnEncoder.WithDriver[T, UdtValue] =
     CqlColumnEncoder.udt[T] { (scalaValue, udtValue) =>
       ctx.parameters.foldLeft(udtValue) { case (acc, p) =>
-        p.typeclass.encodeFieldByName(p.label, p.dereference(scalaValue), acc)
+        val fieldName = {
+          val default = p.label
+          annotations.CqlColumn.extractFieldName(p.annotations).getOrElse(default)
+        }
+        p.typeclass.encodeFieldByName(fieldName, p.dereference(scalaValue), acc)
       }
     }
 

@@ -1,5 +1,7 @@
 package io.kaizensolutions.virgil
 
+import io.kaizensolutions.virgil.annotations.CqlColumn
+import io.kaizensolutions.virgil.codecs._
 import io.kaizensolutions.virgil.cql._
 import io.kaizensolutions.virgil.dsl._
 import zio.Has
@@ -8,7 +10,6 @@ import zio.random.Random
 import zio.test.TestAspect._
 import zio.test._
 import zio.test.environment.Live
-import io.kaizensolutions.virgil.codecs._
 
 import java.time.{LocalDate, LocalTime}
 
@@ -98,7 +99,7 @@ object UDT_Address {
 
 final case class UDT_Email(
   username: String,
-  domain_name: String,
+  @CqlColumn("domain_name") domainName: String,
   domain: String
 )
 object UDT_Email {
