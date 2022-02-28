@@ -12,7 +12,7 @@ import scala.jdk.CollectionConverters._
 /**
  * Reader for Cassandra data types.
  * @see
- *   https://docs.datastax.com/en/developer/java-driver/4.11/manual/core/#cql-to-java-type-mapping
+ *   https://docs.datastax.com/en/developer/java-driver/4.13/manual/core/#cql-to-java-type-mapping
  * @tparam ScalaType
  */
 @implicitNotFound(
