@@ -1,8 +1,9 @@
 package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.cql.Row
-import io.kaizensolutions.virgil.annotations
-import magnolia1._
+import zio.schema.Schema
+
+import scala.annotation.tailrec
 
 /**
  * CQL Decoder gives us the ability to read from a Cassandra row and convert it
@@ -16,22 +17,41 @@ import magnolia1._
  *    }
  * }}}
  */
+trait CqlDecoder[+A] {
+  def decode(row: Row): Either[String, A]
+}
 object CqlDecoder {
-  type Typeclass[T] = CqlColumnDecoder[T]
+  implicit val rowCqlDecoder: CqlDecoder[Row] = (row: Row) => Right(row)
 
-  def join[T](ctx: CaseClass[CqlColumnDecoder, T]): CqlColumnDecoder.WithDriver[T, Row] =
-    CqlColumnDecoder.fromRow { row =>
-      ctx.construct { param =>
-        val fieldName = {
-          val default = param.label
-          annotations.CqlColumn.extractFieldName(param.annotations).getOrElse(default)
-        }
-        val reader = param.typeclass
-        reader.decodeFieldByName(row, fieldName)
+  @tailrec
+  def derive[A](implicit schema: Schema[A]): CqlDecoder[A] = schema match {
+    case record: Schema.Record[a] =>
+      new CqlDecoder[A] {
+        // cached
+        private val fieldDecoders =
+          record.structure.map { field =>
+            val columnDecoder = CqlColumnDecoder.fromSchema(field.schema)
+            (field.label, columnDecoder)
+          }
+
+        override def decode(row: Row): Either[String, A] =
+          record.rawConstruct {
+            fieldDecoders.map { case (fieldName, decoder) =>
+              decoder.decodeFieldByName(row, fieldName)
+            }
+          }.map(_.asInstanceOf[A])
       }
-    }
 
-  // We cannot make this implicit as it would produce incorrect nested Readers choosing Row instead of UdtValue as the DriverType
-  // causing the driver to break as it depends heavily on class types
-  def derive[T]: CqlColumnDecoder.WithDriver[T, Row] = macro Magnolia.gen[T]
+    case Schema.Lazy(s) => derive(s())
+    case other          => throw new RuntimeException(s"Cannot derive CqlDecoder for $other")
+//    case enum: Schema.Enum[_] => ???
+//    case collection: Schema.Collection[_, _] => ???
+//    case Schema.Transform(codec, f, g, annotations) => ???
+//    case Schema.Primitive(standardType, annotations) => ???
+//    case Schema.Optional(codec, annotations) => ???
+//    case Schema.Fail(message, annotations) => ???
+//    case Schema.Tuple(left, right, annotations) => ???
+//    case Schema.EitherSchema(left, right, annotations) => ???
+//    case Schema.Meta(ast, annotations) => ???
+  }
 }

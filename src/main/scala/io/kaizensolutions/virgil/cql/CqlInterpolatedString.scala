@@ -1,7 +1,7 @@
 package io.kaizensolutions.virgil.cql
 
 import com.datastax.oss.driver.api.core.cql.Row
-import io.kaizensolutions.virgil.codecs.{CqlColumnDecoder, CqlDecoder}
+import io.kaizensolutions.virgil.codecs.CqlDecoder
 import io.kaizensolutions.virgil.internal.BindMarkers
 import io.kaizensolutions.virgil.{CQL, MutationResult}
 
@@ -22,7 +22,7 @@ final case class CqlInterpolatedString private (
     CQL.cqlQuery(queryString, BindMarkers.from(dataToBeBound))
 
   def query: CQL[Row] =
-    CQL.cqlQuery(queryString, BindMarkers.from(dataToBeBound))(CqlColumnDecoder.rowColumnDecoder)
+    CQL.cqlQuery(queryString, BindMarkers.from(dataToBeBound))(CqlDecoder.rowCqlDecoder)
 
   def ++(that: CqlInterpolatedString): CqlInterpolatedString =
     CqlInterpolatedString(

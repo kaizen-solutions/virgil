@@ -67,7 +67,12 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
       boundStatementWithPage = boundStatement.setPagingState(driverPageState)
       rp                    <- selectPage(boundStatementWithPage)
       (results, nextPage)    = rp
-      chunksToOutput         = results.map(reader.decodeFieldByName(_, null))
+      chunksToOutput = results.map(row =>
+                         reader.decode(row) match {
+                           case Left(value)  => throw new RuntimeException(value)
+                           case Right(value) => value
+                         }
+                       )
     } yield Paged(chunksToOutput, nextPage)
   }
 
@@ -98,7 +103,12 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
     for {
       boundStatement <- ZStream.fromEffect(buildStatement(queryString, bindMarkers, config))
       reader          = input.reader
-      element        <- select(boundStatement).map(reader.decodeFieldByName(_, null))
+      element <- select(boundStatement).map(row =>
+                   reader.decode(row) match {
+                     case Left(value)  => throw new RuntimeException(value)
+                     case Right(value) => value
+                   }
+                 )
     } yield element
   }
 
@@ -111,7 +121,14 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
       boundStatement <- buildStatement(queryString, bindMarkers, config)
       reader          = input.reader
       optRow         <- selectFirst(boundStatement)
-      element        <- Task.succeed(optRow.map(reader.decodeFieldByName(_, null)))
+      element <- Task.succeed(
+                   optRow.map(row =>
+                     reader.decode(row) match {
+                       case Left(value)  => throw new RuntimeException(value)
+                       case Right(value) => value
+                     }
+                   )
+                 )
     } yield element
   }
 

@@ -7,6 +7,7 @@ import io.kaizensolutions.virgil.dsl._
 import zio.Has
 import zio.duration._
 import zio.random.Random
+import zio.schema.{DeriveSchema, Schema}
 import zio.test.TestAspect._
 import zio.test._
 import zio.test.environment.Live
@@ -73,7 +74,8 @@ final case class UDT_Data(
   email: Option[UDT_Email]
 )
 object UDT_Data {
-  implicit val udtDecoderForUDT_Data: UdtDecoder[UDT_Data] = CqlColumnDecoder.deriveUdtValue[UDT_Data]
+  implicit val schemaForUDT_Data: Schema[UDT_Data]               = DeriveSchema.gen[UDT_Data]
+  implicit val udtDecoderForUDT_Data: CqlColumnDecoder[UDT_Data] = CqlColumnDecoder.fromSchema[UDT_Data]
 
   def gen: Gen[Random, UDT_Data] =
     for {
@@ -148,6 +150,9 @@ final case class UDT_ExampleType(
   time: LocalTime
 )
 object UDT_ExampleType {
+  implicit val schemaForUDT_ExampleType: Schema[UDT_ExampleType]               = DeriveSchema.gen[UDT_ExampleType]
+  implicit val udtDecoderForUDT_ExampleType: CqlColumnDecoder[UDT_ExampleType] = CqlColumnDecoder[UDT_ExampleType]
+
   def gen: Gen[Random, UDT_ExampleType] =
     for {
       x <- Gen.anyLong
@@ -174,6 +179,12 @@ final case class UDT_ExampleNestedType(
   c: UDT_ExampleType
 )
 object UDT_ExampleNestedType {
+  implicit val schemaForUDT_ExampleNestedType: Schema[UDT_ExampleNestedType] =
+    DeriveSchema.gen[UDT_ExampleNestedType]
+
+  implicit val decoderForUDT_ExampleNestedType: CqlColumnDecoder[UDT_ExampleNestedType] =
+    CqlColumnDecoder.fromSchema[UDT_ExampleNestedType]
+
   def gen =
     for {
       a <- Gen.anyInt
@@ -188,8 +199,11 @@ final case class UDT_ExampleCollectionNestedUDTType(
   c: UDT_ExampleNestedType
 )
 object UDT_ExampleCollectionNestedUDTType {
-  implicit val udtDecoderForUDT_ExampleCollectionNestedUDTType: UdtDecoder[UDT_ExampleCollectionNestedUDTType] =
-    CqlColumnDecoder.deriveUdtValue[UDT_ExampleCollectionNestedUDTType]
+  implicit val schemaForUDT_ExampleCollectionNestedUDTType: Schema[UDT_ExampleCollectionNestedUDTType] =
+    DeriveSchema.gen[UDT_ExampleCollectionNestedUDTType]
+
+  implicit val udtDecoderForUDT_ExampleCollectionNestedUDTType: CqlColumnDecoder[UDT_ExampleCollectionNestedUDTType] =
+    CqlColumnDecoder.fromSchema[UDT_ExampleCollectionNestedUDTType]
 
   def gen: Gen[Random with Sized, UDT_ExampleCollectionNestedUDTType] =
     for {

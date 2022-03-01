@@ -15,8 +15,9 @@ lazy val root =
         val datastax  = "com.datastax.oss"
         val datastaxV = "4.14.0"
 
-        val zio  = "dev.zio"
-        val zioV = "1.0.13"
+        val zio        = "dev.zio"
+        val zioV       = "1.0.13"
+        val zioSchemaV = "0.1.8"
 
         Seq(
           datastax                        % "java-driver-core"        % datastaxV,
@@ -25,6 +26,8 @@ lazy val root =
           "org.scala-lang"                % "scala-reflect"           % scalaVersion.value,
           zio                            %% "zio"                     % zioV,
           zio                            %% "zio-streams"             % zioV,
+          zio                            %% "zio-schema"              % zioSchemaV,
+          zio                            %% "zio-schema-derivation"   % zioSchemaV,
           zio                            %% "zio-test"                % zioV     % Test,
           zio                            %% "zio-test-sbt"            % zioV     % Test,
           "com.dimafeng"                 %% "testcontainers-scala"    % "0.40.2" % Test,
