@@ -2,8 +2,8 @@ package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.cql.Row
 import com.datastax.oss.driver.api.core.data.{CqlDuration, GettableByName, TupleValue, UdtValue}
-import io.kaizensolutions.virgil.annotations
-import magnolia1.{CaseClass, Magnolia}
+import zio.Chunk
+import zio.schema.{Schema, StandardType}
 
 import java.util
 import scala.annotation.implicitNotFound
@@ -18,7 +18,7 @@ import scala.jdk.CollectionConverters._
 @implicitNotFound(
   "No CqlColumnDecoder found for ${ScalaType}, please use CqlDecoder.derive for a top level (Row) decoder and CqlColumnDecoder.deriveUdtValue for a User Defined Type decoder"
 )
-trait CqlColumnDecoder[ScalaType] { self =>
+sealed trait CqlColumnDecoder[ScalaType] { self =>
   type DriverType
 
   def driverClass: Class[DriverType]
@@ -62,7 +62,73 @@ trait CqlColumnDecoder[ScalaType] { self =>
       }
     }
 }
-object CqlColumnDecoder extends UdtColumnDecoderMagnoliaDerivation {
+object CqlColumnDecoder extends LowPriorityCqlColumnDecoder {
+  def fromSchema[A](implicit schemaForA: Schema[A]): CqlColumnDecoder[A] =
+    schemaForA match {
+      case Schema.Primitive(standardType, annotations) =>
+        standardType match {
+          case StandardType.UnitType => ???
+
+          case StandardType.StringType =>
+            CqlColumnDecoder[String]
+
+          case StandardType.BoolType                      => ???
+          case StandardType.ShortType                     => ???
+          case StandardType.IntType                       => ???
+          case StandardType.LongType                      => ???
+          case StandardType.FloatType                     => ???
+          case StandardType.DoubleType                    => ???
+          case StandardType.BinaryType                    => ???
+          case StandardType.CharType                      => ???
+          case StandardType.UUIDType                      => ???
+          case StandardType.BigDecimalType                => ???
+          case StandardType.BigIntegerType                => ???
+          case StandardType.DayOfWeekType                 => ???
+          case StandardType.MonthType                     => ???
+          case StandardType.MonthDayType                  => ???
+          case StandardType.PeriodType                    => ???
+          case StandardType.YearType                      => ???
+          case StandardType.YearMonthType                 => ???
+          case StandardType.ZoneIdType                    => ???
+          case StandardType.ZoneOffsetType                => ???
+          case StandardType.Duration(temporalUnit)        => ???
+          case StandardType.InstantType(formatter)        => ???
+          case StandardType.LocalDateType(formatter)      => ???
+          case StandardType.LocalTimeType(formatter)      => ???
+          case StandardType.LocalDateTimeType(formatter)  => ???
+          case StandardType.OffsetTimeType(formatter)     => ???
+          case StandardType.OffsetDateTimeType(formatter) => ???
+          case StandardType.ZonedDateTimeType(formatter)  => ???
+        }
+
+      case record: Schema.Record[_] =>
+        // cached and done once (this is expensive)
+        val result: Chunk[(String, CqlColumnDecoder[Any])] =
+          record.structure.map { field =>
+            val name       = field.label
+            val cqlDecoder = fromSchema(field.schema)
+            (name, cqlDecoder)
+          }
+
+        CqlColumnDecoder.fromUdtValue { udtValue =>
+          val chunkRaw: Chunk[Any] = result.map { case (name, decoder) =>
+            decoder.decodeFieldByName(udtValue, name)
+          }
+          record.rawConstruct(chunkRaw)
+        }
+        ???
+
+      case enum: Schema.Enum[_]                          => ???
+      case collection: Schema.Collection[_, _]           => ??? // separate this into Map/Set/List and handle each
+      case Schema.Transform(codec, f, g, annotations)    => ???
+      case Schema.Optional(codec, annotations)           => ???
+      case Schema.Fail(message, annotations)             => ???
+      case Schema.Tuple(left, right, annotations)        => ???
+      case Schema.EitherSchema(left, right, annotations) => ???
+      case Schema.Lazy(schema0)                          => ???
+      case Schema.Meta(ast, annotations)                 => ???
+    }
+
   type WithDriver[Scala, Driver] = CqlColumnDecoder[Scala] { type DriverType = Driver }
 
   def apply[A](implicit ev: CqlColumnDecoder[A]): CqlColumnDecoder[A] = ev
@@ -219,7 +285,9 @@ object CqlColumnDecoder extends UdtColumnDecoderMagnoliaDerivation {
     make(classOf[UdtValue])(identity)((structure, columnName) => structure.getUdtValue(columnName))(
       (structure, index) => structure.getUdtValue(index)
     )
+}
 
+trait LowPriorityCqlColumnDecoder {
   implicit def listColumnDecoder[A](implicit elementColumnDecoder: CqlColumnDecoder[A]): CqlColumnDecoder[List[A]] =
     new CqlColumnDecoder[List[A]] {
       override type DriverType = java.util.List[elementColumnDecoder.DriverType]
@@ -319,23 +387,4 @@ object CqlColumnDecoder extends UdtColumnDecoderMagnoliaDerivation {
       ): elementColumnDecoder.DriverType =
         structure.get(index, elementColumnDecoder.driverClass)
     }
-}
-
-trait UdtColumnDecoderMagnoliaDerivation {
-  type Typeclass[T] = CqlColumnDecoder[T]
-
-  // Automatic derivation of Reader instances for UDTs
-  def join[T](ctx: CaseClass[CqlColumnDecoder, T]): CqlColumnDecoder.WithDriver[T, UdtValue] =
-    CqlColumnDecoder.fromUdtValue { udtValue =>
-      ctx.construct { param =>
-        val fieldName = {
-          val default = param.label
-          annotations.CqlColumn.extractFieldName(param.annotations).getOrElse(default)
-        }
-        val reader = param.typeclass
-        reader.decodeFieldByName(udtValue, fieldName)
-      }
-    }
-
-  implicit def deriveUdtValue[T]: CqlColumnDecoder.WithDriver[T, UdtValue] = macro Magnolia.gen[T]
 }

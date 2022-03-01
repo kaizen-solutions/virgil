@@ -11,6 +11,7 @@ lazy val root =
       organization     := "io.kaizensolutions",
       organizationName := "kaizen-solutions",
       name             := "virgil",
+      addCompilerPlugin("io.tryp" % "splain" % "1.0.0" cross CrossVersion.patch),
       libraryDependencies ++= {
         val datastax  = "com.datastax.oss"
         val datastaxV = "4.14.0"
@@ -27,6 +28,8 @@ lazy val root =
           zio                            %% "zio-streams"             % zioV,
           zio                            %% "zio-test"                % zioV     % Test,
           zio                            %% "zio-test-sbt"            % zioV     % Test,
+          zio                            %% "zio-schema"              % "0.1.8",
+          zio                            %% "zio-schema-derivation"   % "0.1.8",
           "com.dimafeng"                 %% "testcontainers-scala"    % "0.40.2" % Test,
           "com.outr"                     %% "scribe-slf4j"            % "3.8.0"  % Test
         )

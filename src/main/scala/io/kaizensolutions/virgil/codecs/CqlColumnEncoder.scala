@@ -2,8 +2,6 @@ package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.`type`._
 import com.datastax.oss.driver.api.core.data.{CqlDuration, SettableByName, TupleValue, UdtValue}
-import io.kaizensolutions.virgil.annotations
-import magnolia1._
 
 import java.net.InetAddress
 import java.nio.ByteBuffer
@@ -21,7 +19,7 @@ import scala.jdk.CollectionConverters._
 @implicitNotFound(
   "No CqlColumnEncoder found for ${ScalaType}, please use UdtEncoder.derive for a User Defined Type or make use of <existingEncoderType>.contramap if you have a new type"
 )
-trait CqlColumnEncoder[ScalaType] { self =>
+sealed trait CqlColumnEncoder[ScalaType] { self =>
   type DriverType
 
   def driverClass: Class[DriverType]
@@ -64,7 +62,7 @@ trait CqlColumnEncoder[ScalaType] { self =>
         self.encodeFieldByIndex(index, f(value), structure)
     }
 }
-object CqlColumnEncoder extends UdtEncoderMagnoliaDerivation {
+object CqlColumnEncoder {
   type WithDriver[Sc, Dr] = CqlColumnEncoder[Sc] { type DriverType = Dr }
 
   def apply[ScalaType](implicit encoder: CqlColumnEncoder[ScalaType]): CqlColumnEncoder[ScalaType] = encoder
@@ -649,22 +647,4 @@ object CqlColumnEncoder extends UdtEncoderMagnoliaDerivation {
             structure.setToNull(index)
         }
     }
-}
-
-trait UdtEncoderMagnoliaDerivation {
-  type Typeclass[T] = CqlColumnEncoder[T]
-
-  // User Defined Types
-  def join[T](ctx: CaseClass[CqlColumnEncoder, T]): CqlColumnEncoder.WithDriver[T, UdtValue] =
-    CqlColumnEncoder.udt[T] { (scalaValue, udtValue) =>
-      ctx.parameters.foldLeft(udtValue) { case (acc, p) =>
-        val fieldName = {
-          val default = p.label
-          annotations.CqlColumn.extractFieldName(p.annotations).getOrElse(default)
-        }
-        p.typeclass.encodeFieldByName(fieldName, p.dereference(scalaValue), acc)
-      }
-    }
-
-  implicit def deriveUdtValue[T]: CqlColumnEncoder.WithDriver[T, UdtValue] = macro Magnolia.gen[T]
 }

@@ -52,6 +52,7 @@ final case class Row_Person(
 )
 object Row_Person {
   implicit val decoderForPerson: CqlDecoder[Row_Person] = CqlDecoder.derive[Row_Person]
+  implicit val encoderForPerson: CqlEncoder[Row_Person] = CqlEncoder.derive[Row_Person]
 
   def insert(person: Row_Person): CQL[MutationResult] =
     cql"INSERT INTO userdefinedtypesspec_person (id, name, age, data) VALUES (${person.id}, ${person.name}, ${person.age}, ${person.data})".mutation
@@ -73,7 +74,8 @@ final case class UDT_Data(
   email: Option[UDT_Email]
 )
 object UDT_Data {
-  implicit val udtDecoderForUDT_Data: UdtDecoder[UDT_Data] = CqlColumnDecoder.deriveUdtValue[UDT_Data]
+  implicit val cqlDecoderForUDT_Data: CqlDecoder[UDT_Data] = CqlDecoder.derive[UDT_Data]
+  implicit val cqlEncoderForUDT_Data: CqlEncoder[UDT_Data] = CqlEncoder.derive[UDT_Data]
 
   def gen: Gen[Random, UDT_Data] =
     for {
@@ -88,6 +90,8 @@ final case class UDT_Address(
   city: String
 )
 object UDT_Address {
+  implicit val cqlDecoderForUDT_Address: CqlDecoder[UDT_Address] = CqlDecoder.derive[UDT_Address]
+  implicit val cqlEncoderForUDT_Address: CqlEncoder[UDT_Address] = CqlEncoder.derive[UDT_Address]
 
   def gen: Gen[Random, UDT_Address] =
     for {
@@ -103,6 +107,8 @@ final case class UDT_Email(
   domain: String
 )
 object UDT_Email {
+  implicit val cqlDecoderForUDT_Email: CqlDecoder[UDT_Email] = CqlDecoder.derive[UDT_Email]
+  implicit val cqlEncoderForUDT_Email: CqlEncoder[UDT_Email] = CqlEncoder.derive[UDT_Email]
 
   def gen: Gen[Random, UDT_Email] =
     for {
@@ -119,6 +125,8 @@ final case class Row_HeavilyNestedUDTTable(
 object Row_HeavilyNestedUDTTable {
   implicit val decoderForRow_HeavilyNestedUDTTable: CqlDecoder[Row_HeavilyNestedUDTTable] =
     CqlDecoder.derive[Row_HeavilyNestedUDTTable]
+  implicit val encoderForRow_HeavilyNestedUDTTable: CqlEncoder[Row_HeavilyNestedUDTTable] =
+    CqlEncoder.derive[Row_HeavilyNestedUDTTable]
 
   def gen: Gen[Random with Sized, Row_HeavilyNestedUDTTable] =
     for {
@@ -148,6 +156,9 @@ final case class UDT_ExampleType(
   time: LocalTime
 )
 object UDT_ExampleType {
+  implicit val cqlDecoderForUDT_ExampleType: CqlDecoder[UDT_ExampleType] = CqlDecoder.derive[UDT_ExampleType]
+  implicit val cqlEncoderForUDT_ExampleType: CqlEncoder[UDT_ExampleType] = CqlEncoder.derive[UDT_ExampleType]
+
   def gen: Gen[Random, UDT_ExampleType] =
     for {
       x <- Gen.anyLong
@@ -174,6 +185,12 @@ final case class UDT_ExampleNestedType(
   c: UDT_ExampleType
 )
 object UDT_ExampleNestedType {
+  implicit val cqlDecoderForUDT_ExampleNestedType: CqlDecoder[UDT_ExampleNestedType] =
+    CqlDecoder.derive[UDT_ExampleNestedType]
+
+  implicit val cqlEncoderForUDT_ExampleNestedType: CqlEncoder[UDT_ExampleNestedType] =
+    CqlEncoder.derive[UDT_ExampleNestedType]
+
   def gen =
     for {
       a <- Gen.anyInt
@@ -188,8 +205,11 @@ final case class UDT_ExampleCollectionNestedUDTType(
   c: UDT_ExampleNestedType
 )
 object UDT_ExampleCollectionNestedUDTType {
-  implicit val udtDecoderForUDT_ExampleCollectionNestedUDTType: UdtDecoder[UDT_ExampleCollectionNestedUDTType] =
-    CqlColumnDecoder.deriveUdtValue[UDT_ExampleCollectionNestedUDTType]
+  implicit val udtDecoderForUDT_ExampleCollectionNestedUDTType: CqlDecoder[UDT_ExampleCollectionNestedUDTType] =
+    CqlDecoder.derive[UDT_ExampleCollectionNestedUDTType]
+
+  implicit val udtEncoderForUDT_ExampleCollectionNestedUDTType: CqlEncoder[UDT_ExampleCollectionNestedUDTType] =
+    CqlEncoder.derive[UDT_ExampleCollectionNestedUDTType]
 
   def gen: Gen[Random with Sized, UDT_ExampleCollectionNestedUDTType] =
     for {

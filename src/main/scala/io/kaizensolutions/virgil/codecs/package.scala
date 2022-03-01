@@ -1,10 +1,11 @@
 package io.kaizensolutions.virgil
 
-import com.datastax.oss.driver.api.core.cql.Row
-import com.datastax.oss.driver.api.core.data.UdtValue
-
 package object codecs {
-  type CqlDecoder[A] = CqlColumnDecoder.WithDriver[A, Row]
-  type UdtDecoder[A] = CqlColumnDecoder.WithDriver[A, UdtValue]
-  type UdtEncoder[A] = CqlColumnEncoder.WithDriver[A, UdtValue]
+  def combine[A, B](a: Either[List[String], A], b: Either[List[String], B]): Either[List[String], (A, B)] =
+    (a, b) match {
+      case (Right(a), Right(b)) => Right((a, b))
+      case (Left(a), Left(b))   => Left(a ++ b)
+      case (Left(a), _)         => Left(a)
+      case (_, Left(b))         => Left(b)
+    }
 }

@@ -67,7 +67,9 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
       boundStatementWithPage = boundStatement.setPagingState(driverPageState)
       rp                    <- selectPage(boundStatementWithPage)
       (results, nextPage)    = rp
-      chunksToOutput         = results.map(reader.decodeFieldByName(_, null))
+      chunksToOutput <- ZIO
+                          .foreach(results)(result => ZIO.fromEither(reader.decode(result)))
+                          .mapError(err => new RuntimeException(err.mkString(", ")))
     } yield Paged(chunksToOutput, nextPage)
   }
 
@@ -98,7 +100,9 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
     for {
       boundStatement <- ZStream.fromEffect(buildStatement(queryString, bindMarkers, config))
       reader          = input.reader
-      element        <- select(boundStatement).map(reader.decodeFieldByName(_, null))
+      element <- select(boundStatement).mapM(row =>
+                   ZIO.fromEither(reader.decode(row)).mapError(err => new RuntimeException(err.mkString(", ")))
+                 )
     } yield element
   }
 
@@ -111,7 +115,16 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
       boundStatement <- buildStatement(queryString, bindMarkers, config)
       reader          = input.reader
       optRow         <- selectFirst(boundStatement)
-      element        <- Task.succeed(optRow.map(reader.decodeFieldByName(_, null)))
+      element <- optRow match {
+                   case Some(row) =>
+                     ZIO
+                       .fromEither(reader.decode(row))
+                       .mapError(err => new RuntimeException(err.mkString(", ")))
+                       .asSome
+
+                   case None =>
+                     ZIO.none
+                 }
     } yield element
   }
 
@@ -169,9 +182,9 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
       val result: BoundStatementBuilder = {
         val initial = preparedStatement.boundStatementBuilder()
         val boundColumns = columns.underlying.foldLeft(initial) { case (accBuilder, (colName, column)) =>
-          column.write.encodeFieldByName(
-            structure = accBuilder,
+          column.write.encodeByName(
             fieldName = colName.name,
+            structure = accBuilder,
             value = column.value
           )
         }
