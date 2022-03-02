@@ -2,12 +2,14 @@ package io.kaizensolutions.virgil
 
 import com.datastax.oss.driver.api.core.uuid.Uuids
 import io.kaizensolutions.virgil.annotations.CqlColumn
-import io.kaizensolutions.virgil.codecs.CqlDecoder
+import io.kaizensolutions.virgil.codecs._
 import io.kaizensolutions.virgil.configuration.{ConsistencyLevel, ExecutionAttributes}
 import io.kaizensolutions.virgil.cql._
 import zio._
 import zio.duration._
 import zio.random.Random
+import zio.schema.DeriveSchema._
+import zio.schema.{DeriveSchema, Schema}
 import zio.stream.ZStream
 import zio.test.Assertion.hasSameElements
 import zio.test.TestAspect._
@@ -142,7 +144,7 @@ final case class SystemLocalResponse(
 }
 object SystemLocalResponse {
   implicit val decoderForSystemLocalResponse: CqlDecoder[SystemLocalResponse] =
-    CqlDecoder.fromSchema[SystemLocalResponse]
+    CqlDecoder.derive[SystemLocalResponse]
 }
 
 final case class PreparedStatementsResponse(
@@ -152,13 +154,16 @@ final case class PreparedStatementsResponse(
 )
 object PreparedStatementsResponse {
   implicit val decoderForPreparedStatementsResponse: CqlDecoder[PreparedStatementsResponse] =
-    CqlDecoder.fromSchema[PreparedStatementsResponse]
+    CqlDecoder.derive[PreparedStatementsResponse]
 }
 
 final case class ExecuteTestTable(id: Int, info: String)
 object ExecuteTestTable {
+  implicit val schemaForExecuteTestTable: Schema[ExecuteTestTable] =
+    DeriveSchema.gen[ExecuteTestTable]
+
   implicit val decoderForExecuteTestTable: CqlDecoder[ExecuteTestTable] =
-    CqlDecoder.fromSchema[ExecuteTestTable]
+    CqlDecoder.derive[ExecuteTestTable]
 
   val table      = "ziocassandrasessionspec_executeAction"
   val batchTable = "ziocassandrasessionspec_executeBatchAction"
@@ -180,8 +185,11 @@ object ExecuteTestTable {
 
 final case class SelectPageRow(id: Int, bucket: Int, info: String)
 object SelectPageRow {
+  implicit val schemaForSelectPageRow: Schema[SelectPageRow] =
+    DeriveSchema.gen[SelectPageRow]
+
   implicit val decoderForSelectPageRow: CqlDecoder[SelectPageRow] =
-    CqlDecoder.fromSchema[SelectPageRow]
+    CqlDecoder.derive[SelectPageRow]
 
   val truncate: CQL[MutationResult] = CQL.truncate("ziocassandrasessionspec_selectPage")
 

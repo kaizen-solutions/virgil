@@ -6,7 +6,8 @@ final case class ExecutionAttributes(
   pageSize: Option[Int] = None,
   executionProfile: Option[String] = None,
   consistencyLevel: Option[ConsistencyLevel] = None,
-  idempotent: Option[Boolean] = None
+  idempotent: Option[Boolean] = None,
+  richDecoderError: Boolean = false
 ) { self =>
   def withPageSize(pageSize: Int): ExecutionAttributes =
     copy(pageSize = Some(pageSize))
@@ -19,6 +20,9 @@ final case class ExecutionAttributes(
 
   def withIdempotent(idempotent: Boolean): ExecutionAttributes =
     copy(idempotent = Some(idempotent))
+
+  def withEnhancedErrorMessages(enabled: Boolean): ExecutionAttributes =
+    copy(richDecoderError = enabled)
 
   def combine(that: ExecutionAttributes): ExecutionAttributes =
     ExecutionAttributes(
@@ -38,7 +42,8 @@ final case class ExecutionAttributes(
         case (None, Some(b))    => Some(b)
         case (None, None)       => None
       },
-      idempotent = self.idempotent.orElse(that.idempotent)
+      idempotent = self.idempotent.orElse(that.idempotent),
+      richDecoderError = self.richDecoderError && that.richDecoderError
     )
 
   private[virgil] def configure(s: BoundStatementBuilder): BoundStatementBuilder = {

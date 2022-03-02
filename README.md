@@ -102,7 +102,7 @@ final case class Person(
                        )
 
 object Person {
-  implicit val decoderPerson: CqlDecoder[Person] = CqlDecoder.fromSchema[Person]
+  implicit val decoderPerson: CqlDecoder[Person] = CqlDecoder.derive[Person]
 }
 ```
 

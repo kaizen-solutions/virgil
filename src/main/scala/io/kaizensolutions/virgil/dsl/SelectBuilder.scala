@@ -40,7 +40,7 @@ class SelectBuilder[State <: SelectState](
       tableName = tableName,
       columns = columns,
       relations = relations
-    )
+    )(CqlDecoder.rowCqlDecoder)
   }
 
   def build[FromCassandra <: Product](implicit

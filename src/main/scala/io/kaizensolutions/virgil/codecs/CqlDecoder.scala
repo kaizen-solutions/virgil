@@ -1,9 +1,8 @@
 package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.cql.Row
+import io.kaizensolutions.virgil.annotations.CqlColumn
 import zio.schema.Schema
-
-import scala.util.control.NonFatal
 
 /**
  * CQL Decoder gives us the ability to read from a Cassandra row and convert it
@@ -65,40 +64,41 @@ trait CqlDecoder[+A] { self =>
       }
   }
 }
-object CqlDecoder extends CqlDecoderDerivation {
-  implicit val rowCqlDecoder: CqlDecoder[Row] = (row: Row) => Right(row)
-}
+object CqlDecoder {
+  implicit val rowCqlDecoder: CqlDecoder[Row] =
+    new CqlDecoder[Row] {
+      override def decode(row: Row): Either[String, Row] = Right(row)
+    }
 
-trait CqlDecoderDerivation {
-  implicit def derive[A](implicit schema: Schema[A]): CqlDecoder[A] =
-    fromSchema()(schema)
-
-  def fromSchema[A](index: Int = 0)(implicit schema: Schema[A]): CqlDecoder[A] = schema match {
+  def derive[A](implicit schema: Schema[A]): CqlDecoder[A] = schema match {
     case prim: Schema.Primitive[a] =>
       val columnDecoder = CqlColumnDecoder.fromSchema(prim)
       new CqlDecoder[A] {
         override def decode(row: Row): Either[String, A] =
-          try { Right(columnDecoder.decodeFieldByIndex(row, index).asInstanceOf[A]) }
-          catch {
-            case NonFatal(e) => Left(e.getMessage)
-          }
+          eitherConvert(columnDecoder.decodeFieldByIndex(row, 0))
+      }
+
+    case `byteBufferSchema` =>
+      val columnDecoder = CqlColumnDecoder.byteBufferColumnDecoder
+      new CqlDecoder[A] {
+        override def decode(row: Row): Either[String, A] =
+          eitherConvert(columnDecoder.decodeFieldByIndex(row, 0).asInstanceOf[A])
       }
 
     case `cqlDurationSchema` =>
       val columnDecoder = CqlColumnDecoder.cqlDurationColumnDecoder
       new CqlDecoder[A] {
         override def decode(row: Row): Either[String, A] =
-          try { Right(columnDecoder.decodeFieldByIndex(row, index).asInstanceOf[A]) }
-          catch { case NonFatal(e) => Left(e.getMessage) }
+          eitherConvert(columnDecoder.decodeFieldByIndex(row, 0).asInstanceOf[A])
       }
 
     case record: Schema.Record[a] =>
       new CqlDecoder[A] {
-        // cached
         private val fieldDecoders =
           record.structure.map { field =>
+            val fieldName     = CqlColumn.extractFieldName(field.annotations).getOrElse(field.label)
             val columnDecoder = CqlColumnDecoder.fromSchema(field.schema)
-            (field.label, columnDecoder)
+            (fieldName, columnDecoder)
           }
 
         override def decode(row: Row): Either[String, A] =
@@ -110,11 +110,11 @@ trait CqlDecoderDerivation {
       }
 
     case Schema.Lazy(s) =>
-      fromSchema(index)(s())
+      derive(s())
 
     case e: Schema.EitherSchema[l, r] =>
-      val ld = CqlDecoder.fromSchema(index)(e.left)
-      val rd = CqlDecoder.fromSchema(index)(e.right)
+      val ld = CqlDecoder.derive(e.left)
+      val rd = CqlDecoder.derive(e.right)
       new CqlDecoder[A] {
         override def decode(row: Row): Either[String, A] = {
           val l = ld.decode(row)
@@ -130,8 +130,7 @@ trait CqlDecoderDerivation {
       val listDecoder    = CqlColumnDecoder.listColumnDecoder(elementDecoder)
       new CqlDecoder[A] {
         override def decode(row: Row): Either[String, A] =
-          try { Right(listDecoder.decodeFieldByIndex(row, index).asInstanceOf[A]) }
-          catch { case NonFatal(e) => Left(e.getMessage) }
+          eitherConvert(listDecoder.decodeFieldByIndex(row, 0).asInstanceOf[A])
       }
 
     case Schema.SetSchema(elementSchema, _) =>
@@ -139,8 +138,7 @@ trait CqlDecoderDerivation {
       val setDecoder     = CqlColumnDecoder.setColumnDecoder(elementDecoder)
       new CqlDecoder[A] {
         override def decode(row: Row): Either[String, A] =
-          try { Right(setDecoder.decodeFieldByIndex(row, index).asInstanceOf[A]) }
-          catch { case NonFatal(e) => Left(e.getMessage) }
+          eitherConvert(setDecoder.decodeFieldByIndex(row, 0).asInstanceOf[A])
       }
 
     case Schema.MapSchema(keySchema, valueSchema, _) =>
@@ -149,19 +147,18 @@ trait CqlDecoderDerivation {
       val mapDecoder   = CqlColumnDecoder.mapColumnDecoder(keyDecoder, valueDecoder)
       new CqlDecoder[A] {
         override def decode(row: Row): Either[String, A] =
-          try { Right(mapDecoder.decodeFieldByIndex(row, 0).asInstanceOf[A]) }
-          catch { case NonFatal(e) => Left(e.getMessage) }
+          eitherConvert(mapDecoder.decodeFieldByIndex(row, 0).asInstanceOf[A])
       }
 
     case Schema.Optional(schema, _) =>
-      val decoder = CqlDecoder.fromSchema(index)(schema)
+      val decoder = CqlDecoder.derive(schema)
       new CqlDecoder[A] {
         override def decode(row: Row): Either[String, A] =
           decoder.decode(row).map(Option(_))
       }
 
     case Schema.Transform(schema, to, _, _) =>
-      val decoder = CqlDecoder.fromSchema(index)(schema)
+      val decoder = CqlDecoder.derive(schema)
       new CqlDecoder[A] {
         override def decode(row: Row): Either[String, A] =
           decoder.decode(row).flatMap(to(_))
@@ -169,13 +166,15 @@ trait CqlDecoderDerivation {
 
     case enum: Schema.Enum[a] =>
       val enumDecoder =
-        enum.structure.map { case (_, schema) => CqlDecoder.fromSchema(index)(schema) }
+        enum.structure.map { case (_, schema) => CqlDecoder.derive(schema) }
           .reduce(_ orElse _)
 
       enumDecoder.map(_.asInstanceOf[A])
 
     case Schema.Tuple(_, _, _) =>
-      throw new RuntimeException("CqlDecoder does not support Tuples, please use case classes instead")
+      throw new RuntimeException(
+        "CqlDecoder.derive does not support Tuples, please use this only for case classes or other primitives and collections"
+      )
 
     case Schema.Fail(message, _) =>
       throw new RuntimeException(s"CqlDecoder encountered a Schema.Fail: $message")

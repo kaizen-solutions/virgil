@@ -2,6 +2,7 @@ package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.cql.Row
 import com.datastax.oss.driver.api.core.data.{CqlDuration, GettableByName, TupleValue, UdtValue}
+import io.kaizensolutions.virgil.annotations.CqlColumn
 import zio.Chunk
 import zio.schema.Schema.Primitive
 import zio.schema.{Schema, StandardType}
@@ -350,10 +351,13 @@ object CqlColumnDecoder {
         structure.get(index, elementColumnDecoder.driverClass)
     }
 
-  implicit def fromSchema[A](implicit schema: Schema[A]): CqlColumnDecoder[A] =
+  def fromSchema[A](implicit schema: Schema[A]): CqlColumnDecoder[A] =
     schema match {
       case Primitive(standardType, _) =>
         primitiveDecoder(standardType)
+
+      case `byteBufferSchema` =>
+        CqlColumnDecoder[ByteBuffer].map(_.asInstanceOf[A])
 
       case `cqlDurationSchema` =>
         CqlColumnDecoder[CqlDuration].map(_.asInstanceOf[A])
@@ -448,7 +452,7 @@ object CqlColumnDecoder {
 
   private def decodeFieldsOfRecord[A](record: Schema.Record[A]) =
     record.structure.map { field =>
-      val fieldName = field.label
+      val fieldName = CqlColumn.extractFieldName(field.annotations).getOrElse(field.label)
       val decoder   = fromSchema(field.schema)
       (fieldName, decoder)
     }
