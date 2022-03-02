@@ -102,15 +102,19 @@ object CqlDecoder {
             (fieldName, columnDecoder)
           }
 
-        override def decode(row: Row): Either[String, A] =
-          eitherConvert {
-            record.rawConstruct {
-              // this can throw but I don't want to wrap each of these in eitherConvert
-              fieldDecoders.map { case (fieldName, decoder) =>
-                decoder.decodeFieldByName(row, fieldName)
-              }
-            }.map(_.asInstanceOf[A])
-          }.flatten
+        override def decode(row: Row): Either[String, A] = {
+          val lowLevelDecoderResult: Either[String, Either[String, A]] =
+            eitherConvert {
+              record.rawConstruct {
+                // this can throw but I don't want to wrap each of these in eitherConvert for performance
+                fieldDecoders.map { case (fieldName, decoder) =>
+                  decoder.decodeFieldByName(row, fieldName)
+                }
+              }.map(_.asInstanceOf[A])
+            }
+
+          lowLevelDecoderResult.flatMap(identity)
+        }
       }
 
     case Schema.Lazy(s) =>
@@ -172,7 +176,11 @@ object CqlDecoder {
       val discriminator = CqlDiscriminator.extract(enum.annotations)
       discriminator match {
         case Some(disc) =>
-          discriminatorBasedEnumDecoder(disc, enum)
+          // Cache the derivation of each enum case
+          val enumDecoderByKeyType: Map[String, CqlDecoder[_]] =
+            enum.structure.toList.map { case (typeName, schema) => typeName -> CqlDecoder.derive(schema) }.toMap
+
+          discriminatorBasedEnumDecoder(disc, enumDecoderByKeyType)
 
         case None =>
           val decoders = enum.structure.map { case (_, schema) => CqlDecoder.derive(schema) }
@@ -180,7 +188,7 @@ object CqlDecoder {
             override def decode(row: Row): Either[String, A] =
               decodeFirstMatching(
                 row = row,
-                in = decoders.to(LazyList),
+                in = decoders,
                 errors = Chunk.empty
               ).map(_.asInstanceOf[A])
           }
@@ -202,14 +210,16 @@ object CqlDecoder {
 
   private def discriminatorBasedEnumDecoder[A](
     discriminatorField: String,
-    enumSchema: Schema.Enum[A]
+    decoderLookup: Map[String, CqlDecoder[_]]
   ): CqlDecoder[A] = {
-    val enumDecoder                   = enumSchema.structure.map { case (typeName, schema) => (typeName, CqlDecoder.derive(schema)) }
-    def errorDuringLookup(in: String) = s"Unknown enum type: $in, possible values (${enumDecoder.keys.mkString(", ")})"
+
+    def errorDuringLookup(in: String) =
+      s"Unknown enum type: $in, possible values (${decoderLookup.keys.mkString(", ")})"
+
     new CqlDecoder[A] {
       override def decode(row: Row): Either[String, A] = for {
         discriminator <- eitherConvert(row.getString(discriminatorField))
-        a <- enumDecoder
+        a <- decoderLookup
                .get(discriminator)
                .toRight(errorDuringLookup(discriminator))
                .flatMap(_.decode(row))
@@ -219,7 +229,7 @@ object CqlDecoder {
   }
 
   @scala.annotation.tailrec
-  private def decodeFirstMatching(row: Row, in: LazyList[CqlDecoder[_]], errors: Chunk[String]): Either[String, _] =
+  private def decodeFirstMatching(row: Row, in: Iterable[CqlDecoder[_]], errors: Chunk[String]): Either[String, _] =
     if (in.isEmpty) Left(errors.mkString("Tried the following decoders: ", " and then tried ", ""))
     else {
       val head = in.head
