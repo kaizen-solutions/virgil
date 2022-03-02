@@ -1,7 +1,8 @@
 package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.cql.Row
-import io.kaizensolutions.virgil.annotations.CqlColumn
+import io.kaizensolutions.virgil.annotations.{CqlColumn, CqlDiscriminator}
+import zio.Chunk
 import zio.schema.Schema
 
 /**
@@ -16,7 +17,7 @@ import zio.schema.Schema
  *    }
  * }}}
  */
-trait CqlDecoder[+A] { self =>
+trait CqlDecoder[A] { self =>
   def decode(row: Row): Either[String, A]
 
   def map[B](f: A => B): CqlDecoder[B] = new CqlDecoder[B] {
@@ -35,8 +36,8 @@ trait CqlDecoder[+A] { self =>
 
   def zip[B](that: CqlDecoder[B]): CqlDecoder[(A, B)] = zipWith(that)((_, _))
 
-  def orElse[A1 >: A](that: CqlDecoder[A1]): CqlDecoder[A1] = new CqlDecoder[A1] {
-    override def decode(row: Row): Either[String, A1] =
+  def orElse(that: CqlDecoder[A]): CqlDecoder[A] = new CqlDecoder[A] {
+    override def decode(row: Row): Either[String, A] =
       self.decode(row) match {
         case Left(fstError) =>
           that
@@ -70,7 +71,7 @@ object CqlDecoder {
       override def decode(row: Row): Either[String, Row] = Right(row)
     }
 
-  def derive[A](implicit schema: Schema[A]): CqlDecoder[A] = schema match {
+  implicit def derive[A](implicit schema: Schema[A]): CqlDecoder[A] = schema match {
     case prim: Schema.Primitive[a] =>
       val columnDecoder = CqlColumnDecoder.fromSchema(prim)
       new CqlDecoder[A] {
@@ -102,11 +103,14 @@ object CqlDecoder {
           }
 
         override def decode(row: Row): Either[String, A] =
-          record.rawConstruct {
-            fieldDecoders.map { case (fieldName, decoder) =>
-              decoder.decodeFieldByName(row, fieldName)
-            }
-          }.map(_.asInstanceOf[A])
+          eitherConvert {
+            record.rawConstruct {
+              // this can throw but I don't want to wrap each of these in eitherConvert
+              fieldDecoders.map { case (fieldName, decoder) =>
+                decoder.decodeFieldByName(row, fieldName)
+              }
+            }.map(_.asInstanceOf[A])
+          }.flatten
       }
 
     case Schema.Lazy(s) =>
@@ -165,11 +169,22 @@ object CqlDecoder {
       }
 
     case enum: Schema.Enum[a] =>
-      val enumDecoder =
-        enum.structure.map { case (_, schema) => CqlDecoder.derive(schema) }
-          .reduce(_ orElse _)
+      val discriminator = CqlDiscriminator.extract(enum.annotations)
+      discriminator match {
+        case Some(disc) =>
+          discriminatorBasedEnumDecoder(disc, enum)
 
-      enumDecoder.map(_.asInstanceOf[A])
+        case None =>
+          val decoders = enum.structure.map { case (_, schema) => CqlDecoder.derive(schema) }
+          new CqlDecoder[A] {
+            override def decode(row: Row): Either[String, A] =
+              decodeFirstMatching(
+                row = row,
+                in = decoders.to(LazyList),
+                errors = Chunk.empty
+              ).map(_.asInstanceOf[A])
+          }
+      }
 
     case Schema.Tuple(_, _, _) =>
       throw new RuntimeException(
@@ -184,4 +199,34 @@ object CqlDecoder {
 
     case other => throw new RuntimeException(s"Cannot derive CqlDecoder for $other")
   }
+
+  private def discriminatorBasedEnumDecoder[A](
+    discriminatorField: String,
+    enumSchema: Schema.Enum[A]
+  ): CqlDecoder[A] = {
+    val enumDecoder                   = enumSchema.structure.map { case (typeName, schema) => (typeName, CqlDecoder.derive(schema)) }
+    def errorDuringLookup(in: String) = s"Unknown enum type: $in, possible values (${enumDecoder.keys.mkString(", ")})"
+    new CqlDecoder[A] {
+      override def decode(row: Row): Either[String, A] = for {
+        discriminator <- eitherConvert(row.getString(discriminatorField))
+        a <- enumDecoder
+               .get(discriminator)
+               .toRight(errorDuringLookup(discriminator))
+               .flatMap(_.decode(row))
+        result = a.asInstanceOf[A]
+      } yield result
+    }
+  }
+
+  @scala.annotation.tailrec
+  private def decodeFirstMatching(row: Row, in: LazyList[CqlDecoder[_]], errors: Chunk[String]): Either[String, _] =
+    if (in.isEmpty) Left(errors.mkString("Tried the following decoders: ", " and then tried ", ""))
+    else {
+      val head = in.head
+      head.decode(row) match {
+        case Left(value)  => decodeFirstMatching(row, in.tail, errors :+ value)
+        case Right(value) => Right(value)
+      }
+    }
+
 }
