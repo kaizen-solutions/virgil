@@ -28,7 +28,7 @@ lazy val root =
           zio                            %% "zio-test"                % zioV     % Test,
           zio                            %% "zio-test-sbt"            % zioV     % Test,
           "com.dimafeng"                 %% "testcontainers-scala"    % "0.40.2" % Test,
-          "com.outr"                     %% "scribe-slf4j"            % "3.8.0"  % Test
+          "com.outr"                     %% "scribe-slf4j"            % "3.8.1"  % Test
         )
       },
       testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
