@@ -410,8 +410,8 @@ object CqlColumnDecoder {
       case t: Schema.Transform[a, b] =>
         val schemaForA: Schema[a] = t.codec
         fromSchema(schemaForA)
-          .map(t.f)
-          .orDie
+          .map(a => t.f(a))
+          .orDie[String, b]
 
       case o: Schema.Optional[a] =>
         val decoder = fromSchema(o.codec)
@@ -478,15 +478,15 @@ object CqlColumnDecoder {
       case StandardType.OffsetTimeType(_)     => CqlColumnDecoder[OffsetTime]
       case StandardType.OffsetDateTimeType(_) => CqlColumnDecoder[OffsetDateTime]
       case StandardType.ZonedDateTimeType(_)  => CqlColumnDecoder[ZonedDateTime]
-      case t @ StandardType.Duration(_)       => throw new RuntimeException(s"$t not supported for CqlColumnDecoder")
-      case t @ StandardType.ZoneIdType        => throw new RuntimeException(s"$t not supported for CqlColumnDecoder")
-      case t @ StandardType.ZoneOffsetType    => throw new RuntimeException(s"$t not supported for CqlColumnDecoder")
-      case t @ StandardType.CharType          => throw new RuntimeException(s"$t not supported for CqlColumnDecoder")
-      case t @ StandardType.DayOfWeekType     => throw new RuntimeException(s"$t not supported for CqlColumnDecoder")
-      case t @ StandardType.MonthType         => throw new RuntimeException(s"$t not supported for CqlColumnDecoder")
-      case t @ StandardType.MonthDayType      => throw new RuntimeException(s"$t not supported for CqlColumnDecoder")
-      case t @ StandardType.PeriodType        => throw new RuntimeException(s"$t not supported for CqlColumnDecoder")
-      case t @ StandardType.YearType          => throw new RuntimeException(s"$t not supported for CqlColumnDecoder")
-      case t @ StandardType.YearMonthType     => throw new RuntimeException(s"$t not supported for CqlColumnDecoder")
+      case StandardType.Duration(_)           => throw new RuntimeException(s"$typ not supported for CqlColumnDecoder")
+      case StandardType.ZoneIdType            => throw new RuntimeException(s"$typ not supported for CqlColumnDecoder")
+      case StandardType.ZoneOffsetType        => throw new RuntimeException(s"$typ not supported for CqlColumnDecoder")
+      case StandardType.CharType              => throw new RuntimeException(s"$typ not supported for CqlColumnDecoder")
+      case StandardType.DayOfWeekType         => throw new RuntimeException(s"$typ not supported for CqlColumnDecoder")
+      case StandardType.MonthType             => throw new RuntimeException(s"$typ not supported for CqlColumnDecoder")
+      case StandardType.MonthDayType          => throw new RuntimeException(s"$typ not supported for CqlColumnDecoder")
+      case StandardType.PeriodType            => throw new RuntimeException(s"$typ not supported for CqlColumnDecoder")
+      case StandardType.YearType              => throw new RuntimeException(s"$typ not supported for CqlColumnDecoder")
+      case StandardType.YearMonthType         => throw new RuntimeException(s"$typ not supported for CqlColumnDecoder")
     }
 }
