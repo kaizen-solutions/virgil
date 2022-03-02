@@ -15,10 +15,12 @@ object CollectionsSpec {
         import SimpleCollectionRow._
         checkM(gen) { expected =>
           for {
-            _      <- insert(expected).execute.runDrain
-            result <- select(expected.id).execute.runCollect
-            actual  = result.head
-          } yield assertTrue(actual == expected) && assertTrue(result.length == 1)
+            _         <- insert(expected).execute.runDrain
+            result    <- select(expected.id).execute.runCollect
+            resultAll <- selectAll.execute.runCollect
+            actual     = result.head
+          } yield assertTrue(actual == expected) && assertTrue(result.length == 1) &&
+            assertTrue(resultAll.contains(expected))
         }
       } + testM("Read and write a row containing nested collections") {
         import NestedCollectionRow._
@@ -59,6 +61,12 @@ object SimpleCollectionRow {
       .column("set_test")
       .column("list_test")
       .where("id" === id)
+      .build[SimpleCollectionRow]
+
+  val selectAll: CQL[SimpleCollectionRow] =
+    SelectBuilder
+      .from("collectionspec_simplecollectiontable")
+      .columns("id", "map_test", "set_test", "list_test")
       .build[SimpleCollectionRow]
 
   def gen: Gen[Random with Sized, SimpleCollectionRow] =

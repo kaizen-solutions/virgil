@@ -221,29 +221,31 @@ private[virgil] object CqlStatementRenderer {
    * @param relations
    * @return
    */
-  private def renderRelations(relations: Chunk[Relation]): (String, BindMarkers) = {
-    val initial = (Chunk[String](), BindMarkers.empty)
-    val (exprChunk, columns) =
-      relations.foldLeft(initial) { case ((accExpr, accColumns), relation) =>
-        relation match {
-          case Relation.Binary(columnName, operator, value, encoder) =>
-            // For example, where("col1" >= 1) becomes
-            // "col1 >= :col1_relation" along with Columns("col1_relation" -> 1 with write capabilities)
-            val param      = s"${columnName.name}_relation"
-            val column     = BindMarker.make(BindMarkerName.make(param), value)(encoder)
-            val expression = s"${columnName.name} ${operator.render} :$param"
-            (accExpr :+ expression, accColumns + column)
+  private def renderRelations(relations: Chunk[Relation]): (String, BindMarkers) =
+    if (relations.isEmpty) ("", BindMarkers.empty)
+    else {
+      val initial = (Chunk[String](), BindMarkers.empty)
+      val (exprChunk, columns) =
+        relations.foldLeft(initial) { case ((accExpr, accColumns), relation) =>
+          relation match {
+            case Relation.Binary(columnName, operator, value, encoder) =>
+              // For example, where("col1" >= 1) becomes
+              // "col1 >= :col1_relation" along with Columns("col1_relation" -> 1 with write capabilities)
+              val param      = s"${columnName.name}_relation"
+              val column     = BindMarker.make(BindMarkerName.make(param), value)(encoder)
+              val expression = s"${columnName.name} ${operator.render} :$param"
+              (accExpr :+ expression, accColumns + column)
 
-          case Relation.IsNotNull(columnName) =>
-            val expression = s"${columnName.name} IS NOT NULL"
-            (accExpr :+ expression, accColumns)
+            case Relation.IsNotNull(columnName) =>
+              val expression = s"${columnName.name} IS NOT NULL"
+              (accExpr :+ expression, accColumns)
 
-          case Relation.IsNull(columnName) =>
-            val expression = s"${columnName.name} == NULL"
-            (accExpr :+ expression, accColumns)
+            case Relation.IsNull(columnName) =>
+              val expression = s"${columnName.name} == NULL"
+              (accExpr :+ expression, accColumns)
+          }
         }
-      }
-    val relationExpr = "WHERE " ++ exprChunk.mkString(" AND ")
-    (relationExpr, columns)
-  }
+      val relationExpr = "WHERE " ++ exprChunk.mkString(" AND ")
+      (relationExpr, columns)
+    }
 }
