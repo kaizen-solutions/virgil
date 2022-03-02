@@ -95,14 +95,14 @@ object Address {
 
 // Note: This is the top level row, we write out its components so we don't need an Encoder for the whole Person
 final case class Person(
-  id: String, 
-  name: String, 
-  age: Int, 
-  @CqlColumn("past_addresses") addresses: Set[Address]
-)
+                         id: String,
+                         name: String,
+                         age: Int,
+                         @CqlColumn("past_addresses") addresses: Set[Address]
+                       )
 
 object Person {
-  implicit val decoderPerson: CqlDecoder[Person] = CqlDecoder.derive[Person]
+  implicit val decoderPerson: CqlDecoder[Person] = CqlDecoder.fromSchema[Person]
 }
 ```
 

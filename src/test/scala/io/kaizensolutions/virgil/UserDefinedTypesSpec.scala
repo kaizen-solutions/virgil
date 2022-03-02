@@ -52,7 +52,7 @@ final case class Row_Person(
   data: UDT_Data
 )
 object Row_Person {
-  implicit val decoderForPerson: CqlDecoder[Row_Person] = CqlDecoder.derive[Row_Person]
+  implicit val decoderForPerson: CqlDecoder[Row_Person] = CqlDecoder.fromSchema[Row_Person]
 
   def insert(person: Row_Person): CQL[MutationResult] =
     cql"INSERT INTO userdefinedtypesspec_person (id, name, age, data) VALUES (${person.id}, ${person.name}, ${person.age}, ${person.data})".mutation
@@ -120,7 +120,7 @@ final case class Row_HeavilyNestedUDTTable(
 )
 object Row_HeavilyNestedUDTTable {
   implicit val decoderForRow_HeavilyNestedUDTTable: CqlDecoder[Row_HeavilyNestedUDTTable] =
-    CqlDecoder.derive[Row_HeavilyNestedUDTTable]
+    CqlDecoder.fromSchema[Row_HeavilyNestedUDTTable]
 
   def gen: Gen[Random with Sized, Row_HeavilyNestedUDTTable] =
     for {

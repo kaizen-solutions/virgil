@@ -43,7 +43,7 @@ final case class SimpleCollectionRow(
 )
 object SimpleCollectionRow {
   implicit val decoderForSimpleCollectionRow: CqlDecoder[SimpleCollectionRow] =
-    CqlDecoder.derive[SimpleCollectionRow]
+    CqlDecoder.fromSchema[SimpleCollectionRow]
 
   def insert(in: SimpleCollectionRow): CQL[MutationResult] =
     InsertBuilder("collectionspec_simplecollectiontable")
@@ -84,7 +84,7 @@ final case class NestedCollectionRow(
 )
 object NestedCollectionRow {
   implicit val decoderForNestedCollectionRow: CqlDecoder[NestedCollectionRow] =
-    CqlDecoder.derive[NestedCollectionRow]
+    CqlDecoder.fromSchema[NestedCollectionRow]
 
   def select(a: Int): CQL[NestedCollectionRow] =
     SelectBuilder

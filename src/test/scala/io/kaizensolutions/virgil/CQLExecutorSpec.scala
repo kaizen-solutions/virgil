@@ -142,7 +142,7 @@ final case class SystemLocalResponse(
 }
 object SystemLocalResponse {
   implicit val decoderForSystemLocalResponse: CqlDecoder[SystemLocalResponse] =
-    CqlDecoder.derive[SystemLocalResponse]
+    CqlDecoder.fromSchema[SystemLocalResponse]
 }
 
 final case class PreparedStatementsResponse(
@@ -152,13 +152,13 @@ final case class PreparedStatementsResponse(
 )
 object PreparedStatementsResponse {
   implicit val decoderForPreparedStatementsResponse: CqlDecoder[PreparedStatementsResponse] =
-    CqlDecoder.derive[PreparedStatementsResponse]
+    CqlDecoder.fromSchema[PreparedStatementsResponse]
 }
 
 final case class ExecuteTestTable(id: Int, info: String)
 object ExecuteTestTable {
   implicit val decoderForExecuteTestTable: CqlDecoder[ExecuteTestTable] =
-    CqlDecoder.derive[ExecuteTestTable]
+    CqlDecoder.fromSchema[ExecuteTestTable]
 
   val table      = "ziocassandrasessionspec_executeAction"
   val batchTable = "ziocassandrasessionspec_executeBatchAction"
@@ -181,7 +181,7 @@ object ExecuteTestTable {
 final case class SelectPageRow(id: Int, bucket: Int, info: String)
 object SelectPageRow {
   implicit val decoderForSelectPageRow: CqlDecoder[SelectPageRow] =
-    CqlDecoder.derive[SelectPageRow]
+    CqlDecoder.fromSchema[SelectPageRow]
 
   val truncate: CQL[MutationResult] = CQL.truncate("ziocassandrasessionspec_selectPage")
 

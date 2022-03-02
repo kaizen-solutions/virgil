@@ -20,7 +20,7 @@ import scala.jdk.CollectionConverters._
  * @tparam ScalaType
  */
 @implicitNotFound(
-  "No CqlColumnDecoder found for ${ScalaType}, please use CqlDecoder.derive for a top level (Row) decoder and CqlColumnDecoder.deriveUdtValue for a User Defined Type decoder"
+  "No CqlColumnDecoder found for ${ScalaType}, please use CqlColumnDecoder.fromSchema[${ScalaType}] to derive one and make sure a zio.schema.Schema[${ScalaType}] is defined and marked implicit"
 )
 sealed trait CqlColumnDecoder[ScalaType] { self =>
   type DriverType
@@ -352,7 +352,12 @@ object CqlColumnDecoder {
 
   implicit def fromSchema[A](implicit schema: Schema[A]): CqlColumnDecoder[A] =
     schema match {
-      case Primitive(standardType, _) => primitiveDecoder(standardType)
+      case Primitive(standardType, _) =>
+        primitiveDecoder(standardType)
+
+      case `cqlDurationSchema` =>
+        CqlColumnDecoder[CqlDuration].map(_.asInstanceOf[A])
+
       case record: Schema.Record[a] =>
         val fields = decodeFieldsOfRecord(record)
 
@@ -398,14 +403,47 @@ object CqlColumnDecoder {
 
       case Schema.Lazy(schemaFn) => fromSchema(schemaFn())
 
-      case Schema.Fail(message, _) => throw new RuntimeException(s"Schema failed to decode: $message")
-//      case enum: Schema.Enum[_]                          => ???
-//      case Schema.Transform(codec, f, g, annotations)    => ???
-//      case Schema.Optional(codec, annotations)           => ???
-//      case Schema.Tuple(left, right, annotations)        => ???
-//      case Schema.EitherSchema(left, right, annotations) => ???
-//      case Schema.Meta(ast, annotations)                 => ???
-      case s => throw new RuntimeException(s"Unsupported schema: $s")
+      case t: Schema.Transform[a, b] =>
+        val schemaForA: Schema[a] = t.codec
+        fromSchema(schemaForA)
+          .map(t.f)
+          .orDie
+
+      case o: Schema.Optional[a] =>
+        val decoder = fromSchema(o.codec)
+        new CqlColumnDecoder[Option[a]] {
+          override type DriverType = decoder.DriverType
+
+          override def driverClass: Class[DriverType] = decoder.driverClass
+
+          override def convertDriverToScala(driverValue: DriverType): Option[a] =
+            Option(driverValue).map(decoder.convertDriverToScala)
+
+          override def readFieldFromDriver[Structure <: GettableByName](
+            structure: Structure,
+            fieldName: String
+          ): DriverType = decoder.readFieldFromDriver(structure, fieldName)
+
+          override def readIndexFromDriver[Structure <: GettableByName](structure: Structure, index: Int): DriverType =
+            decoder.readIndexFromDriver(structure, index)
+        }
+
+      case t: Schema.Tuple[a, b] =>
+        throw new RuntimeException(s"Tuple is not supported: $t")
+
+      case Schema.Fail(message, _) =>
+        throw new RuntimeException(s"Schema failed to decode: $message")
+
+      case enum: Schema.Enum[_] =>
+        throw new RuntimeException(s"Enumeration failed to decode: $enum")
+
+      case e @ Schema.EitherSchema(_, _, _) =>
+        throw new RuntimeException(s"Either Schema failed to decode: $e")
+
+      case Schema.Meta(ast, _) => throw new RuntimeException(s"Meta is not supported: $ast")
+
+      case s =>
+        throw new RuntimeException(s"Unsupported schema: $s")
     }
 
   private def decodeFieldsOfRecord[A](record: Schema.Record[A]) =
