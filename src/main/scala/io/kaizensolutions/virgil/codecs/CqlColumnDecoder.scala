@@ -436,13 +436,13 @@ object CqlColumnDecoder {
         throw new RuntimeException(s"Tuple is not supported: $t")
 
       case Schema.Fail(message, _) =>
-        throw new RuntimeException(s"Schema failed to decode: $message")
+        throw new RuntimeException(s"Schema Fail is not supported: $message")
 
       case enum: Schema.Enum[_] =>
-        throw new RuntimeException(s"Enumeration failed to decode: $enum")
+        throw new RuntimeException(s"Enumeration is not supported: $enum")
 
       case e @ Schema.EitherSchema(_, _, _) =>
-        throw new RuntimeException(s"Either Schema failed to decode: $e")
+        throw new RuntimeException(s"Either Schema is not supported: $e")
 
       case Schema.Meta(ast, _) => throw new RuntimeException(s"Meta is not supported: $ast")
 

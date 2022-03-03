@@ -3,6 +3,7 @@ package io.kaizensolutions.virgil.codecs
 import com.datastax.oss.driver.api.core.`type`._
 import com.datastax.oss.driver.api.core.data.{CqlDuration, SettableByName, TupleValue, UdtValue}
 import io.kaizensolutions.virgil.annotations
+import io.kaizensolutions.virgil.annotations.{CqlDiscriminator, CqlSubtype}
 import magnolia1._
 
 import java.net.InetAddress
@@ -19,7 +20,7 @@ import scala.jdk.CollectionConverters._
  * @tparam ScalaType
  */
 @implicitNotFound(
-  "No CqlColumnEncoder found for ${ScalaType}, please use UdtEncoder.derive for a User Defined Type or make use of <existingEncoderType>.contramap if you have a new type"
+  "No CqlColumnEncoder found for ${ScalaType}, please use CqlColumnEncoder.derive[${ScalaType}] for a User Defined Type or make use of CqlColumnEncoder[ExistingType].contramap if you have a new type"
 )
 trait CqlColumnEncoder[ScalaType] { self =>
   type DriverType
@@ -666,5 +667,59 @@ trait UdtEncoderMagnoliaDerivation {
       }
     }
 
-  implicit def deriveUdtValue[T]: CqlColumnEncoder.WithDriver[T, UdtValue] = macro Magnolia.gen[T]
+  def split[T](ctx: SealedTrait[CqlColumnEncoder, T]): CqlColumnEncoder.WithDriver[T, UdtValue] = {
+    def sealedTraitDecoder(
+      enrich: (UdtValue, Subtype[CqlColumnEncoder, T]) => UdtValue
+    ): CqlColumnEncoder.WithDriver[T, UdtValue] =
+      new CqlColumnEncoder[T] {
+        override type DriverType = UdtValue
+
+        override def driverClass: Class[UdtValue] = classOf[DriverType]
+
+        override def convertScalaToDriver(scalaValue: T, dataType: DataType): UdtValue =
+          ctx.split(scalaValue) { subType =>
+            val scalaSubTypeValue = subType.cast(scalaValue)
+            val encoder           = subType.typeclass
+            val udtValue          = encoder.convertScalaToDriver(scalaSubTypeValue, dataType).asInstanceOf[UdtValue]
+
+            enrich(udtValue, subType)
+          }
+
+        override def encodeFieldByName[Structure <: SettableByName[Structure]](
+          fieldName: String,
+          value: T,
+          structure: Structure
+        ): Structure = {
+          val udtValue = convertScalaToDriver(value, structure.getType(fieldName))
+          structure.setUdtValue(fieldName, udtValue)
+        }
+
+        override def encodeFieldByIndex[Structure <: SettableByName[Structure]](
+          index: Int,
+          value: T,
+          structure: Structure
+        ): Structure = {
+          val udtValue = convertScalaToDriver(value, structure.getType(index))
+          structure.setUdtValue(index, udtValue)
+        }
+      }
+
+    val discriminator = CqlDiscriminator.extract(ctx.annotations)
+    discriminator match {
+      case Some(disc) =>
+        sealedTraitDecoder { (udtValue, subType) =>
+          val subTypeName =
+            CqlSubtype
+              .extract(subType.annotations)
+              .getOrElse(subType.typeName.short)
+
+          udtValue.setString(disc, subTypeName)
+        }
+
+      case None =>
+        sealedTraitDecoder((udtValue, _) => udtValue)
+    }
+  }
+
+  implicit def derive[T]: CqlColumnEncoder.WithDriver[T, UdtValue] = macro Magnolia.gen[T]
 }

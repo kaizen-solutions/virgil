@@ -1,9 +1,11 @@
 package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.cql.Row
-import io.kaizensolutions.virgil.annotations.{CqlColumn, CqlDiscriminator}
+import io.kaizensolutions.virgil.annotations.{CqlColumn, CqlDiscriminator, CqlSubtype}
 import zio.Chunk
 import zio.schema.Schema
+
+import scala.annotation.implicitNotFound
 
 /**
  * CQL Decoder gives us the ability to read from a Cassandra row and convert it
@@ -17,6 +19,9 @@ import zio.schema.Schema
  *    }
  * }}}
  */
+@implicitNotFound(
+  "No CqlDecoder found for type ${A}, if you are using java.time types or java.nio.ByteBuffer or CqlDuration, import codecs._ to get instances and ensure a zio.schema.Schema[${A}] can be found"
+)
 trait CqlDecoder[A] { self =>
   def decode(row: Row): Either[String, A]
 
@@ -178,7 +183,14 @@ object CqlDecoder {
         case Some(disc) =>
           // Cache the derivation of each enum case
           val enumDecoderByKeyType: Map[String, CqlDecoder[_]] =
-            enum.structure.toList.map { case (typeName, schema) => typeName -> CqlDecoder.derive(schema) }.toMap
+            enum.structure.toList.map { case (defaultTypeName, schema) =>
+              val typeName =
+                CqlSubtype
+                  .extract(schema.annotations)
+                  .getOrElse(defaultTypeName)
+
+              typeName -> CqlDecoder.derive(schema)
+            }.toMap
 
           discriminatorBasedEnumDecoder(disc, enumDecoderByKeyType)
 
