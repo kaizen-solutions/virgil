@@ -666,5 +666,5 @@ trait UdtEncoderMagnoliaDerivation {
       }
     }
 
-  implicit def deriveUdtValue[T]: CqlColumnEncoder.WithDriver[T, UdtValue] = macro Magnolia.gen[T]
+  implicit def derive[T]: UdtEncoder[T] = macro Magnolia.gen[T]
 }

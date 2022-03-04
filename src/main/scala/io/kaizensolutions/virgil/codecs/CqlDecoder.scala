@@ -33,5 +33,5 @@ object CqlDecoder {
 
   // We cannot make this implicit as it would produce incorrect nested Readers choosing Row instead of UdtValue as the DriverType
   // causing the driver to break as it depends heavily on class types
-  def derive[T]: CqlColumnDecoder.WithDriver[T, Row] = macro Magnolia.gen[T]
+  def derive[T]: CqlDecoder[T] = macro Magnolia.gen[T]
 }
