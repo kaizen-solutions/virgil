@@ -71,6 +71,14 @@ trait CqlDecoder[A] { self =>
   }
 }
 object CqlDecoder {
+
+  /**
+   * CREATE TYPE IF NOT EXISTS address ( street TEXT, city TEXT, points
+   * frozen<map<TEXT, set<set<point>>>> );
+   */
+  // final case class Person(address: Address)
+  // final case class Address(street: String, city2: String, randomField: List[Int]) ->
+
   implicit val rowCqlDecoder: CqlDecoder[Row] =
     new CqlDecoder[Row] {
       override def decode(row: Row): Either[String, Row] = Right(row)

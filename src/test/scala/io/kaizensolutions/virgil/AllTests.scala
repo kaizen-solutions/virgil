@@ -60,6 +60,11 @@ object AllTests extends DefaultRunnableSpec {
 
   override def spec: ZSpec[TestEnvironment, Any] =
     suite("Virgil Test Suite") {
-      (CQLExecutorSpec.sessionSpec + UserDefinedTypesSpec.userDefinedTypesSpec + CollectionsSpec.collectionsSpec) @@ TestAspect.parallel
+      (
+        CQLExecutorSpec.sessionSpec +
+          UserDefinedTypesSpec.userDefinedTypesSpec +
+          CollectionsSpec.collectionsSpec +
+          SumTypeSpec.sumTypeSpec
+      ) @@ TestAspect.parallel
     }.provideCustomLayerShared(dependencies)
 }

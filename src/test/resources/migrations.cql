@@ -83,3 +83,38 @@ CREATE TABLE collectionspec_nestedcollectiontable
     a int PRIMARY KEY,
     b frozen<map<int, frozen<set<frozen<set<frozen<set<frozen<set<int>>>>>>>>>>
 );
+
+CREATE TYPE sumtypespec_metadata(
+    key text,
+    value text
+);
+
+CREATE TYPE sumtypespec_configuration(
+    config_type TEXT,
+    api_id TEXT,
+    api_key TEXT,
+    file_path TEXT,
+    metadata frozen<map<text,set<sumtypespec_metadata>>>
+);
+
+CREATE TABLE sumtypespec_configuration_data
+(
+    id int PRIMARY KEY,
+    config frozen<sumtypespec_configuration>
+);
+
+CREATE TYPE sumtypespec_configuration_no_discriminator
+(
+    network_id TEXT,
+    network_key TEXT,
+    file_path TEXT,
+    metadata frozen<map<text,set<sumtypespec_metadata>>>,
+    default_id TEXT,
+    default_password TEXT,
+);
+
+CREATE TABLE sumtypespec_configuration_data_no_discriminator
+(
+    id int PRIMARY KEY,
+    config frozen<sumtypespec_configuration_no_discriminator>
+);

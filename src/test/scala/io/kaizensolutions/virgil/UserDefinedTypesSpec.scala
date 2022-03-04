@@ -52,8 +52,7 @@ final case class Row_Person(
   data: UDT_Data
 )
 object Row_Person {
-  implicit val schemaForPerson: Schema[Row_Person]      = DeriveSchema.gen[Row_Person]
-  implicit val decoderForPerson: CqlDecoder[Row_Person] = CqlDecoder.derive[Row_Person]
+  implicit val schemaForPerson: Schema[Row_Person] = DeriveSchema.gen[Row_Person]
 
   def insert(person: Row_Person): CQL[MutationResult] =
     cql"INSERT INTO userdefinedtypesspec_person (id, name, age, data) VALUES (${person.id}, ${person.name}, ${person.age}, ${person.data})".mutation
@@ -75,8 +74,6 @@ final case class UDT_Data(
   email: Option[UDT_Email]
 )
 object UDT_Data {
-  implicit val schemaForUDT_Data: Schema[UDT_Data]               = DeriveSchema.gen[UDT_Data]
-  implicit val udtDecoderForUDT_Data: CqlColumnDecoder[UDT_Data] = CqlColumnDecoder.fromSchema[UDT_Data]
 
   def gen: Gen[Random, UDT_Data] =
     for {

@@ -2,7 +2,7 @@ package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.cql.Row
 import com.datastax.oss.driver.api.core.data.{CqlDuration, GettableByName, TupleValue, UdtValue}
-import io.kaizensolutions.virgil.annotations.CqlColumn
+import io.kaizensolutions.virgil.annotations.{CqlColumn, CqlDiscriminator, CqlSubtype}
 import zio.Chunk
 import zio.schema.Schema.Primitive
 import zio.schema.{Schema, StandardType}
@@ -67,6 +67,7 @@ sealed trait CqlColumnDecoder[ScalaType] { self =>
       }
     }
 }
+
 object CqlColumnDecoder {
   type WithDriver[Scala, Driver] = CqlColumnDecoder[Scala] { type DriverType = Driver }
 
@@ -439,7 +440,21 @@ object CqlColumnDecoder {
         throw new RuntimeException(s"Schema Fail is not supported: $message")
 
       case enum: Schema.Enum[_] =>
-        throw new RuntimeException(s"Enumeration is not supported: $enum")
+        val discriminator = CqlDiscriminator.extract(enum.annotations)
+        val enumDecoderByKeyType: Map[String, CqlColumnDecoder[_]] =
+          enum.structure.toList.map { case (defaultTypeName, schema) =>
+            val typeName = CqlSubtype.extract(schema.annotations).getOrElse(defaultTypeName)
+            val decoder  = fromSchema(schema)
+            typeName -> decoder
+          }.toMap
+
+        discriminator match {
+          case Some(disc) =>
+            discriminatorBasedEnumDecoder(disc, enumDecoderByKeyType)
+
+          case None =>
+            firstMatchingEnumDecoder(enumDecoderByKeyType)
+        }
 
       case e @ Schema.EitherSchema(_, _, _) =>
         throw new RuntimeException(s"Either Schema is not supported: $e")
@@ -448,6 +463,72 @@ object CqlColumnDecoder {
 
       case s =>
         throw new RuntimeException(s"Unsupported schema: $s")
+    }
+
+  private def discriminatorBasedEnumDecoder[A](
+    discriminatorField: String,
+    decoderLookup: Map[String, CqlColumnDecoder[_]]
+  ): CqlColumnDecoder.WithDriver[A, UdtValue] =
+    new CqlColumnDecoder[A] {
+      override type DriverType = UdtValue
+
+      override def driverClass: Class[UdtValue] = classOf[UdtValue]
+
+      override def convertDriverToScala(driverValue: UdtValue): A = {
+        val subType = driverValue.getString(discriminatorField)
+        decoderLookup.get(subType) match {
+          case Some(decoder) =>
+            decoder
+              .asInstanceOf[CqlColumnDecoder.WithDriver[A, UdtValue]]
+              .convertDriverToScala(driverValue)
+
+          case None =>
+            throw new RuntimeException(
+              s"Unknown subtype $subType, expected one of ${decoderLookup.keys.mkString(", ")}"
+            )
+        }
+      }
+
+      override def readFieldFromDriver[Structure <: GettableByName](
+        structure: Structure,
+        fieldName: String
+      ): DriverType =
+        structure.getUdtValue(fieldName)
+
+      override def readIndexFromDriver[Structure <: GettableByName](structure: Structure, index: Int): DriverType =
+        structure.getUdtValue(index)
+    }
+
+  private def firstMatchingEnumDecoder[A](
+    decoders: Map[String, CqlColumnDecoder[_]]
+  ): CqlColumnDecoder.WithDriver[A, UdtValue] =
+    new CqlColumnDecoder[A] {
+      override type DriverType = UdtValue
+
+      override def driverClass: Class[UdtValue] = classOf[UdtValue]
+
+      override def convertDriverToScala(driverValue: UdtValue): A = {
+        val results = decoders.values.view.map { decoder =>
+          eitherConvert(
+            decoder
+              .asInstanceOf[CqlColumnDecoder.WithDriver[A, UdtValue]]
+              .convertDriverToScala(driverValue)
+          )
+        }
+        results.collectFirst { case Right(value) => value }.getOrElse {
+          val errors = results.collect { case Left(error) => error }
+            .mkString("Tried the following decoders: ", " and then tried ", "")
+          throw new RuntimeException(errors)
+        }
+      }
+
+      override def readFieldFromDriver[Structure <: GettableByName](
+        structure: Structure,
+        fieldName: String
+      ): UdtValue = structure.getUdtValue(fieldName)
+
+      override def readIndexFromDriver[Structure <: GettableByName](structure: Structure, index: Int): UdtValue =
+        structure.getUdtValue(index)
     }
 
   private def decodeFieldsOfRecord[A](record: Schema.Record[A]) =
