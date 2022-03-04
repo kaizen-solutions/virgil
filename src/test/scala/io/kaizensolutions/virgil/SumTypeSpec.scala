@@ -12,11 +12,10 @@ import zio.test.TestAspect.{samples, sequential}
 import zio.test._
 
 object SumTypeSpec {
-  def sumTypeSpec: ZSpec[Has[CQLExecutor] with Random with Sized with TestConfig, Serializable] =
+  def sumTypeSpec: ZSpec[Has[CQLExecutor] with Random with Sized with TestConfig, Any] =
     (nonDiscriminator + discriminator) @@ samples(10)
 
-  def discriminator
-    : Spec[Has[CQLExecutor] with Random with Sized with TestConfig, TestFailure[Throwable], TestSuccess] =
+  def discriminator: ZSpec[Has[CQLExecutor] with Random with Sized with TestConfig, Any] =
     suite("Sum Type Specification") {
       suite("Discriminator aided sum types") {
         testM("be able to persist and retrieve sum types encoded within product types") {
@@ -36,8 +35,7 @@ object SumTypeSpec {
       }
     }
 
-  def nonDiscriminator
-    : Spec[Has[CQLExecutor] with Random with Sized with TestConfig, TestFailure[Serializable], TestSuccess] =
+  def nonDiscriminator: ZSpec[Has[CQLExecutor] with Random with Sized with TestConfig, Any] =
     suite("First matching sum type") {
       testM("be able to persist and retrieve sum types encoded within product types") {
         checkM(Gen.chunkOfN(3)(ConfigurationDataNonDiscriminator.genAll)) { configs =>
