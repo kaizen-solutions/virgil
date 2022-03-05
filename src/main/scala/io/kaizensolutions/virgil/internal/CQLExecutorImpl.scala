@@ -13,7 +13,7 @@ import scala.jdk.CollectionConverters._
 /**
  * CQLExecutorImpl is a ZIO based client for the Apache Cassandra Java Driver
  * that provides ZIO and ZStream abstractions over the Datastax Java driver. We
- * consider CQLExecutor to be the interpreter of [[CQL[A]] expressions.
+ * consider CQLExecutor to be the interpreter of [[CQL[A]]] expressions.
  *
  * @param underlyingSession
  *   is the underlying Datastax Java driver session
