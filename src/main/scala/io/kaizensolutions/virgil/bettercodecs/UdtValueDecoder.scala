@@ -3,11 +3,21 @@ package io.kaizensolutions.virgil.bettercodecs
 import com.datastax.oss.driver.api.core.data.UdtValue
 import magnolia1._
 
+/**
+ * A [[UdtValueDecoder]] is a mechanism that provides a way to decode a
+ * [[UdtValue]] into its component pieces ([[A]] being one of the components of
+ * the [[UdtValue]]).
+ */
 trait UdtValueDecoder[A] {
   def decodeByFieldName(structure: UdtValue, fieldName: String): A
   def decodeByIndex(structure: UdtValue, index: Int): A
 }
 object UdtValueDecoder extends UdtValueDecoderMagnoliaDerivation {
+
+  /**
+   * A [[UdtValueDecoder.Object]] is a mechanism that provides a way to decode a
+   * [[UdtValue]] into a Scala type [[A]]
+   */
   trait Object[A] extends UdtValueDecoder[A] {
     def decode(structure: UdtValue): A
   }

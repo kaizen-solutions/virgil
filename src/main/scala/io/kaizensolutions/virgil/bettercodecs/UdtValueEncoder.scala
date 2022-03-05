@@ -3,16 +3,28 @@ package io.kaizensolutions.virgil.bettercodecs
 import com.datastax.oss.driver.api.core.data.UdtValue
 import magnolia1._
 
+/**
+ * A [[UdtValueEncoder]] encodes a Scala type [[A]] as a component of a
+ * [[UdtValue]]
+ *
+ * @tparam A
+ */
 trait UdtValueEncoder[A] {
   def encodeByFieldName(structure: UdtValue, fieldName: String, value: A): UdtValue
   def encodeByIndex(structure: UdtValue, index: Int, value: A): UdtValue
 }
 object UdtValueEncoder extends UdtValueEncoderMagnoliaDerivation {
+
+  /**
+   * A [[UdtValueEncoder.Object]] that encodes a Scala type [[A]] as an entire
+   * [[UdtValue]]
+   * @tparam A
+   */
   trait Object[A] extends UdtValueEncoder[A] {
     def encode(structure: UdtValue, value: A): UdtValue
   }
 
-  def apply[A](implicit encoder: UdtValueEncoder.Object[A]): UdtValueEncoder[A] = encoder
+  def apply[A](implicit encoder: UdtValueEncoder.Object[A]): UdtValueEncoder.Object[A] = encoder
 
   def custom[A](f: (UdtValue, A) => UdtValue): UdtValueEncoder.Object[A] = new UdtValueEncoder.Object[A] {
     override def encode(structure: UdtValue, value: A): UdtValue = f(structure, value)

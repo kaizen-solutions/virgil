@@ -5,6 +5,12 @@ import com.datastax.oss.driver.api.core.data.{CqlDuration, UdtValue}
 
 import scala.jdk.CollectionConverters._
 
+/**
+ * A typeclass that describes how to turn a Scala type into a CQL type.
+ *
+ * @tparam ScalaType
+ *   is the Scala type to be converted into the CQL type
+ */
 trait CqlPrimitiveDecoder[ScalaType] { self =>
   type DriverType
   def driverClass: Class[DriverType]
@@ -18,6 +24,15 @@ trait CqlPrimitiveDecoder[ScalaType] { self =>
         f(self.driver2Scala(driverValue, dataType))
     }
 }
+
+/**
+ * TODO: As a further optimization, we can turn each of the instances below into
+ * case objects and case classes where appropriate and create implicit instances
+ * that point to these case objects and case classes. This way we can pattern
+ * match on these known types and call row.getString(<fieldName>) or
+ * udtValue.getString(<fieldName>) instead of calling row.get(<fieldName>,
+ * primDecoder.driverClass) which results in a call to to the registry.
+ */
 object CqlPrimitiveDecoder {
   type WithDriver[Scala, Driver] = CqlPrimitiveDecoder[Scala] { type DriverType = Driver }
 
