@@ -8,7 +8,11 @@ import scala.util.control.NonFatal
 /**
  * A [[RowDecoder]] is an internal mechanism that provides a way to decode a
  * [[Row]] into its component pieces ([[A]] being one of the components of the
- * [[Row]]).
+ * [[Row]]). This is really covariant in A but Magnolia will not automatically
+ * derive if you mark it as such. The reason why its covariant is because if B
+ * is a supertype of A, and you have a RowDecoder[A], A has more information
+ * than B and B is really a subset of A, so you read out more information (A)
+ * and discard information (since B contains less information than A)
  */
 trait RowDecoder[A] {
   private[virgil] def decodeByFieldName(row: Row, fieldName: String): A
@@ -70,6 +74,8 @@ object RowDecoder extends RowDecoderMagnoliaDerivation {
 
     def orElseEither[B](other: RowDecoder.Object[B]): RowDecoder.Object[Either[A, B]] =
       eitherWith(other)(identity)
+
+    def widen[B >: A]: RowDecoder.Object[B] = self.map(identity)
   }
 
   // A user can only summon what is built by the automatic derivation mechanism
@@ -87,6 +93,7 @@ object RowDecoder extends RowDecoderMagnoliaDerivation {
       CqlPrimitiveDecoder.decodePrimitiveByIndex(row, index)
   }
 }
+
 trait RowDecoderMagnoliaDerivation {
   type Typeclass[T] = RowDecoder[T]
 

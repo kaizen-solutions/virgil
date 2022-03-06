@@ -8,7 +8,8 @@ import scala.util.control.NonFatal
 /**
  * A [[UdtValueDecoder]] is a mechanism that provides a way to decode a
  * [[UdtValue]] into its component pieces ([[A]] being one of the components of
- * the [[UdtValue]]).
+ * the [[UdtValue]]). This is really covariant in A but due to Magnolia we
+ * cannot mark it as such as it interferes with automatic derivation
  */
 trait UdtValueDecoder[A] {
   def decodeByFieldName(structure: UdtValue, fieldName: String): A
@@ -63,6 +64,8 @@ object UdtValueDecoder extends UdtValueDecoderMagnoliaDerivation {
 
     def orElseEither[B](other: UdtValueDecoder.Object[B]): UdtValueDecoder.Object[Either[A, B]] =
       eitherWith(other)(identity)
+
+    def widen[B >: A]: UdtValueDecoder.Object[B] = self.map(identity)
   }
 
   def apply[A](implicit ev: UdtValueDecoder.Object[A]): UdtValueDecoder.Object[A] = ev

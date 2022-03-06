@@ -1,11 +1,11 @@
 package io.kaizensolutions.virgil.bettercodecs
 
 import com.datastax.oss.driver.api.core.`type`._
-import com.datastax.oss.driver.api.core.data.{CqlDuration, UdtValue}
+import com.datastax.oss.driver.api.core.data.{CqlDuration, SettableByName, UdtValue}
 
 import scala.jdk.CollectionConverters._
 
-trait CqlPrimitiveEncoder[ScalaType] { self =>
+trait CqlPrimitiveEncoder[-ScalaType] { self =>
   type DriverType
   def driverClass: Class[DriverType]
   def scala2Driver(scalaValue: ScalaType, dataType: DataType): DriverType
@@ -13,204 +13,302 @@ trait CqlPrimitiveEncoder[ScalaType] { self =>
   def contramap[ScalaType2](
     f: ScalaType2 => ScalaType
   ): CqlPrimitiveEncoder.WithDriver[ScalaType2, DriverType] =
-    new CqlPrimitiveEncoder[ScalaType2] {
-      override type DriverType = self.DriverType
-
-      override def driverClass: Class[DriverType] = self.driverClass
-
-      override def scala2Driver(scalaValue: ScalaType2, dataType: DataType): DriverType =
-        self.scala2Driver(f(scalaValue), dataType)
-    }
+    CqlPrimitiveEncoder.ContramapPrimitiveEncoder(self, f)
 }
 object CqlPrimitiveEncoder {
   type WithDriver[Scala, Driver] = CqlPrimitiveEncoder[Scala] { type DriverType = Driver }
 
+  def apply[Scala](implicit encoder: CqlPrimitiveEncoder[Scala]): CqlPrimitiveEncoder[Scala] = encoder
+
+  def encodePrimitiveByFieldName[Structure <: SettableByName[Structure], Scala](
+    structure: Structure,
+    fieldName: String,
+    value: Scala
+  )(implicit prim: CqlPrimitiveEncoder[Scala]): Structure =
+    prim match {
+      case StringPrimitiveEncoder      => structure.setString(fieldName, value)
+      case BigIntPrimitiveEncoder      => structure.setBigInteger(fieldName, value.bigInteger)
+      case ByteBufferPrimitiveEncoder  => structure.setByteBuffer(fieldName, value)
+      case BooleanPrimitiveEncoder     => structure.setBoolean(fieldName, value)
+      case LongPrimitiveEncoder        => structure.setLong(fieldName, value)
+      case LocalDatePrimitiveEncoder   => structure.setLocalDate(fieldName, value)
+      case BigDecimalPrimitiveEncoder  => structure.setBigDecimal(fieldName, value.bigDecimal)
+      case DoublePrimitiveEncoder      => structure.setDouble(fieldName, value)
+      case CqlDurationPrimitiveEncoder => structure.setCqlDuration(fieldName, value)
+      case FloatPrimitiveEncoder       => structure.setFloat(fieldName, value)
+      case InetAddressPrimitiveEncoder => structure.setInetAddress(fieldName, value)
+      case IntPrimitiveEncoder         => structure.setInt(fieldName, value)
+      case ShortPrimitiveEncoder       => structure.setShort(fieldName, value)
+      case LocalTimePrimitiveEncoder   => structure.setLocalTime(fieldName, value)
+      case InstantPrimitiveEncoder     => structure.setInstant(fieldName, value)
+      case UUIDPrimitiveEncoder        => structure.setUuid(fieldName, value)
+      case BytePrimitiveEncoder        => structure.setByte(fieldName, value)
+      case UdtValuePrimitiveEncoder    => structure.setUdtValue(fieldName, value)
+
+      case UdtValueEncoderPrimitiveEncoder(encoder) =>
+        val emptyUdtValue = structure.getType(fieldName).asInstanceOf[UserDefinedType].newValue()
+        val udtValue      = encoder.encode(emptyUdtValue, value)
+        structure.setUdtValue(fieldName, udtValue)
+
+      case l @ ListPrimitiveEncoder(element) =>
+        val driverType  = structure.getType(fieldName).asInstanceOf[ListType].getElementType
+        val driverValue = l.scala2Driver(value, driverType)
+        structure.setList(fieldName, driverValue, element.driverClass)
+
+      case s @ SetPrimitiveEncoder(element) =>
+        val driverType  = structure.getType(fieldName).asInstanceOf[SetType].getElementType
+        val driverValue = s.scala2Driver(value, driverType)
+        structure.setSet(fieldName, driverValue, element.driverClass)
+
+      case m @ MapPrimitiveEncoder(k, v) =>
+        val mapType   = structure.getType(fieldName).asInstanceOf[MapType]
+        val driverMap = m.scala2Driver(value, mapType)
+        structure.setMap(fieldName, driverMap, k.driverClass, v.driverClass)
+
+      case o: OptionPrimitiveEncoder[scala, driver] =>
+        value.asInstanceOf[Option[scala]] match {
+          case Some(value) => encodePrimitiveByFieldName(structure, fieldName, value)(o.element)
+          case None        => structure.setToNull(fieldName)
+        }
+
+      case ContramapPrimitiveEncoder(element, f) =>
+        encodePrimitiveByFieldName(structure, fieldName, f(value))(element)
+
+      case other =>
+        val driverType  = structure.getType(fieldName)
+        val driverValue = other.scala2Driver(value, driverType)
+        structure.set(fieldName, driverValue, other.driverClass)
+    }
+
+  case object StringPrimitiveEncoder extends CqlPrimitiveEncoder[String] {
+    type DriverType = java.lang.String
+    def driverClass: Class[DriverType]                                   = classOf[DriverType]
+    def scala2Driver(scalaValue: String, dataType: DataType): DriverType = scalaValue
+  }
   implicit val stringPrimitiveEncoder: CqlPrimitiveEncoder.WithDriver[String, java.lang.String] =
-    new CqlPrimitiveEncoder[String] {
-      type DriverType = java.lang.String
-      def driverClass: Class[DriverType]                                   = classOf[DriverType]
-      def scala2Driver(scalaValue: String, dataType: DataType): DriverType = scalaValue
-    }
+    StringPrimitiveEncoder
+
+  case object BigIntPrimitiveEncoder extends CqlPrimitiveEncoder[BigInt] {
+    type DriverType = java.math.BigInteger
+    def driverClass: Class[DriverType]                                   = classOf[DriverType]
+    def scala2Driver(scalaValue: BigInt, dataType: DataType): DriverType = scalaValue.bigInteger
+  }
   implicit val bigIntPrimitiveEncoder: CqlPrimitiveEncoder.WithDriver[BigInt, java.math.BigInteger] =
-    new CqlPrimitiveEncoder[BigInt] {
-      type DriverType = java.math.BigInteger
-      def driverClass: Class[DriverType]                                   = classOf[DriverType]
-      def scala2Driver(scalaValue: BigInt, dataType: DataType): DriverType = scalaValue.bigInteger
-    }
+    BigIntPrimitiveEncoder
+
+  case object ByteBufferPrimitiveEncoder extends CqlPrimitiveEncoder[java.nio.ByteBuffer] {
+    type DriverType = java.nio.ByteBuffer
+    def driverClass: Class[DriverType]                                                = classOf[DriverType]
+    def scala2Driver(scalaValue: java.nio.ByteBuffer, dataType: DataType): DriverType = scalaValue
+  }
   implicit val byteBufferPrimitiveEncoder: CqlPrimitiveEncoder.WithDriver[java.nio.ByteBuffer, java.nio.ByteBuffer] =
-    new CqlPrimitiveEncoder[java.nio.ByteBuffer] {
-      type DriverType = java.nio.ByteBuffer
-      def driverClass: Class[DriverType]                                                = classOf[DriverType]
-      def scala2Driver(scalaValue: java.nio.ByteBuffer, dataType: DataType): DriverType = scalaValue
-    }
+    ByteBufferPrimitiveEncoder
 
+  case object BooleanPrimitiveEncoder extends CqlPrimitiveEncoder[Boolean] {
+    type DriverType = java.lang.Boolean
+    def driverClass: Class[DriverType]                                    = classOf[DriverType]
+    def scala2Driver(scalaValue: Boolean, dataType: DataType): DriverType = scalaValue
+  }
   implicit val booleanPrimitiveEncoder: CqlPrimitiveEncoder.WithDriver[Boolean, java.lang.Boolean] =
-    new CqlPrimitiveEncoder[Boolean] {
-      type DriverType = java.lang.Boolean
-      def driverClass: Class[DriverType]                                    = classOf[DriverType]
-      def scala2Driver(scalaValue: Boolean, dataType: DataType): DriverType = scalaValue
-    }
+    BooleanPrimitiveEncoder
 
+  case object LongPrimitiveEncoder extends CqlPrimitiveEncoder[Long] {
+    type DriverType = java.lang.Long
+    def driverClass: Class[DriverType]                                 = classOf[DriverType]
+    def scala2Driver(scalaValue: Long, dataType: DataType): DriverType = scalaValue
+  }
   implicit val longPrimitiveEncoder: CqlPrimitiveEncoder.WithDriver[Long, java.lang.Long] =
-    new CqlPrimitiveEncoder[Long] {
-      type DriverType = java.lang.Long
-      def driverClass: Class[DriverType]                                 = classOf[DriverType]
-      def scala2Driver(scalaValue: Long, dataType: DataType): DriverType = scalaValue
-    }
+    LongPrimitiveEncoder
 
+  case object LocalDatePrimitiveEncoder extends CqlPrimitiveEncoder[java.time.LocalDate] {
+    type DriverType = java.time.LocalDate
+    def driverClass: Class[DriverType]                                                = classOf[DriverType]
+    def scala2Driver(scalaValue: java.time.LocalDate, dataType: DataType): DriverType = scalaValue
+  }
   implicit val datePrimitiveEncoder: CqlPrimitiveEncoder.WithDriver[java.time.LocalDate, java.time.LocalDate] =
-    new CqlPrimitiveEncoder[java.time.LocalDate] {
-      type DriverType = java.time.LocalDate
-      def driverClass: Class[DriverType]                                                = classOf[DriverType]
-      def scala2Driver(scalaValue: java.time.LocalDate, dataType: DataType): DriverType = scalaValue
-    }
+    LocalDatePrimitiveEncoder
 
+  case object BigDecimalPrimitiveEncoder extends CqlPrimitiveEncoder[BigDecimal] {
+    type DriverType = java.math.BigDecimal
+    def driverClass: Class[DriverType]                                       = classOf[DriverType]
+    def scala2Driver(scalaValue: BigDecimal, dataType: DataType): DriverType = scalaValue.bigDecimal
+  }
   implicit val bigDecimalPrimitiveEncoder: CqlPrimitiveEncoder.WithDriver[BigDecimal, java.math.BigDecimal] =
-    new CqlPrimitiveEncoder[BigDecimal] {
-      type DriverType = java.math.BigDecimal
-      def driverClass: Class[DriverType]                                       = classOf[DriverType]
-      def scala2Driver(scalaValue: BigDecimal, dataType: DataType): DriverType = scalaValue.bigDecimal
-    }
+    BigDecimalPrimitiveEncoder
 
+  case object DoublePrimitiveEncoder extends CqlPrimitiveEncoder[Double] {
+    type DriverType = java.lang.Double
+    def driverClass: Class[DriverType]                                   = classOf[DriverType]
+    def scala2Driver(scalaValue: Double, dataType: DataType): DriverType = scalaValue
+  }
   implicit val doublePrimitiveEncoder: CqlPrimitiveEncoder.WithDriver[Double, java.lang.Double] =
-    new CqlPrimitiveEncoder[Double] {
-      type DriverType = java.lang.Double
-      def driverClass: Class[DriverType]                                   = classOf[DriverType]
-      def scala2Driver(scalaValue: Double, dataType: DataType): DriverType = scalaValue
-    }
+    DoublePrimitiveEncoder
 
+  case object CqlDurationPrimitiveEncoder extends CqlPrimitiveEncoder[CqlDuration] {
+    type DriverType = CqlDuration
+    def driverClass: Class[DriverType]                                        = classOf[DriverType]
+    def scala2Driver(scalaValue: CqlDuration, dataType: DataType): DriverType = scalaValue
+  }
   implicit val cqlDurationPrimitiveEncoder: CqlPrimitiveEncoder.WithDriver[CqlDuration, CqlDuration] =
-    new CqlPrimitiveEncoder[CqlDuration] {
-      type DriverType = CqlDuration
-      def driverClass: Class[DriverType]                                        = classOf[DriverType]
-      def scala2Driver(scalaValue: CqlDuration, dataType: DataType): DriverType = scalaValue
-    }
+    CqlDurationPrimitiveEncoder
 
+  case object FloatPrimitiveEncoder extends CqlPrimitiveEncoder[Float] {
+    type DriverType = java.lang.Float
+    def driverClass: Class[DriverType]                                  = classOf[DriverType]
+    def scala2Driver(scalaValue: Float, dataType: DataType): DriverType = scalaValue
+  }
   implicit val floatPrimitiveEncoder: CqlPrimitiveEncoder.WithDriver[Float, java.lang.Float] =
-    new CqlPrimitiveEncoder[Float] {
-      type DriverType = java.lang.Float
-      def driverClass: Class[DriverType]                                  = classOf[DriverType]
-      def scala2Driver(scalaValue: Float, dataType: DataType): DriverType = scalaValue
-    }
+    FloatPrimitiveEncoder
 
+  case object InetAddressPrimitiveEncoder extends CqlPrimitiveEncoder[java.net.InetAddress] {
+    type DriverType = java.net.InetAddress
+    def driverClass: Class[DriverType]                                                 = classOf[DriverType]
+    def scala2Driver(scalaValue: java.net.InetAddress, dataType: DataType): DriverType = scalaValue
+  }
   implicit val inetPrimitiveEncoder: CqlPrimitiveEncoder.WithDriver[java.net.InetAddress, java.net.InetAddress] =
-    new CqlPrimitiveEncoder[java.net.InetAddress] {
-      type DriverType = java.net.InetAddress
-      def driverClass: Class[DriverType]                                                 = classOf[DriverType]
-      def scala2Driver(scalaValue: java.net.InetAddress, dataType: DataType): DriverType = scalaValue
-    }
+    InetAddressPrimitiveEncoder
 
+  case object IntPrimitiveEncoder extends CqlPrimitiveEncoder[Int] {
+    type DriverType = java.lang.Integer
+    def driverClass: Class[DriverType]                                = classOf[DriverType]
+    def scala2Driver(scalaValue: Int, dataType: DataType): DriverType = scalaValue
+  }
   implicit val intPrimitiveEncoder: CqlPrimitiveEncoder.WithDriver[Int, java.lang.Integer] =
-    new CqlPrimitiveEncoder[Int] {
-      type DriverType = java.lang.Integer
-      def driverClass: Class[DriverType]                                = classOf[DriverType]
-      def scala2Driver(scalaValue: Int, dataType: DataType): DriverType = scalaValue
-    }
+    IntPrimitiveEncoder
 
+  case object ShortPrimitiveEncoder extends CqlPrimitiveEncoder[Short] {
+    type DriverType = java.lang.Short
+    def driverClass: Class[DriverType]                                  = classOf[DriverType]
+    def scala2Driver(scalaValue: Short, dataType: DataType): DriverType = scalaValue
+  }
   implicit val shortPrimitiveEncoder: CqlPrimitiveEncoder.WithDriver[Short, java.lang.Short] =
-    new CqlPrimitiveEncoder[Short] {
-      type DriverType = java.lang.Short
-      def driverClass: Class[DriverType]                                  = classOf[DriverType]
-      def scala2Driver(scalaValue: Short, dataType: DataType): DriverType = scalaValue
-    }
+    ShortPrimitiveEncoder
 
+  case object LocalTimePrimitiveEncoder extends CqlPrimitiveEncoder[java.time.LocalTime] {
+    type DriverType = java.time.LocalTime
+    def driverClass: Class[DriverType]                                                = classOf[DriverType]
+    def scala2Driver(scalaValue: java.time.LocalTime, dataType: DataType): DriverType = scalaValue
+  }
   implicit val localTimePrimitiveEncoder: CqlPrimitiveEncoder.WithDriver[java.time.LocalTime, java.time.LocalTime] =
-    new CqlPrimitiveEncoder[java.time.LocalTime] {
-      type DriverType = java.time.LocalTime
-      def driverClass: Class[DriverType]                                                = classOf[DriverType]
-      def scala2Driver(scalaValue: java.time.LocalTime, dataType: DataType): DriverType = scalaValue
-    }
+    LocalTimePrimitiveEncoder
 
+  case object InstantPrimitiveEncoder extends CqlPrimitiveEncoder[java.time.Instant] {
+    type DriverType = java.time.Instant
+    def driverClass: Class[DriverType]                                              = classOf[DriverType]
+    def scala2Driver(scalaValue: java.time.Instant, dataType: DataType): DriverType = scalaValue
+  }
   implicit val instantPrimitiveEncoder: CqlPrimitiveEncoder.WithDriver[java.time.Instant, java.time.Instant] =
-    new CqlPrimitiveEncoder[java.time.Instant] {
-      type DriverType = java.time.Instant
-      def driverClass: Class[DriverType]                                              = classOf[DriverType]
-      def scala2Driver(scalaValue: java.time.Instant, dataType: DataType): DriverType = scalaValue
-    }
+    InstantPrimitiveEncoder
 
+  case object UUIDPrimitiveEncoder extends CqlPrimitiveEncoder[java.util.UUID] {
+    type DriverType = java.util.UUID
+    def driverClass: Class[DriverType]                                           = classOf[DriverType]
+    def scala2Driver(scalaValue: java.util.UUID, dataType: DataType): DriverType = scalaValue
+  }
   implicit val uuidPrimitiveEncoder: CqlPrimitiveEncoder.WithDriver[java.util.UUID, java.util.UUID] =
-    new CqlPrimitiveEncoder[java.util.UUID] {
-      type DriverType = java.util.UUID
-      def driverClass: Class[DriverType]                                           = classOf[DriverType]
-      def scala2Driver(scalaValue: java.util.UUID, dataType: DataType): DriverType = scalaValue
-    }
+    UUIDPrimitiveEncoder
 
+  case object BytePrimitiveEncoder extends CqlPrimitiveEncoder[Byte] {
+    type DriverType = java.lang.Byte
+    def driverClass: Class[DriverType]                                 = classOf[DriverType]
+    def scala2Driver(scalaValue: Byte, dataType: DataType): DriverType = scalaValue
+  }
   implicit val bytePrimitiveEncoder: CqlPrimitiveEncoder.WithDriver[Byte, java.lang.Byte] =
-    new CqlPrimitiveEncoder[Byte] {
-      type DriverType = java.lang.Byte
-      def driverClass: Class[DriverType]                                 = classOf[DriverType]
-      def scala2Driver(scalaValue: Byte, dataType: DataType): DriverType = scalaValue
-    }
+    BytePrimitiveEncoder
 
+  case object UdtValuePrimitiveEncoder extends CqlPrimitiveEncoder[UdtValue] {
+    type DriverType = UdtValue
+    def driverClass: Class[DriverType]                                     = classOf[DriverType]
+    def scala2Driver(scalaValue: UdtValue, dataType: DataType): DriverType = scalaValue
+  }
   implicit val udtValuePrimitiveEncoder: CqlPrimitiveEncoder.WithDriver[UdtValue, UdtValue] =
-    new CqlPrimitiveEncoder[UdtValue] {
-      type DriverType = UdtValue
-      def driverClass: Class[DriverType]                                     = classOf[DriverType]
-      def scala2Driver(scalaValue: UdtValue, dataType: DataType): DriverType = scalaValue
-    }
+    UdtValuePrimitiveEncoder
 
+  final case class UdtValueEncoderPrimitiveEncoder[A](encoder: UdtValueEncoder.Object[A])
+      extends CqlPrimitiveEncoder[A] {
+    type DriverType = UdtValue
+    def driverClass: Class[DriverType] = classOf[DriverType]
+    def scala2Driver(scalaValue: A, dataType: DataType): DriverType = {
+      val udtValue = dataType.asInstanceOf[UserDefinedType].newValue()
+      encoder.encode(udtValue, scalaValue)
+    }
+  }
   implicit def scalaTypeViaUdtValuePrimitive[A](implicit
     encoder: UdtValueEncoder.Object[A]
   ): CqlPrimitiveEncoder[A] =
-    new CqlPrimitiveEncoder[A] {
-      type DriverType = UdtValue
-      def driverClass: Class[DriverType] = classOf[DriverType]
-      def scala2Driver(scalaValue: A, dataType: DataType): DriverType = {
-        val udtValue = dataType.asInstanceOf[UserDefinedType].newValue()
-        encoder.encode(udtValue, scalaValue)
-      }
-    }
+    UdtValueEncoderPrimitiveEncoder(encoder)
 
-  implicit def listCqlPrimitiveEncoder[A](implicit
-    element: CqlPrimitiveEncoder[A]
-  ): CqlPrimitiveEncoder.WithDriver[List[A], java.util.List[element.DriverType]] = new CqlPrimitiveEncoder[List[A]] {
+  final case class ListPrimitiveEncoder[Scala, Driver](element: CqlPrimitiveEncoder.WithDriver[Scala, Driver])
+      extends CqlPrimitiveEncoder[List[Scala]] {
     override type DriverType = java.util.List[element.DriverType]
     override def driverClass: Class[DriverType] = classOf[DriverType]
-    override def scala2Driver(scalaValue: List[A], dataType: DataType): DriverType = {
+    override def scala2Driver(scalaValue: List[Scala], dataType: DataType): DriverType = {
       val elementDataType = dataType.asInstanceOf[ListType].getElementType
       scalaValue.map(element.scala2Driver(_, elementDataType)).asJava
     }
-
   }
 
-  implicit def setCqlPrimitiveEncoder[A](implicit
+  implicit def listCqlPrimitiveEncoder[A](implicit
     element: CqlPrimitiveEncoder[A]
-  ): CqlPrimitiveEncoder.WithDriver[Set[A], java.util.Set[element.DriverType]] = new CqlPrimitiveEncoder[Set[A]] {
+  ): CqlPrimitiveEncoder.WithDriver[List[A], java.util.List[element.DriverType]] =
+    ListPrimitiveEncoder[A, element.DriverType](element)
+
+  final case class SetPrimitiveEncoder[Scala, Driver](element: CqlPrimitiveEncoder.WithDriver[Scala, Driver])
+      extends CqlPrimitiveEncoder[Set[Scala]] {
     override type DriverType = java.util.Set[element.DriverType]
     override def driverClass: Class[DriverType] = classOf[DriverType]
-    override def scala2Driver(scalaValue: Set[A], dataType: DataType): DriverType = {
+    override def scala2Driver(scalaValue: Set[Scala], dataType: DataType): DriverType = {
       val elementDataType = dataType.asInstanceOf[SetType].getElementType
       scalaValue.map(element.scala2Driver(_, elementDataType)).asJava
     }
+  }
+  implicit def setCqlPrimitiveEncoder[A](implicit
+    element: CqlPrimitiveEncoder[A]
+  ): CqlPrimitiveEncoder.WithDriver[Set[A], java.util.Set[element.DriverType]] =
+    SetPrimitiveEncoder[A, element.DriverType](element)
 
+  final case class MapPrimitiveEncoder[K, DriverK, V, DriverV](
+    key: CqlPrimitiveEncoder.WithDriver[K, DriverK],
+    value: CqlPrimitiveEncoder.WithDriver[V, DriverV]
+  ) extends CqlPrimitiveEncoder[Map[K, V]] {
+    override type DriverType = java.util.Map[DriverK, DriverV]
+    override def driverClass: Class[DriverType] = classOf[DriverType]
+    override def scala2Driver(scalaValue: Map[K, V], dataType: DataType): DriverType = {
+      val mapType       = dataType.asInstanceOf[MapType]
+      val keyDataType   = mapType.getKeyType
+      val valueDataType = mapType.getValueType
+      scalaValue.map { case (k, v) =>
+        key.scala2Driver(k, keyDataType) -> value.scala2Driver(v, valueDataType)
+      }.asJava
+    }
   }
 
-  implicit def mapCqlPrimitiveEncoder[A, B](implicit
-    key: CqlPrimitiveEncoder[A],
-    value: CqlPrimitiveEncoder[B]
-  ): CqlPrimitiveEncoder.WithDriver[Map[A, B], java.util.Map[key.DriverType, value.DriverType]] =
-    new CqlPrimitiveEncoder[Map[A, B]] {
-      override type DriverType = java.util.Map[key.DriverType, value.DriverType]
-      override def driverClass: Class[DriverType] = classOf[DriverType]
-      override def scala2Driver(scalaValue: Map[A, B], dataType: DataType): DriverType = {
-        val mapType       = dataType.asInstanceOf[MapType]
-        val keyDataType   = mapType.getKeyType
-        val valueDataType = mapType.getValueType
-        scalaValue.map { case (k, v) =>
-          key.scala2Driver(k, keyDataType) -> value.scala2Driver(v, valueDataType)
-        }.asJava
+  implicit def mapCqlPrimitiveEncoder[K, V](implicit
+    key: CqlPrimitiveEncoder[K],
+    value: CqlPrimitiveEncoder[V]
+  ): CqlPrimitiveEncoder.WithDriver[Map[K, V], java.util.Map[key.DriverType, value.DriverType]] =
+    MapPrimitiveEncoder[K, key.DriverType, V, value.DriverType](key, value)
+
+  final case class OptionPrimitiveEncoder[Scala, Driver](element: CqlPrimitiveEncoder.WithDriver[Scala, Driver])
+      extends CqlPrimitiveEncoder[Option[Scala]] {
+    override type DriverType = element.DriverType
+    override def driverClass: Class[DriverType] = element.driverClass
+    override def scala2Driver(scalaValue: Option[Scala], dataType: DataType): DriverType =
+      scalaValue match {
+        case Some(value) => element.scala2Driver(value, dataType)
+        case None        => null.asInstanceOf[DriverType]
       }
-
-    }
-
+  }
   implicit def optionCqlPrimitiveEncoder[A](implicit element: CqlPrimitiveEncoder[A]): CqlPrimitiveEncoder[Option[A]] =
-    new CqlPrimitiveEncoder[Option[A]] {
-      override type DriverType = element.DriverType
-      override def driverClass: Class[DriverType] = element.driverClass
-      override def scala2Driver(scalaValue: Option[A], dataType: DataType): DriverType =
-        scalaValue match {
-          case Some(value) => element.scala2Driver(value, dataType)
-          case None        => null.asInstanceOf[DriverType]
-        }
-    }
+    OptionPrimitiveEncoder[A, element.DriverType](element)
+
+  final case class ContramapPrimitiveEncoder[Scala, Scala2, Driver](
+    element: CqlPrimitiveEncoder.WithDriver[Scala, Driver],
+    f: Scala2 => Scala
+  ) extends CqlPrimitiveEncoder[Scala2] {
+    override type DriverType = Driver
+    override def driverClass: Class[DriverType] = element.driverClass
+    override def scala2Driver(scalaValue: Scala2, dataType: DataType): DriverType =
+      element.scala2Driver(f(scalaValue), dataType)
+  }
 }

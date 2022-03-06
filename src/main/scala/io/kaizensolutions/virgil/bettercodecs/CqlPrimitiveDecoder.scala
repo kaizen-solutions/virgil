@@ -6,7 +6,9 @@ import com.datastax.oss.driver.api.core.data.{CqlDuration, GettableByIndex, Gett
 import scala.jdk.CollectionConverters._
 
 /**
- * A typeclass that describes how to turn a Scala type into a CQL type.
+ * A typeclass that describes how to turn a Scala type into a CQL type. This is
+ * really covariant in ScalaType this inteferes with Magnolia's derivation
+ * mechanism
  *
  * @tparam ScalaType
  *   is the Scala type to be converted into the CQL type
@@ -16,8 +18,11 @@ trait CqlPrimitiveDecoder[ScalaType] { self =>
   def driverClass: Class[DriverType]
   def driver2Scala(driverValue: DriverType, dataType: DataType): ScalaType
 
-  def map[ScalaType2](f: ScalaType => ScalaType2): CqlPrimitiveDecoder[ScalaType2] =
+  def map[ScalaType2](f: ScalaType => ScalaType2): CqlPrimitiveDecoder.WithDriver[ScalaType2, DriverType] =
     CqlPrimitiveDecoder.MapFunctionPrimitiveDecoder[ScalaType, ScalaType2, DriverType](self, f)
+
+  def widen[SuperTypeScala >: ScalaType]: CqlPrimitiveDecoder.WithDriver[SuperTypeScala, DriverType] =
+    self.map(identity)
 }
 
 object CqlPrimitiveDecoder {
@@ -30,12 +35,12 @@ object CqlPrimitiveDecoder {
   ): Scala = prim match {
     // These special cases allow us to avoid extra calls to the registry and extra function calls
     case StringPrimitiveDecoder                   => structure.getString(fieldName)
-    case BigIntPrimitiveDecoder                   => structure.getBigInteger(fieldName)
+    case BigIntPrimitiveDecoder                   => BigInt.javaBigInteger2bigInt(structure.getBigInteger(fieldName))
     case ByteBufferPrimitiveDecoder               => structure.getByteBuffer(fieldName)
     case BooleanPrimitiveDecoder                  => structure.getBoolean(fieldName)
     case LongPrimitiveDecoder                     => structure.getLong(fieldName)
     case LocalDatePrimitiveDecoder                => structure.getLocalDate(fieldName)
-    case BigDecimalPrimitiveDecoder               => structure.getBigDecimal(fieldName)
+    case BigDecimalPrimitiveDecoder               => BigDecimal.javaBigDecimal2bigDecimal(structure.getBigDecimal(fieldName))
     case DoublePrimitiveDecoder                   => structure.getDouble(fieldName)
     case CqlDurationPrimitiveDecoder              => structure.getCqlDuration(fieldName)
     case FloatPrimitiveDecoder                    => structure.getFloat(fieldName)
@@ -80,12 +85,12 @@ object CqlPrimitiveDecoder {
   ): Scala = prim match {
     // These special cases allow us to avoid extra calls to the registry and extra function calls
     case StringPrimitiveDecoder                   => structure.getString(index)
-    case BigIntPrimitiveDecoder                   => structure.getBigInteger(index)
+    case BigIntPrimitiveDecoder                   => BigInt.javaBigInteger2bigInt(structure.getBigInteger(index))
     case ByteBufferPrimitiveDecoder               => structure.getByteBuffer(index)
     case BooleanPrimitiveDecoder                  => structure.getBoolean(index)
     case LongPrimitiveDecoder                     => structure.getLong(index)
     case LocalDatePrimitiveDecoder                => structure.getLocalDate(index)
-    case BigDecimalPrimitiveDecoder               => structure.getBigDecimal(index)
+    case BigDecimalPrimitiveDecoder               => BigDecimal.javaBigDecimal2bigDecimal(structure.getBigDecimal(index))
     case DoublePrimitiveDecoder                   => structure.getDouble(index)
     case CqlDurationPrimitiveDecoder              => structure.getCqlDuration(index)
     case FloatPrimitiveDecoder                    => structure.getFloat(index)

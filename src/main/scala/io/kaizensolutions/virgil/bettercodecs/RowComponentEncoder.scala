@@ -15,9 +15,21 @@ import com.datastax.oss.driver.api.core.cql.BoundStatementBuilder
  * @tparam A
  *   is the component to be encoded into the Row
  */
-trait RowComponentEncoder[A] {
+trait RowComponentEncoder[-A] { self =>
   def encodeByFieldName(structure: BoundStatementBuilder, fieldName: String, value: A): BoundStatementBuilder
   def encodeByIndex(structure: BoundStatementBuilder, index: Int, value: A): BoundStatementBuilder
+
+  def contramap[B](f: B => A): RowComponentEncoder[B] = new RowComponentEncoder[B] {
+    override def encodeByFieldName(
+      structure: BoundStatementBuilder,
+      fieldName: String,
+      value: B
+    ): BoundStatementBuilder =
+      self.encodeByFieldName(structure, fieldName, f(value))
+
+    override def encodeByIndex(structure: BoundStatementBuilder, index: Int, value: B): BoundStatementBuilder =
+      self.encodeByIndex(structure, index, f(value))
+  }
 }
 object RowComponentEncoder {
   def apply[A](implicit encoder: RowComponentEncoder[A]): RowComponentEncoder[A] = encoder
