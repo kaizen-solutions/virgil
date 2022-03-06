@@ -10,7 +10,22 @@ import scala.util.control.NonFatal
  * A [[CqlUdtValueDecoder]] is a mechanism that provides a way to decode a
  * [[UdtValue]] into its component pieces ([[A]] being one of the components of
  * the [[UdtValue]]). This is really covariant in A but due to Magnolia we
- * cannot mark it as such as it interferes with automatic derivation
+ * cannot mark it as such as it interferes with automatic derivation.
+ *
+ * __Design note__: We can abstract over both CqlRowDecoder and
+ * CqlUdtValueDecoder (lets call the abstraction: CqlStructureDecoder) because
+ * UdtValue and Row share the same interface (GettableByName). If we do decide
+ * to go down this path, we need to take special care in [[CqlPrimitiveDecoder]]
+ * when it comes to UDTValues to ensure that we can materialize instances only
+ * for `CqlStructureDecoder.WithDriver[A, UdtValue]` because we cannot have Rows
+ * nested inside of Rows and cannot have that kind of implicit derivation play
+ * out (it is valid to have nesting where Rows contain UdtValues and UdtValues
+ * themselves contain UdtValues). We have to keep track of precise types (i.e.
+ * UdtValue, Row) as using the interface GettableByName is not acceptable to the
+ * Datastax driver. We currently take the approach of duplication to keep things
+ * easier to read and understand for automatic derivation. Currently, RowDecoder
+ * and UdtValueDecoder share many similarities however, nesting is not supported
+ * in RowDecoder.
  */
 trait CqlUdtValueDecoder[A] {
   def decodeByFieldName(structure: UdtValue, fieldName: String): A
