@@ -88,10 +88,28 @@ object CqlRowDecoder extends RowDecoderMagnoliaDerivation {
 
   implicit def fromCqlPrimitive[A](implicit prim: CqlPrimitiveDecoder[A]): CqlRowDecoder[A] = new CqlRowDecoder[A] {
     override def decodeByFieldName(row: Row, fieldName: String): A =
-      CqlPrimitiveDecoder.decodePrimitiveByFieldName(row, fieldName)
+      try (CqlPrimitiveDecoder.decodePrimitiveByFieldName(row, fieldName))
+      catch {
+        case NonFatal(cause) =>
+          throw DecoderException(
+            message = s"Cannot decode field '$fieldName' in the Row",
+            field = FieldType.Name(fieldName),
+            structure = row,
+            cause = cause
+          )
+      }
 
     override def decodeByIndex(row: Row, index: Int): A =
-      CqlPrimitiveDecoder.decodePrimitiveByIndex(row, index)
+      try (CqlPrimitiveDecoder.decodePrimitiveByIndex(row, index))
+      catch {
+        case NonFatal(cause) =>
+          throw DecoderException(
+            message = s"Cannot decode index $index in the Row",
+            field = FieldType.Index(index),
+            structure = row,
+            cause = cause
+          )
+      }
   }
 }
 

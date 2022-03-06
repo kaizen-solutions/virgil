@@ -78,10 +78,28 @@ object CqlUdtValueDecoder extends UdtValueDecoderMagnoliaDerivation {
   implicit def fromCqlPrimitive[A](implicit prim: CqlPrimitiveDecoder[A]): CqlUdtValueDecoder[A] =
     new CqlUdtValueDecoder[A] {
       override def decodeByFieldName(structure: UdtValue, fieldName: String): A =
-        CqlPrimitiveDecoder.decodePrimitiveByFieldName(structure, fieldName)
+        try (CqlPrimitiveDecoder.decodePrimitiveByFieldName(structure, fieldName))
+        catch {
+          case NonFatal(cause) =>
+            throw DecoderException(
+              message = s"Cannot decode field '$fieldName' in the UDT",
+              field = FieldType.Name(fieldName),
+              structure = structure,
+              cause = cause
+            )
+        }
 
       override def decodeByIndex(structure: UdtValue, index: Int): A =
-        CqlPrimitiveDecoder.decodePrimitiveByIndex(structure, index)
+        try (CqlPrimitiveDecoder.decodePrimitiveByIndex(structure, index))
+        catch {
+          case NonFatal(cause) =>
+            throw DecoderException(
+              message = s"Cannot decode index $index in the UDT",
+              field = FieldType.Index(index),
+              structure = structure,
+              cause = cause
+            )
+        }
     }
 }
 trait UdtValueDecoderMagnoliaDerivation {
