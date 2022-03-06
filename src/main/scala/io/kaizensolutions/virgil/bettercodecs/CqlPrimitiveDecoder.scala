@@ -6,8 +6,8 @@ import com.datastax.oss.driver.api.core.data.{CqlDuration, GettableByIndex, Gett
 import scala.jdk.CollectionConverters._
 
 /**
- * A typeclass that describes how to turn a Scala type into a CQL type. This is
- * really covariant in ScalaType this inteferes with Magnolia's derivation
+ * A typeclass that describes how to turn a CQL type into a Scala type. This is
+ * really covariant in [[ScalaType]] this interferes with Magnolia's derivation
  * mechanism
  *
  * @tparam ScalaType
@@ -274,7 +274,7 @@ object CqlPrimitiveDecoder {
   implicit val udtValuePrimitiveDecoder: CqlPrimitiveDecoder.WithDriver[UdtValue, UdtValue] =
     UdtValuePrimitiveDecoder
 
-  final case class UdtValueDecoderPrimitiveDecoder[A](decoder: UdtValueDecoder.Object[A])
+  final case class UdtValueDecoderPrimitiveDecoder[A](decoder: CqlUdtValueDecoder.Object[A])
       extends CqlPrimitiveDecoder[A] {
     type DriverType = UdtValue
     def driverClass: Class[DriverType] = classOf[DriverType]
@@ -283,7 +283,7 @@ object CqlPrimitiveDecoder {
       decoder.decode(driverValue)
   }
   implicit def scalaTypeViaUdtValuePrimitive[A](implicit
-    decoder: UdtValueDecoder.Object[A]
+    decoder: CqlUdtValueDecoder.Object[A]
   ): CqlPrimitiveDecoder.WithDriver[A, UdtValue] =
     UdtValueDecoderPrimitiveDecoder(decoder)
 

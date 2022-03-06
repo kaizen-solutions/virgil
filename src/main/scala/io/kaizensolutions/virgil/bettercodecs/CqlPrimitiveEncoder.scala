@@ -5,6 +5,12 @@ import com.datastax.oss.driver.api.core.data.{CqlDuration, SettableByName, UdtVa
 
 import scala.jdk.CollectionConverters._
 
+/**
+ * A typeclass that describes how to turn a Scala type into a CQL type.
+ *
+ * @tparam ScalaType
+ *   is the Scala type to be converted into the CQL type
+ */
 trait CqlPrimitiveEncoder[-ScalaType] { self =>
   type DriverType
   def driverClass: Class[DriverType]
@@ -224,7 +230,7 @@ object CqlPrimitiveEncoder {
   implicit val udtValuePrimitiveEncoder: CqlPrimitiveEncoder.WithDriver[UdtValue, UdtValue] =
     UdtValuePrimitiveEncoder
 
-  final case class UdtValueEncoderPrimitiveEncoder[A](encoder: UdtValueEncoder.Object[A])
+  final case class UdtValueEncoderPrimitiveEncoder[A](encoder: CqlUdtValueEncoder.Object[A])
       extends CqlPrimitiveEncoder[A] {
     type DriverType = UdtValue
     def driverClass: Class[DriverType] = classOf[DriverType]
@@ -234,7 +240,7 @@ object CqlPrimitiveEncoder {
     }
   }
   implicit def scalaTypeViaUdtValuePrimitive[A](implicit
-    encoder: UdtValueEncoder.Object[A]
+    encoder: CqlUdtValueEncoder.Object[A]
   ): CqlPrimitiveEncoder[A] =
     UdtValueEncoderPrimitiveEncoder(encoder)
 

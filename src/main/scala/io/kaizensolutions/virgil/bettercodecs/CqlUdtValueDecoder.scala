@@ -1,28 +1,29 @@
 package io.kaizensolutions.virgil.bettercodecs
 
 import com.datastax.oss.driver.api.core.data.UdtValue
+import io.kaizensolutions.virgil.annotations.CqlColumn
 import magnolia1._
 
 import scala.util.control.NonFatal
 
 /**
- * A [[UdtValueDecoder]] is a mechanism that provides a way to decode a
+ * A [[CqlUdtValueDecoder]] is a mechanism that provides a way to decode a
  * [[UdtValue]] into its component pieces ([[A]] being one of the components of
  * the [[UdtValue]]). This is really covariant in A but due to Magnolia we
  * cannot mark it as such as it interferes with automatic derivation
  */
-trait UdtValueDecoder[A] {
+trait CqlUdtValueDecoder[A] {
   def decodeByFieldName(structure: UdtValue, fieldName: String): A
   def decodeByIndex(structure: UdtValue, index: Int): A
 }
-object UdtValueDecoder extends UdtValueDecoderMagnoliaDerivation {
+object CqlUdtValueDecoder extends UdtValueDecoderMagnoliaDerivation {
 
   /**
-   * A [[UdtValueDecoder.Object]] is a mechanism that provides a way to decode a
-   * [[UdtValue]] into a Scala type [[A]]. This is the public interface exposed
-   * to the user
+   * A [[CqlUdtValueDecoder.Object]] is a mechanism that provides a way to
+   * decode a [[UdtValue]] into a Scala type [[A]]. This is the public interface
+   * exposed to the user
    */
-  trait Object[A] extends UdtValueDecoder[A] { self =>
+  trait Object[A] extends CqlUdtValueDecoder[A] { self =>
     def decode(structure: UdtValue): A
 
     override def decodeByFieldName(structure: UdtValue, fieldName: String): A =
@@ -31,13 +32,13 @@ object UdtValueDecoder extends UdtValueDecoderMagnoliaDerivation {
     override def decodeByIndex(structure: UdtValue, index: Int): A =
       decode(structure.getUdtValue(index))
 
-    def map[B](f: A => B): UdtValueDecoder.Object[B] =
+    def map[B](f: A => B): CqlUdtValueDecoder.Object[B] =
       new Object[B] {
         def decode(structure: UdtValue): B =
           f(self.decode(structure))
       }
 
-    def zipWith[B, C](other: UdtValueDecoder.Object[B])(f: (A, B) => C): UdtValueDecoder.Object[C] =
+    def zipWith[B, C](other: CqlUdtValueDecoder.Object[B])(f: (A, B) => C): CqlUdtValueDecoder.Object[C] =
       new Object[C] {
         def decode(structure: UdtValue): C = {
           val a = self.decode(structure)
@@ -46,10 +47,10 @@ object UdtValueDecoder extends UdtValueDecoderMagnoliaDerivation {
         }
       }
 
-    def zip[B](other: UdtValueDecoder.Object[B]): UdtValueDecoder.Object[(A, B)] =
+    def zip[B](other: CqlUdtValueDecoder.Object[B]): CqlUdtValueDecoder.Object[(A, B)] =
       zipWith(other)((_, _))
 
-    def eitherWith[B, C](other: UdtValueDecoder.Object[B])(f: Either[A, B] => C): UdtValueDecoder.Object[C] =
+    def eitherWith[B, C](other: CqlUdtValueDecoder.Object[B])(f: Either[A, B] => C): CqlUdtValueDecoder.Object[C] =
       new Object[C] {
         def decode(structure: UdtValue): C = {
           val in =
@@ -59,23 +60,23 @@ object UdtValueDecoder extends UdtValueDecoderMagnoliaDerivation {
         }
       }
 
-    def orElse(other: UdtValueDecoder.Object[A]): UdtValueDecoder.Object[A] =
+    def orElse(other: CqlUdtValueDecoder.Object[A]): CqlUdtValueDecoder.Object[A] =
       eitherWith(other)(_.merge)
 
-    def orElseEither[B](other: UdtValueDecoder.Object[B]): UdtValueDecoder.Object[Either[A, B]] =
+    def orElseEither[B](other: CqlUdtValueDecoder.Object[B]): CqlUdtValueDecoder.Object[Either[A, B]] =
       eitherWith(other)(identity)
 
-    def widen[B >: A]: UdtValueDecoder.Object[B] = self.map(identity)
+    def widen[B >: A]: CqlUdtValueDecoder.Object[B] = self.map(identity)
   }
 
-  def apply[A](implicit ev: UdtValueDecoder.Object[A]): UdtValueDecoder.Object[A] = ev
+  def apply[A](implicit ev: CqlUdtValueDecoder.Object[A]): CqlUdtValueDecoder.Object[A] = ev
 
-  def custom[A](f: UdtValue => A): UdtValueDecoder.Object[A] = new UdtValueDecoder.Object[A] {
+  def custom[A](f: UdtValue => A): CqlUdtValueDecoder.Object[A] = new CqlUdtValueDecoder.Object[A] {
     override def decode(structure: UdtValue): A = f(structure)
   }
 
-  implicit def fromCqlPrimitive[A](implicit prim: CqlPrimitiveDecoder[A]): UdtValueDecoder[A] =
-    new UdtValueDecoder[A] {
+  implicit def fromCqlPrimitive[A](implicit prim: CqlPrimitiveDecoder[A]): CqlUdtValueDecoder[A] =
+    new CqlUdtValueDecoder[A] {
       override def decodeByFieldName(structure: UdtValue, fieldName: String): A =
         CqlPrimitiveDecoder.decodePrimitiveByFieldName(structure, fieldName)
 
@@ -84,17 +85,17 @@ object UdtValueDecoder extends UdtValueDecoderMagnoliaDerivation {
     }
 }
 trait UdtValueDecoderMagnoliaDerivation {
-  type Typeclass[T] = UdtValueDecoder[T]
+  type Typeclass[T] = CqlUdtValueDecoder[T]
 
-  def join[T](ctx: CaseClass[UdtValueDecoder, T]): UdtValueDecoder.Object[T] =
-    new UdtValueDecoder.Object[T] {
+  def join[T](ctx: CaseClass[CqlUdtValueDecoder, T]): CqlUdtValueDecoder.Object[T] =
+    new CqlUdtValueDecoder.Object[T] {
       override def decode(structure: UdtValue): T =
         ctx.construct { param =>
-          val fieldName = param.label
+          val fieldName = CqlColumn.extractFieldName(param.annotations).getOrElse(param.label)
           val decoder   = param.typeclass
           decoder.decodeByFieldName(structure, fieldName)
         }
     }
 
-  implicit def derive[T]: UdtValueDecoder.Object[T] = macro Magnolia.gen[T]
+  implicit def derive[T]: CqlUdtValueDecoder.Object[T] = macro Magnolia.gen[T]
 }

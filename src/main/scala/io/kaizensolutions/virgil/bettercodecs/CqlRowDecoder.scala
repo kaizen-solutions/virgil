@@ -1,12 +1,13 @@
 package io.kaizensolutions.virgil.bettercodecs
 
 import com.datastax.oss.driver.api.core.cql.Row
+import io.kaizensolutions.virgil.annotations.CqlColumn
 import magnolia1._
 
 import scala.util.control.NonFatal
 
 /**
- * A [[RowDecoder]] is an internal mechanism that provides a way to decode a
+ * A [[CqlRowDecoder]] is an internal mechanism that provides a way to decode a
  * [[Row]] into its component pieces ([[A]] being one of the components of the
  * [[Row]]). This is really covariant in A but Magnolia will not automatically
  * derive if you mark it as such. The reason why its covariant is because if B
@@ -14,25 +15,25 @@ import scala.util.control.NonFatal
  * than B and B is really a subset of A, so you read out more information (A)
  * and discard information (since B contains less information than A)
  */
-trait RowDecoder[A] {
+trait CqlRowDecoder[A] {
   private[virgil] def decodeByFieldName(row: Row, fieldName: String): A
   private[virgil] def decodeByIndex(row: Row, index: Int): A
 }
-object RowDecoder extends RowDecoderMagnoliaDerivation {
+object CqlRowDecoder extends RowDecoderMagnoliaDerivation {
 
   /**
-   * A [[RowDecoder.Object]] is a mechanism that provides a way to decode an
+   * A [[CqlRowDecoder.Object]] is a mechanism that provides a way to decode an
    * entire [[Row]] into some Scala type [[A]].
    *
    * NOTE: The automatic derivation mechanism and the custom method can produce
    * the following subtype. The automatic derivation mechanism uses
-   * `fromCqlPrimitive` to create a [[RowDecoder]] which knows how to extract a
-   * component. We use Magnolia to build up Scala case classes from their
+   * `fromCqlPrimitive` to create a [[CqlRowDecoder]] which knows how to extract
+   * a component. We use Magnolia to build up Scala case classes from their
    * components
    *
    * @tparam A
    */
-  trait Object[A] extends RowDecoder[A] { self =>
+  trait Object[A] extends CqlRowDecoder[A] { self =>
     def decode(row: Row): A
 
     // You cannot have nested Rows within Rows
@@ -41,13 +42,13 @@ object RowDecoder extends RowDecoderMagnoliaDerivation {
     private[virgil] def decodeByFieldName(row: Row, fieldName: String): A = decode(row)
     private[virgil] def decodeByIndex(row: Row, index: Int): A            = decode(row)
 
-    def map[B](f: A => B): RowDecoder.Object[B] =
+    def map[B](f: A => B): CqlRowDecoder.Object[B] =
       new Object[B] {
         def decode(row: Row): B =
           f(self.decode(row))
       }
 
-    def zipWith[B, C](other: RowDecoder.Object[B])(f: (A, B) => C): RowDecoder.Object[C] =
+    def zipWith[B, C](other: CqlRowDecoder.Object[B])(f: (A, B) => C): CqlRowDecoder.Object[C] =
       new Object[C] {
         def decode(row: Row): C = {
           val a = self.decode(row)
@@ -56,10 +57,10 @@ object RowDecoder extends RowDecoderMagnoliaDerivation {
         }
       }
 
-    def zip[B](other: RowDecoder.Object[B]): RowDecoder.Object[(A, B)] =
+    def zip[B](other: CqlRowDecoder.Object[B]): CqlRowDecoder.Object[(A, B)] =
       zipWith(other)((_, _))
 
-    def eitherWith[B, C](other: RowDecoder.Object[B])(f: Either[A, B] => C): RowDecoder.Object[C] =
+    def eitherWith[B, C](other: CqlRowDecoder.Object[B])(f: Either[A, B] => C): CqlRowDecoder.Object[C] =
       new Object[C] {
         def decode(row: Row): C = {
           val in =
@@ -69,23 +70,23 @@ object RowDecoder extends RowDecoderMagnoliaDerivation {
         }
       }
 
-    def orElse(other: RowDecoder.Object[A]): RowDecoder.Object[A] =
+    def orElse(other: CqlRowDecoder.Object[A]): CqlRowDecoder.Object[A] =
       eitherWith(other)(_.merge)
 
-    def orElseEither[B](other: RowDecoder.Object[B]): RowDecoder.Object[Either[A, B]] =
+    def orElseEither[B](other: CqlRowDecoder.Object[B]): CqlRowDecoder.Object[Either[A, B]] =
       eitherWith(other)(identity)
 
-    def widen[B >: A]: RowDecoder.Object[B] = self.map(identity)
+    def widen[B >: A]: CqlRowDecoder.Object[B] = self.map(identity)
   }
 
   // A user can only summon what is built by the automatic derivation mechanism
-  def apply[A](implicit ev: RowDecoder.Object[A]): RowDecoder.Object[A] = ev
+  def apply[A](implicit ev: CqlRowDecoder.Object[A]): CqlRowDecoder.Object[A] = ev
 
-  def custom[A](f: Row => A): RowDecoder.Object[A] = new RowDecoder.Object[A] {
+  def custom[A](f: Row => A): CqlRowDecoder.Object[A] = new CqlRowDecoder.Object[A] {
     override def decode(row: Row): A = f(row)
   }
 
-  implicit def fromCqlPrimitive[A](implicit prim: CqlPrimitiveDecoder[A]): RowDecoder[A] = new RowDecoder[A] {
+  implicit def fromCqlPrimitive[A](implicit prim: CqlPrimitiveDecoder[A]): CqlRowDecoder[A] = new CqlRowDecoder[A] {
     override def decodeByFieldName(row: Row, fieldName: String): A =
       CqlPrimitiveDecoder.decodePrimitiveByFieldName(row, fieldName)
 
@@ -95,16 +96,16 @@ object RowDecoder extends RowDecoderMagnoliaDerivation {
 }
 
 trait RowDecoderMagnoliaDerivation {
-  type Typeclass[T] = RowDecoder[T]
+  type Typeclass[T] = CqlRowDecoder[T]
 
-  def join[T](ctx: CaseClass[RowDecoder, T]): RowDecoder.Object[T] =
-    new RowDecoder.Object[T] {
+  def join[T](ctx: CaseClass[CqlRowDecoder, T]): CqlRowDecoder.Object[T] =
+    new CqlRowDecoder.Object[T] {
       override def decode(row: Row): T =
         ctx.construct { p =>
-          val fieldName = p.label
+          val fieldName = CqlColumn.extractFieldName(p.annotations).getOrElse(p.label)
           p.typeclass.decodeByFieldName(row, fieldName)
         }
     }
 
-  implicit def derive[T]: RowDecoder.Object[T] = macro Magnolia.gen[T]
+  implicit def derive[T]: CqlRowDecoder.Object[T] = macro Magnolia.gen[T]
 }
