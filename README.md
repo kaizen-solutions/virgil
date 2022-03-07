@@ -5,6 +5,8 @@ _Virgil is a functional Cassandra client built using ZIO, Magnolia and the Datas
 
 [![Latest Version](https://jitpack.io/v/kaizen-solutions/virgil.svg)](https://jitpack.io/#kaizen-solutions/virgil)
 
+[![Coverage Status](https://coveralls.io/repos/github/kaizen-solutions/virgil/badge.svg)](https://coveralls.io/github/kaizen-solutions/virgil)
+
 [Documentation](https://javadoc.jitpack.io/com/github/kaizen-solutions/virgil/virgil_2.13/main-7a8b8ba88b-1/javadoc/io/kaizensolutions/virgil/index.html)
 
 ## Quick Start
