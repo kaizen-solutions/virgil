@@ -74,6 +74,22 @@ object CQLExecutorSpec {
             } yield assert(dataFromPage)(hasSameElements(dataFromSelect)) &&
               assert(dataFromSelect)(hasSameElements(actual))
           }
+        } +
+        testM("take(1)") {
+          cql"SELECT * FROM system.local".query
+            .take(1)
+            .execute
+            .runCount
+            .map(rowCount => assertTrue(rowCount > 0))
+        } +
+        testM("take(n > 1)") {
+          checkM(Gen.long(2, 1000)) { n =>
+            cql"SELECT * FROM system.local".query
+              .take(n)
+              .execute
+              .runCount
+              .map(rowCount => assertTrue(rowCount > 0))
+          }
         }
     }
 
