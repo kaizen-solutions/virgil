@@ -60,6 +60,35 @@ object CqlRowDecoder extends RowDecoderMagnoliaDerivation {
     def zip[B](other: CqlRowDecoder.Object[B]): CqlRowDecoder.Object[(A, B)] =
       zipWith(other)((_, _))
 
+    def either: CqlRowDecoder.Object[Either[DecoderException, A]] =
+      new CqlRowDecoder.Object[Either[DecoderException, A]] {
+        def decode(row: Row): Either[DecoderException, A] =
+          try Right(self.decode(row))
+          catch {
+            case NonFatal(decoderException: DecoderException) =>
+              Left(decoderException)
+
+            case NonFatal(cause) =>
+              Left(
+                DecoderException.StructureReadFailure(
+                  message = s"Cannot decode Row",
+                  field = None,
+                  structure = row,
+                  cause = cause
+                )
+              )
+          }
+      }
+
+    def absolve[B](implicit ev: A <:< Either[DecoderException, B]): CqlRowDecoder.Object[B] =
+      new CqlRowDecoder.Object[B] {
+        def decode(row: Row): B =
+          ev(self.decode(row)) match {
+            case Right(b)               => b
+            case Left(decoderException) => throw decoderException
+          }
+      }
+
     def eitherWith[B, C](other: CqlRowDecoder.Object[B])(f: Either[A, B] => C): CqlRowDecoder.Object[C] =
       new Object[C] {
         def decode(row: Row): C = {
@@ -90,10 +119,13 @@ object CqlRowDecoder extends RowDecoderMagnoliaDerivation {
     override def decodeByFieldName(row: Row, fieldName: String): A =
       try (CqlPrimitiveDecoder.decodePrimitiveByFieldName(row, fieldName))
       catch {
+        case NonFatal(decoderException: DecoderException) =>
+          throw decoderException
+
         case NonFatal(cause) =>
-          throw DecoderException(
+          throw DecoderException.StructureReadFailure(
             message = s"Cannot decode field '$fieldName' in the Row",
-            field = FieldType.Name(fieldName),
+            field = Some(DecoderException.FieldType.Name(fieldName)),
             structure = row,
             cause = cause
           )
@@ -102,10 +134,13 @@ object CqlRowDecoder extends RowDecoderMagnoliaDerivation {
     override def decodeByIndex(row: Row, index: Int): A =
       try (CqlPrimitiveDecoder.decodePrimitiveByIndex(row, index))
       catch {
+        case NonFatal(decoderException: DecoderException) =>
+          throw decoderException
+
         case NonFatal(cause) =>
-          throw DecoderException(
+          throw DecoderException.StructureReadFailure(
             message = s"Cannot decode index $index in the Row",
-            field = FieldType.Index(index),
+            field = Some(DecoderException.FieldType.Index(index)),
             structure = row,
             cause = cause
           )

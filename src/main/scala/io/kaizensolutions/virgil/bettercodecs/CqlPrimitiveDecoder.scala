@@ -4,6 +4,7 @@ import com.datastax.oss.driver.api.core.`type`.{DataType, ListType, MapType, Set
 import com.datastax.oss.driver.api.core.data.{CqlDuration, GettableByIndex, GettableByName, UdtValue}
 
 import scala.jdk.CollectionConverters._
+import scala.util.control.NonFatal
 
 /**
  * A typeclass that describes how to turn a CQL type into a Scala type. This is
@@ -23,6 +24,38 @@ trait CqlPrimitiveDecoder[ScalaType] { self =>
 
   def widen[SuperTypeScala >: ScalaType]: CqlPrimitiveDecoder.WithDriver[SuperTypeScala, DriverType] =
     self.map(identity)
+
+  def either: CqlPrimitiveDecoder.WithDriver[Either[DecoderException, ScalaType], DriverType] =
+    new CqlPrimitiveDecoder[Either[DecoderException, ScalaType]] {
+      override type DriverType = self.DriverType
+
+      override def driverClass: Class[DriverType] = self.driverClass
+
+      override def driver2Scala(driverValue: DriverType, dataType: DataType): Either[DecoderException, ScalaType] =
+        try Right(self.driver2Scala(driverValue, dataType))
+        catch {
+          case NonFatal(decoderException: DecoderException) =>
+            Left(decoderException)
+
+          case NonFatal(cause) =>
+            Left(
+              DecoderException.PrimitiveReadFailure(
+                message = s"Failed to decode ${dataType.asCql(true, true)}",
+                cause = cause
+              )
+            )
+        }
+    }
+
+  def absolve[ScalaType2](implicit
+    ev: ScalaType <:< Either[DecoderException, ScalaType2]
+  ): CqlPrimitiveDecoder.WithDriver[ScalaType2, DriverType] =
+    self.map(a =>
+      ev(a) match {
+        case Left(decoderException) => throw decoderException
+        case Right(value)           => value
+      }
+    )
 }
 
 object CqlPrimitiveDecoder {

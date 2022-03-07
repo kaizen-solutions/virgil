@@ -65,6 +65,35 @@ object CqlUdtValueDecoder extends UdtValueDecoderMagnoliaDerivation {
     def zip[B](other: CqlUdtValueDecoder.Object[B]): CqlUdtValueDecoder.Object[(A, B)] =
       zipWith(other)((_, _))
 
+    def either: CqlUdtValueDecoder.Object[Either[DecoderException, A]] =
+      new CqlUdtValueDecoder.Object[Either[DecoderException, A]] {
+        def decode(structure: UdtValue): Either[DecoderException, A] =
+          try Right(self.decode(structure))
+          catch {
+            case NonFatal(decoderException: DecoderException) =>
+              Left(decoderException)
+
+            case NonFatal(cause) =>
+              Left(
+                DecoderException.StructureReadFailure(
+                  message = s"Cannot decode Row",
+                  field = None,
+                  structure = structure,
+                  cause = cause
+                )
+              )
+          }
+      }
+
+    def absolve[B](implicit ev: A <:< Either[DecoderException, B]): CqlUdtValueDecoder.Object[B] =
+      new CqlUdtValueDecoder.Object[B] {
+        def decode(structure: UdtValue): B =
+          ev(self.decode(structure)) match {
+            case Right(b)               => b
+            case Left(decoderException) => throw decoderException
+          }
+      }
+
     def eitherWith[B, C](other: CqlUdtValueDecoder.Object[B])(f: Either[A, B] => C): CqlUdtValueDecoder.Object[C] =
       new Object[C] {
         def decode(structure: UdtValue): C = {
@@ -95,10 +124,13 @@ object CqlUdtValueDecoder extends UdtValueDecoderMagnoliaDerivation {
       override def decodeByFieldName(structure: UdtValue, fieldName: String): A =
         try (CqlPrimitiveDecoder.decodePrimitiveByFieldName(structure, fieldName))
         catch {
+          case NonFatal(decoderException: DecoderException) =>
+            throw decoderException
+
           case NonFatal(cause) =>
-            throw DecoderException(
+            throw DecoderException.StructureReadFailure(
               message = s"Cannot decode field '$fieldName' in the UDT",
-              field = FieldType.Name(fieldName),
+              field = Some(DecoderException.FieldType.Name(fieldName)),
               structure = structure,
               cause = cause
             )
@@ -107,10 +139,13 @@ object CqlUdtValueDecoder extends UdtValueDecoderMagnoliaDerivation {
       override def decodeByIndex(structure: UdtValue, index: Int): A =
         try (CqlPrimitiveDecoder.decodePrimitiveByIndex(structure, index))
         catch {
+          case NonFatal(decoderException: DecoderException) =>
+            throw decoderException
+
           case NonFatal(cause) =>
-            throw DecoderException(
+            throw DecoderException.StructureReadFailure(
               message = s"Cannot decode index $index in the UDT",
-              field = FieldType.Index(index),
+              field = Some(DecoderException.FieldType.Index(index)),
               structure = structure,
               cause = cause
             )
