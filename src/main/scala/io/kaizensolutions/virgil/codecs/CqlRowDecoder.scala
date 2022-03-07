@@ -1,4 +1,4 @@
-package io.kaizensolutions.virgil.bettercodecs
+package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.cql.Row
 import io.kaizensolutions.virgil.annotations.CqlColumn
@@ -114,6 +114,11 @@ object CqlRowDecoder extends RowDecoderMagnoliaDerivation {
   def custom[A](f: Row => A): CqlRowDecoder.Object[A] = new CqlRowDecoder.Object[A] {
     override def decode(row: Row): A = f(row)
   }
+
+  implicit val cqlRowDecoderForUnderlyingRow: CqlRowDecoder.Object[Row] =
+    new CqlRowDecoder.Object[Row] {
+      override def decode(row: Row): Row = row
+    }
 
   implicit def fromCqlPrimitive[A](implicit prim: CqlPrimitiveDecoder[A]): CqlRowDecoder[A] = new CqlRowDecoder[A] {
     override def decodeByFieldName(row: Row, fieldName: String): A =

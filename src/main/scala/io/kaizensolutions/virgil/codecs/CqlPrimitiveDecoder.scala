@@ -1,4 +1,4 @@
-package io.kaizensolutions.virgil.bettercodecs
+package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.`type`.{DataType, ListType, MapType, SetType}
 import com.datastax.oss.driver.api.core.data.{CqlDuration, GettableByIndex, GettableByName, UdtValue}

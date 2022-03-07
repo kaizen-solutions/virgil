@@ -1,4 +1,4 @@
-package io.kaizensolutions.virgil.bettercodecs
+package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.`type`._
 import com.datastax.oss.driver.api.core.data.{CqlDuration, SettableByName, UdtValue}

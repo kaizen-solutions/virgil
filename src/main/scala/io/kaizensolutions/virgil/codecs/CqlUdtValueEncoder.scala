@@ -1,4 +1,4 @@
-package io.kaizensolutions.virgil.bettercodecs
+package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.data.UdtValue
 import io.kaizensolutions.virgil.annotations.CqlColumn
