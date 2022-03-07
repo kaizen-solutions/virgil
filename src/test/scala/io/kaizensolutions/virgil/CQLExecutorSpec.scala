@@ -61,14 +61,11 @@ object CQLExecutorSpec {
           import SelectPageRow._
           checkM(Gen.chunkOfN(50)(gen)) { actual =>
             for {
-              _  <- truncate.execute.runDrain
-              _  <- ZIO.foreachPar_(actual.map(insert))(_.execute.runDrain)
-              all = selectAll.execute.runCollect
-              paged =
-                selectPageStream(
-                  selectAll
-                    .withAttributes(ExecutionAttributes.default.withPageSize(actual.length / 2))
-                ).runCollect
+              _                             <- truncate.execute.runDrain
+              _                             <- ZIO.foreachPar_(actual.map(insert))(_.execute.runDrain)
+              attr                           = ExecutionAttributes.default.withPageSize(actual.length / 2)
+              all                            = selectAll.withAttributes(attr).execute.runCollect
+              paged                          = selectPageStream(selectAll.withAttributes(attr)).runCollect
               result                        <- all.zipPar(paged)
               (dataFromSelect, dataFromPage) = result
             } yield assert(dataFromPage)(hasSameElements(dataFromSelect)) &&
