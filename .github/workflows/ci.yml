@@ -55,3 +55,9 @@ jobs:
 
       - name: Build project
         run: sbt ++${{ matrix.scala }} test
+
+      - name: Coverage Coveralls
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COVERALLS_FLAG_NAME: Scala ${{ matrix.scala }}
+        run: sbt ++${{ matrix.scala }} clean coverage test coverageReport coverageAggregate coveralls

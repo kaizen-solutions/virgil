@@ -4,7 +4,15 @@ inThisBuild(
   List(
     scalaVersion                        := "2.13.8",
     crossScalaVersions                  := Seq("2.13.8", "2.12.15"),
-    githubWorkflowPublishTargetBranches := Seq.empty
+    githubWorkflowPublishTargetBranches := Seq.empty,
+    githubWorkflowBuild += WorkflowStep.Sbt(
+      name = Option("Coverage Coveralls"),
+      commands = List("clean", "coverage", "test", "coverageReport", "coverageAggregate", "coveralls"),
+      env = Map(
+        "COVERALLS_REPO_TOKEN" -> "${{ secrets.GITHUB_TOKEN }}",
+        "COVERALLS_FLAG_NAME"  -> "Scala ${{ matrix.scala }}"
+      )
+    )
   )
 )
 addCommandAlias("coverme", "; clean; coverage; test; coverageReport; coverageAggregate")
