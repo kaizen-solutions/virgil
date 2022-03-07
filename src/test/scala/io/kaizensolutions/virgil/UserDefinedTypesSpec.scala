@@ -1,7 +1,6 @@
 package io.kaizensolutions.virgil
 
 import io.kaizensolutions.virgil.annotations.CqlColumn
-import io.kaizensolutions.virgil.codecs._
 import io.kaizensolutions.virgil.cql._
 import io.kaizensolutions.virgil.dsl._
 import zio.Has
@@ -51,8 +50,6 @@ final case class Row_Person(
   data: UDT_Data
 )
 object Row_Person {
-  implicit val decoderForPerson: CqlDecoder[Row_Person] = CqlDecoder.derive[Row_Person]
-
   def insert(person: Row_Person): CQL[MutationResult] =
     cql"INSERT INTO userdefinedtypesspec_person (id, name, age, data) VALUES (${person.id}, ${person.name}, ${person.age}, ${person.data})".mutation
 
@@ -73,8 +70,6 @@ final case class UDT_Data(
   email: Option[UDT_Email]
 )
 object UDT_Data {
-  implicit val udtDecoderForUDT_Data: UdtDecoder[UDT_Data] = CqlColumnDecoder.deriveUdtValue[UDT_Data]
-
   def gen: Gen[Random, UDT_Data] =
     for {
       addresses <- Gen.listOfBounded(10, 20)(UDT_Address.gen)
@@ -117,9 +112,6 @@ final case class Row_HeavilyNestedUDTTable(
   data: UDT_ExampleCollectionNestedUDTType
 )
 object Row_HeavilyNestedUDTTable {
-  implicit val decoderForRow_HeavilyNestedUDTTable: CqlDecoder[Row_HeavilyNestedUDTTable] =
-    CqlDecoder.derive[Row_HeavilyNestedUDTTable]
-
   def gen: Gen[Random with Sized, Row_HeavilyNestedUDTTable] =
     for {
       id   <- Gen.anyInt
@@ -188,9 +180,6 @@ final case class UDT_ExampleCollectionNestedUDTType(
   c: UDT_ExampleNestedType
 )
 object UDT_ExampleCollectionNestedUDTType {
-  implicit val udtDecoderForUDT_ExampleCollectionNestedUDTType: UdtDecoder[UDT_ExampleCollectionNestedUDTType] =
-    CqlColumnDecoder.deriveUdtValue[UDT_ExampleCollectionNestedUDTType]
-
   def gen: Gen[Random with Sized, UDT_ExampleCollectionNestedUDTType] =
     for {
       a <- Gen.anyInt

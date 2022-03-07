@@ -5,6 +5,8 @@ _Virgil is a functional Cassandra client built using ZIO, Magnolia and the Datas
 
 [![Latest Version](https://jitpack.io/v/kaizen-solutions/virgil.svg)](https://jitpack.io/#kaizen-solutions/virgil)
 
+[![Coverage Status](https://coveralls.io/repos/github/kaizen-solutions/virgil/badge.svg)](https://coveralls.io/github/kaizen-solutions/virgil)
+
 [Documentation](https://javadoc.jitpack.io/com/github/kaizen-solutions/virgil/virgil_2.13/main-7a8b8ba88b-1/javadoc/io/kaizensolutions/virgil/index.html)
 
 ## Quick Start
@@ -72,38 +74,19 @@ CREATE TABLE IF NOT EXISTS persons (
 
 ### Scala data-types 
 
-If we want to read and write data to this table, we create case classes that mirror the table and UDTs in Scala through 
-along with adding codecs for each datatype:
+If we want to read and write data to this table, we create case classes that mirror the table and UDTs in Scala:
 
 ```scala
 import io.kaizensolutions.virgil.annotations.CqlColumn
-import io.kaizensolutions.virgil.codecs._
 
 final case class Info(favorite: Boolean, comment: String)
-
-object Info {
-  implicit val decoderInfo: UdtDecoder[Info] = CqlColumnDecoder.deriveUdtValue[Info]
-  implicit val encoderInfo: UdtEncoder[Info] = CqlColumnEncoder.deriveUdtValue[Info]
-}
-
 final case class Address(street: String, city: String, state: String, zip: Int, data: List[Info])
-
-object Address {
-  implicit val decoderAddress: UdtDecoder[Address] = CqlColumnDecoder.deriveUdtValue[Address]
-  implicit val encoderAddress: UdtEncoder[Address] = CqlColumnEncoder.deriveUdtValue[Address]
-}
-
-// Note: This is the top level row, we write out its components so we don't need an Encoder for the whole Person
 final case class Person(
   id: String, 
   name: String, 
   age: Int, 
   @CqlColumn("past_addresses") addresses: Set[Address]
 )
-
-object Person {
-  implicit val decoderPerson: CqlDecoder[Person] = CqlDecoder.derive[Person]
-}
 ```
 
 Note that the `CqlColumn` annotation can be used if the column/field name in the Cassandra table is different from the 
@@ -121,12 +104,12 @@ def insert(p: Person): CQL[MutationResult] =
     .value("id", p.id)
     .value("name", p.name)
     .value("age", p.age)
-    .value("addresses", p.addresses)
+    .value("past_addresses", p.addresses)
     .build
 
 def setAddress(personId: String, personAge: Int, address: Address): CQL[MutationResult] =
   UpdateBuilder("persons")
-    .set("addresses" := Set(address))
+    .set("past_addresses" := Set(address))
     .where("id" === personId)
     .and("age" === personAge)
     .build
@@ -137,7 +120,7 @@ We can also read data:
 def select(personId: String, personAge: Int): CQL[Person] =
   SelectBuilder
     .from("persons")
-    .columns("id", "name", "age", "addresses")
+    .columns("id", "name", "age", "past_addresses")
     .where("id" === personId)
     .and("age" === personAge)
     .build[Person]

@@ -13,7 +13,7 @@ import scala.jdk.CollectionConverters._
 /**
  * CQLExecutorImpl is a ZIO based client for the Apache Cassandra Java Driver
  * that provides ZIO and ZStream abstractions over the Datastax Java driver. We
- * consider CQLExecutor to be the interpreter of [[CQL[A]] expressions.
+ * consider CQLExecutor to be the interpreter of [[CQL[A]]] expressions.
  *
  * @param underlyingSession
  *   is the underlying Datastax Java driver session
@@ -67,7 +67,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
       boundStatementWithPage = boundStatement.setPagingState(driverPageState)
       rp                    <- selectPage(boundStatementWithPage)
       (results, nextPage)    = rp
-      chunksToOutput         = results.map(reader.decodeFieldByName(_, null))
+      chunksToOutput        <- results.mapM(row => ZIO.effect(reader.decode(row)))
     } yield Paged(chunksToOutput, nextPage)
   }
 
@@ -98,7 +98,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
     for {
       boundStatement <- ZStream.fromEffect(buildStatement(queryString, bindMarkers, config))
       reader          = input.reader
-      element        <- select(boundStatement).map(reader.decodeFieldByName(_, null))
+      element        <- select(boundStatement).mapM(row => ZIO.effect(reader.decode(row)))
     } yield element
   }
 
@@ -111,7 +111,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
       boundStatement <- buildStatement(queryString, bindMarkers, config)
       reader          = input.reader
       optRow         <- selectFirst(boundStatement)
-      element        <- Task.succeed(optRow.map(reader.decodeFieldByName(_, null)))
+      element        <- Task(optRow.map(reader.decode))
     } yield element
   }
 
@@ -169,7 +169,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
       val result: BoundStatementBuilder = {
         val initial = preparedStatement.boundStatementBuilder()
         val boundColumns = columns.underlying.foldLeft(initial) { case (accBuilder, (colName, column)) =>
-          column.write.encodeFieldByName(
+          column.write.encodeByFieldName(
             structure = accBuilder,
             fieldName = colName.name,
             value = column.value

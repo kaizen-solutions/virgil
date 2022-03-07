@@ -1,8 +1,8 @@
 package io.kaizensolutions.virgil
 
+import com.datastax.oss.driver.api.core.CqlSession
 import com.datastax.oss.driver.api.core.uuid.Uuids
 import io.kaizensolutions.virgil.annotations.CqlColumn
-import io.kaizensolutions.virgil.codecs.CqlDecoder
 import io.kaizensolutions.virgil.configuration.{ConsistencyLevel, ExecutionAttributes}
 import io.kaizensolutions.virgil.cql._
 import zio._
@@ -14,16 +14,18 @@ import zio.test.TestAspect._
 import zio.test._
 import zio.test.environment.Live
 
+import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.util.UUID
 import scala.util.Try
 
 object CQLExecutorSpec {
-  def sessionSpec: Spec[Live with Has[CQLExecutor] with Random with Sized with TestConfig, TestFailure[
-    Throwable
-  ], TestSuccess] =
+  def sessionSpec
+    : Spec[Live with Has[CassandraContainer] with Has[CQLExecutor] with Random with Sized with TestConfig, TestFailure[
+      Throwable
+    ], TestSuccess] =
     suite("Cassandra Session Interpreter Specification") {
-      (queries + actions) @@ timeout(1.minute) @@ samples(10)
+      (queries + actions + configuration) @@ timeout(1.minute) @@ samples(10)
     }
 
   def queries: Spec[Has[CQLExecutor] with Random with Sized with TestConfig, TestFailure[Throwable], TestSuccess] =
@@ -59,18 +61,31 @@ object CQLExecutorSpec {
           import SelectPageRow._
           checkM(Gen.chunkOfN(50)(gen)) { actual =>
             for {
-              _  <- truncate.execute.runDrain
-              _  <- ZIO.foreachPar_(actual.map(insert))(_.execute.runDrain)
-              all = selectAll.execute.runCollect
-              paged =
-                selectPageStream(
-                  selectAll
-                    .withAttributes(ExecutionAttributes.default.withPageSize(actual.length / 2))
-                ).runCollect
+              _                             <- truncate.execute.runDrain
+              _                             <- ZIO.foreachPar_(actual.map(insert))(_.execute.runDrain)
+              attr                           = ExecutionAttributes.default.withPageSize(actual.length / 2)
+              all                            = selectAll.withAttributes(attr).execute.runCollect
+              paged                          = selectPageStream(selectAll.withAttributes(attr)).runCollect
               result                        <- all.zipPar(paged)
               (dataFromSelect, dataFromPage) = result
             } yield assert(dataFromPage)(hasSameElements(dataFromSelect)) &&
               assert(dataFromSelect)(hasSameElements(actual))
+          }
+        } +
+        testM("take(1)") {
+          cql"SELECT * FROM system.local".query
+            .take(1)
+            .execute
+            .runCount
+            .map(rowCount => assertTrue(rowCount > 0))
+        } +
+        testM("take(n > 1)") {
+          checkM(Gen.long(2, 1000)) { n =>
+            cql"SELECT * FROM system.local".query
+              .take(n)
+              .execute
+              .runCount
+              .map(rowCount => assertTrue(rowCount > 0))
           }
         }
     }
@@ -114,6 +129,34 @@ object CQLExecutorSpec {
         }
     }
 
+  def configuration: Spec[Has[CassandraContainer], TestFailure[Throwable], TestSuccess] =
+    suite("Session Configuration") {
+      testM("Creating a layer from an existing session allows you to access Cassandra") {
+        val sessionManaged: URManaged[Has[CassandraContainer], CqlSession] = {
+          val createSession = for {
+            c            <- ZIO.service[CassandraContainer]
+            contactPoint <- (c.getHost).zipWith(c.getPort)(InetSocketAddress.createUnresolved)
+            session <- ZIO.effectTotal(
+                         CqlSession.builder
+                           .addContactPoint(contactPoint)
+                           .withLocalDatacenter("dc1")
+                           .withKeyspace("virgil")
+                           .build
+                       )
+          } yield session
+          val releaseSession = (session: CqlSession) => ZIO.effectTotal(session.close())
+          ZManaged.make(createSession)(releaseSession).orDie
+        }
+
+        val sessionLayer     = ZLayer.fromManaged(sessionManaged)
+        val cqlExecutorLayer = sessionLayer >>> CQLExecutor.sessionLive
+
+        cql"SELECT * FROM system.local".query.execute.runCount
+          .map(numberOfRows => assertTrue(numberOfRows > 0))
+          .provideLayer(cqlExecutorLayer)
+      }
+    }
+
   // Used to provide a similar API as the `select` method
   private def selectPageStream[ScalaType](
     query: CQL[ScalaType]
@@ -140,26 +183,15 @@ final case class SystemLocalResponse(
   def time: Either[Throwable, Long] =
     Try(Uuids.unixTimestamp(now)).toEither
 }
-object SystemLocalResponse {
-  implicit val decoderForSystemLocalResponse: CqlDecoder[SystemLocalResponse] =
-    CqlDecoder.derive[SystemLocalResponse]
-}
 
 final case class PreparedStatementsResponse(
   @CqlColumn("prepared_id") preparedId: ByteBuffer,
   @CqlColumn("logged_keyspace") keyspace: Option[String],
   @CqlColumn("query_string") query: String
 )
-object PreparedStatementsResponse {
-  implicit val decoderForPreparedStatementsResponse: CqlDecoder[PreparedStatementsResponse] =
-    CqlDecoder.derive[PreparedStatementsResponse]
-}
 
 final case class ExecuteTestTable(id: Int, info: String)
 object ExecuteTestTable {
-  implicit val decoderForExecuteTestTable: CqlDecoder[ExecuteTestTable] =
-    CqlDecoder.derive[ExecuteTestTable]
-
   val table      = "ziocassandrasessionspec_executeAction"
   val batchTable = "ziocassandrasessionspec_executeBatchAction"
 
@@ -180,9 +212,6 @@ object ExecuteTestTable {
 
 final case class SelectPageRow(id: Int, bucket: Int, info: String)
 object SelectPageRow {
-  implicit val decoderForSelectPageRow: CqlDecoder[SelectPageRow] =
-    CqlDecoder.derive[SelectPageRow]
-
   val truncate: CQL[MutationResult] = CQL.truncate("ziocassandrasessionspec_selectPage")
 
   def insert(in: SelectPageRow): CQL[MutationResult] =
