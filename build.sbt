@@ -1,8 +1,13 @@
 import ReleaseTransformations._
 
-ThisBuild / scalaVersion                        := "2.13.8"
-ThisBuild / crossScalaVersions                  := Seq("2.13.8", "2.12.15")
-ThisBuild / githubWorkflowPublishTargetBranches := Seq.empty
+inThisBuild(
+  List(
+    scalaVersion                        := "2.13.8",
+    crossScalaVersions                  := Seq("2.13.8", "2.12.15"),
+    githubWorkflowPublishTargetBranches := Seq.empty
+  )
+)
+addCommandAlias("coverme", "; clean; coverage; test; coverageReport; coverageAggregate")
 
 lazy val root =
   (project in file("."))
