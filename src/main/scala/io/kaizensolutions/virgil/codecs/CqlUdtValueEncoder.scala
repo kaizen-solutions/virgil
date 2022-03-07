@@ -1,5 +1,6 @@
 package io.kaizensolutions.virgil.codecs
 
+import com.datastax.oss.driver.api.core.`type`.UserDefinedType
 import com.datastax.oss.driver.api.core.data.UdtValue
 import io.kaizensolutions.virgil.annotations.CqlColumn
 import magnolia1._
@@ -26,11 +27,17 @@ object CqlUdtValueEncoder extends UdtValueEncoderMagnoliaDerivation {
   trait Object[A] extends CqlUdtValueEncoder[A] { self =>
     def encode(structure: UdtValue, value: A): UdtValue
 
-    override def encodeByFieldName(structure: UdtValue, fieldName: String, value: A): UdtValue =
-      encode(structure.getUdtValue(fieldName), value)
+    override def encodeByFieldName(structure: UdtValue, fieldName: String, value: A): UdtValue = {
+      val emptySubStructure  = structure.getType(fieldName).asInstanceOf[UserDefinedType].newValue()
+      val filledSubStructure = encode(emptySubStructure, value)
+      structure.setUdtValue(fieldName, filledSubStructure)
+    }
 
-    override def encodeByIndex(structure: UdtValue, index: Int, value: A): UdtValue =
-      encode(structure.getUdtValue(index), value)
+    override def encodeByIndex(structure: UdtValue, index: Int, value: A): UdtValue = {
+      val emptySubStructure  = structure.getType(index).asInstanceOf[UserDefinedType].newValue()
+      val filledSubStructure = encode(emptySubStructure, value)
+      structure.setUdtValue(index, filledSubStructure)
+    }
 
     def contramap[B](f: B => A): CqlUdtValueEncoder.Object[B] = new CqlUdtValueEncoder.Object[B] {
       override def encode(structure: UdtValue, value: B): UdtValue = self.encode(structure, f(value))
@@ -55,27 +62,15 @@ object CqlUdtValueEncoder extends UdtValueEncoderMagnoliaDerivation {
 
   def custom[A](f: (UdtValue, A) => UdtValue): CqlUdtValueEncoder.Object[A] = new CqlUdtValueEncoder.Object[A] {
     override def encode(structure: UdtValue, value: A): UdtValue = f(structure, value)
-
-    override def encodeByFieldName(structure: UdtValue, fieldName: String, value: A): UdtValue =
-      f(structure.getUdtValue(fieldName), value)
-
-    override def encodeByIndex(structure: UdtValue, index: Int, value: A): UdtValue =
-      f(structure.getUdtValue(index), value)
   }
 
   implicit def fromCqlPrimitive[A](implicit prim: CqlPrimitiveEncoder[A]): CqlUdtValueEncoder[A] =
     new CqlUdtValueEncoder[A] {
-      override def encodeByFieldName(structure: UdtValue, fieldName: String, value: A): UdtValue = {
-        val driverType = structure.getType(fieldName)
-        val driver     = prim.scala2Driver(value, driverType)
-        structure.set(fieldName, driver, prim.driverClass)
-      }
+      override def encodeByFieldName(structure: UdtValue, fieldName: String, value: A): UdtValue =
+        CqlPrimitiveEncoder.encodePrimitiveByFieldName(structure, fieldName, value)(prim)
 
-      override def encodeByIndex(structure: UdtValue, index: Int, value: A): UdtValue = {
-        val driverType = structure.getType(index)
-        val driver     = prim.scala2Driver(value, driverType)
-        structure.set(index, driver, prim.driverClass)
-      }
+      override def encodeByIndex(structure: UdtValue, index: Int, value: A): UdtValue =
+        CqlPrimitiveEncoder.encodePrimitiveByIndex(structure, index, value)(prim)
     }
 }
 
@@ -85,10 +80,10 @@ trait UdtValueEncoderMagnoliaDerivation {
   def join[T](ctx: CaseClass[CqlUdtValueEncoder, T]): CqlUdtValueEncoder.Object[T] =
     new CqlUdtValueEncoder.Object[T] {
       override def encode(structure: UdtValue, value: T): UdtValue =
-        ctx.parameters.foldLeft(structure) { case (acc, p) =>
-          val fieldName  = CqlColumn.extractFieldName(p.annotations).getOrElse(p.label)
-          val fieldValue = p.dereference(value)
-          val encoder    = p.typeclass
+        ctx.parameters.foldLeft(structure) { case (acc, param) =>
+          val fieldName  = CqlColumn.extractFieldName(param.annotations).getOrElse(param.label)
+          val fieldValue = param.dereference(value)
+          val encoder    = param.typeclass
           encoder.encodeByFieldName(acc, fieldName, fieldValue)
         }
     }

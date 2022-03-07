@@ -57,17 +57,17 @@ object CqlPrimitiveEncoder {
         structure.setUdtValue(fieldName, udtValue)
 
       case l @ ListPrimitiveEncoder(element) =>
-        val driverType  = structure.getType(fieldName).asInstanceOf[ListType].getElementType
+        val driverType  = structure.getType(fieldName)
         val driverValue = l.scala2Driver(value, driverType)
         structure.setList(fieldName, driverValue, element.driverClass)
 
       case s @ SetPrimitiveEncoder(element) =>
-        val driverType  = structure.getType(fieldName).asInstanceOf[SetType].getElementType
+        val driverType  = structure.getType(fieldName)
         val driverValue = s.scala2Driver(value, driverType)
         structure.setSet(fieldName, driverValue, element.driverClass)
 
       case m @ MapPrimitiveEncoder(k, v) =>
-        val mapType   = structure.getType(fieldName).asInstanceOf[MapType]
+        val mapType   = structure.getType(fieldName)
         val driverMap = m.scala2Driver(value, mapType)
         structure.setMap(fieldName, driverMap, k.driverClass, v.driverClass)
 
@@ -84,6 +84,66 @@ object CqlPrimitiveEncoder {
         val driverType  = structure.getType(fieldName)
         val driverValue = other.scala2Driver(value, driverType)
         structure.set(fieldName, driverValue, other.driverClass)
+    }
+
+  def encodePrimitiveByIndex[Structure <: SettableByName[Structure], Scala](
+    structure: Structure,
+    index: Int,
+    value: Scala
+  )(implicit prim: CqlPrimitiveEncoder[Scala]): Structure =
+    prim match {
+      case StringPrimitiveEncoder      => structure.setString(index, value)
+      case BigIntPrimitiveEncoder      => structure.setBigInteger(index, value.bigInteger)
+      case ByteBufferPrimitiveEncoder  => structure.setByteBuffer(index, value)
+      case BooleanPrimitiveEncoder     => structure.setBoolean(index, value)
+      case LongPrimitiveEncoder        => structure.setLong(index, value)
+      case LocalDatePrimitiveEncoder   => structure.setLocalDate(index, value)
+      case BigDecimalPrimitiveEncoder  => structure.setBigDecimal(index, value.bigDecimal)
+      case DoublePrimitiveEncoder      => structure.setDouble(index, value)
+      case CqlDurationPrimitiveEncoder => structure.setCqlDuration(index, value)
+      case FloatPrimitiveEncoder       => structure.setFloat(index, value)
+      case InetAddressPrimitiveEncoder => structure.setInetAddress(index, value)
+      case IntPrimitiveEncoder         => structure.setInt(index, value)
+      case ShortPrimitiveEncoder       => structure.setShort(index, value)
+      case LocalTimePrimitiveEncoder   => structure.setLocalTime(index, value)
+      case InstantPrimitiveEncoder     => structure.setInstant(index, value)
+      case UUIDPrimitiveEncoder        => structure.setUuid(index, value)
+      case BytePrimitiveEncoder        => structure.setByte(index, value)
+      case UdtValuePrimitiveEncoder    => structure.setUdtValue(index, value)
+
+      case UdtValueEncoderPrimitiveEncoder(encoder) =>
+        val emptyUdtValue = structure.getType(index).asInstanceOf[UserDefinedType].newValue()
+        val udtValue      = encoder.encode(emptyUdtValue, value)
+        structure.setUdtValue(index, udtValue)
+
+      case l @ ListPrimitiveEncoder(element) =>
+        val driverType  = structure.getType(index).asInstanceOf[ListType].getElementType
+        val driverValue = l.scala2Driver(value, driverType)
+        structure.setList(index, driverValue, element.driverClass)
+
+      case s @ SetPrimitiveEncoder(element) =>
+        val driverType  = structure.getType(index).asInstanceOf[SetType]
+        val driverValue = s.scala2Driver(value, driverType)
+        structure.setSet(index, driverValue, element.driverClass)
+
+      case m @ MapPrimitiveEncoder(k, v) =>
+        val mapType   = structure.getType(index).asInstanceOf[MapType]
+        val driverMap = m.scala2Driver(value, mapType)
+        structure.setMap(index, driverMap, k.driverClass, v.driverClass)
+
+      case o: OptionPrimitiveEncoder[scala, driver] =>
+        value.asInstanceOf[Option[scala]] match {
+          case Some(value) => encodePrimitiveByIndex(structure, index, value)(o.element)
+          case None        => structure.setToNull(index)
+        }
+
+      case ContramapPrimitiveEncoder(element, f) =>
+        encodePrimitiveByIndex(structure, index, f(value))(element)
+
+      case other =>
+        val driverType  = structure.getType(index)
+        val driverValue = other.scala2Driver(value, driverType)
+        structure.set(index, driverValue, other.driverClass)
     }
 
   case object StringPrimitiveEncoder extends CqlPrimitiveEncoder[String] {

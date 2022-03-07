@@ -40,16 +40,10 @@ object CqlRowComponentEncoder {
         structure: BoundStatementBuilder,
         fieldName: String,
         value: A
-      ): BoundStatementBuilder = {
-        val driverType  = structure.getType(fieldName)
-        val driverValue = prim.scala2Driver(value, driverType)
-        structure.set(fieldName, driverValue, prim.driverClass)
-      }
+      ): BoundStatementBuilder =
+        CqlPrimitiveEncoder.encodePrimitiveByFieldName(structure, fieldName, value)
 
-      override def encodeByIndex(structure: BoundStatementBuilder, index: Int, value: A): BoundStatementBuilder = {
-        val driverType  = structure.getType(index)
-        val driverValue = prim.scala2Driver(value, driverType)
-        structure.set(index, driverValue, prim.driverClass)
-      }
+      override def encodeByIndex(structure: BoundStatementBuilder, index: Int, value: A): BoundStatementBuilder =
+        CqlPrimitiveEncoder.encodePrimitiveByIndex(structure, index, value)
     }
 }

@@ -2,7 +2,6 @@ package io.kaizensolutions.virgil
 
 import com.datastax.oss.driver.api.core.uuid.Uuids
 import io.kaizensolutions.virgil.annotations.CqlColumn
-import io.kaizensolutions.virgil.codecs.CqlDecoder
 import io.kaizensolutions.virgil.configuration.{ConsistencyLevel, ExecutionAttributes}
 import io.kaizensolutions.virgil.cql._
 import zio._
@@ -140,26 +139,15 @@ final case class SystemLocalResponse(
   def time: Either[Throwable, Long] =
     Try(Uuids.unixTimestamp(now)).toEither
 }
-object SystemLocalResponse {
-  implicit val decoderForSystemLocalResponse: CqlDecoder[SystemLocalResponse] =
-    CqlDecoder.derive[SystemLocalResponse]
-}
 
 final case class PreparedStatementsResponse(
   @CqlColumn("prepared_id") preparedId: ByteBuffer,
   @CqlColumn("logged_keyspace") keyspace: Option[String],
   @CqlColumn("query_string") query: String
 )
-object PreparedStatementsResponse {
-  implicit val decoderForPreparedStatementsResponse: CqlDecoder[PreparedStatementsResponse] =
-    CqlDecoder.derive[PreparedStatementsResponse]
-}
 
 final case class ExecuteTestTable(id: Int, info: String)
 object ExecuteTestTable {
-  implicit val decoderForExecuteTestTable: CqlDecoder[ExecuteTestTable] =
-    CqlDecoder.derive[ExecuteTestTable]
-
   val table      = "ziocassandrasessionspec_executeAction"
   val batchTable = "ziocassandrasessionspec_executeBatchAction"
 
@@ -180,9 +168,6 @@ object ExecuteTestTable {
 
 final case class SelectPageRow(id: Int, bucket: Int, info: String)
 object SelectPageRow {
-  implicit val decoderForSelectPageRow: CqlDecoder[SelectPageRow] =
-    CqlDecoder.derive[SelectPageRow]
-
   val truncate: CQL[MutationResult] = CQL.truncate("ziocassandrasessionspec_selectPage")
 
   def insert(in: SelectPageRow): CQL[MutationResult] =
