@@ -1,5 +1,6 @@
 package io.kaizensolutions.virgil
 
+import com.datastax.oss.driver.api.core.CqlSession
 import com.datastax.oss.driver.api.core.uuid.Uuids
 import io.kaizensolutions.virgil.annotations.CqlColumn
 import io.kaizensolutions.virgil.configuration.{ConsistencyLevel, ExecutionAttributes}
@@ -13,16 +14,18 @@ import zio.test.TestAspect._
 import zio.test._
 import zio.test.environment.Live
 
+import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.util.UUID
 import scala.util.Try
 
 object CQLExecutorSpec {
-  def sessionSpec: Spec[Live with Has[CQLExecutor] with Random with Sized with TestConfig, TestFailure[
-    Throwable
-  ], TestSuccess] =
+  def sessionSpec
+    : Spec[Live with Has[CassandraContainer] with Has[CQLExecutor] with Random with Sized with TestConfig, TestFailure[
+      Throwable
+    ], TestSuccess] =
     suite("Cassandra Session Interpreter Specification") {
-      (queries + actions) @@ timeout(1.minute) @@ samples(10)
+      (queries + actions + configuration) @@ timeout(1.minute) @@ samples(10)
     }
 
   def queries: Spec[Has[CQLExecutor] with Random with Sized with TestConfig, TestFailure[Throwable], TestSuccess] =
@@ -111,6 +114,34 @@ object CQLExecutorSpec {
             } yield assert(actual)(hasSameElements(expected))
           }
         }
+    }
+
+  def configuration: Spec[Has[CassandraContainer], TestFailure[Throwable], TestSuccess] =
+    suite("Session Configuration") {
+      testM("Creating a layer from an existing session allows you to access Cassandra") {
+        val sessionManaged: URManaged[Has[CassandraContainer], CqlSession] = {
+          val createSession = for {
+            c            <- ZIO.service[CassandraContainer]
+            contactPoint <- (c.getHost).zipWith(c.getPort)(InetSocketAddress.createUnresolved)
+            session <- ZIO.effectTotal(
+                         CqlSession.builder
+                           .addContactPoint(contactPoint)
+                           .withLocalDatacenter("dc1")
+                           .withKeyspace("virgil")
+                           .build
+                       )
+          } yield session
+          val releaseSession = (session: CqlSession) => ZIO.effectTotal(session.close())
+          ZManaged.make(createSession)(releaseSession).orDie
+        }
+
+        val sessionLayer     = ZLayer.fromManaged(sessionManaged)
+        val cqlExecutorLayer = sessionLayer >>> CQLExecutor.sessionLive
+
+        cql"SELECT * FROM system.local".query.execute.runCount
+          .map(numberOfRows => assertTrue(numberOfRows > 0))
+          .provideLayer(cqlExecutorLayer)
+      }
     }
 
   // Used to provide a similar API as the `select` method

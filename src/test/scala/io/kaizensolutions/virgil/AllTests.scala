@@ -11,10 +11,10 @@ import zio.test.environment.TestEnvironment
 import java.net.InetSocketAddress
 
 object AllTests extends DefaultRunnableSpec {
-  val dependencies: URLayer[Blocking, Has[CQLExecutor]] = {
+  val dependencies: URLayer[Blocking, Has[CassandraContainer] with Has[CQLExecutor]] = {
     val managedSession =
       for {
-        c           <- CassandraContainer(CassandraType.Plain)
+        c           <- ZManaged.service[CassandraContainer]
         details     <- (c.getHost).zip(c.getPort).toManaged_
         (host, port) = details
         session <- CQLExecutor(
@@ -35,7 +35,9 @@ object AllTests extends DefaultRunnableSpec {
         _          <- runMigration(session, "migrations.cql").toManaged_
       } yield session
 
-    managedSession.toLayer.orDie
+    val containerLayer = CassandraContainer(CassandraType.Plain).toLayer
+    val sessionLayer   = managedSession.toLayer.orDie
+    ZLayer.requires[Blocking] ++ containerLayer >+> sessionLayer
   }
 
   def runMigration(executor: CQLExecutor, fileName: String): ZIO[Blocking, Throwable, Unit] = {

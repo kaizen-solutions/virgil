@@ -4,7 +4,7 @@ import io.kaizensolutions.virgil.configuration.PageState
 import io.kaizensolutions.virgil.internal.CQLExecutorImpl
 import io.kaizensolutions.virgil.internal.Proofs.=:!=
 import zio.stream._
-import zio.{Has, RIO, RLayer, Task, TaskManaged, ZIO, ZLayer, ZManaged}
+import zio.{Has, RIO, RLayer, Task, TaskManaged, URLayer, ZIO, ZLayer, ZManaged}
 
 trait CQLExecutor {
   def execute[A](in: CQL[A]): Stream[Throwable, A]
@@ -22,7 +22,7 @@ object CQLExecutor {
   val live: RLayer[Has[CqlSessionBuilder], Has[CQLExecutor]] =
     ZLayer.fromServiceManaged[CqlSessionBuilder, Any, Throwable, CQLExecutor](apply)
 
-  val sessionLive: RLayer[Has[CqlSession], Has[CQLExecutor]] =
+  val sessionLive: URLayer[Has[CqlSession], Has[CQLExecutor]] =
     ZLayer.fromService[CqlSession, CQLExecutor](fromCqlSession)
 
   /**
