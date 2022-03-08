@@ -83,3 +83,23 @@ CREATE TABLE collectionspec_nestedcollectiontable
     a int PRIMARY KEY,
     b frozen<map<int, frozen<set<frozen<set<frozen<set<frozen<set<int>>>>>>>>>>
 );
+
+CREATE TYPE cursorspec_note(
+    data TEXT,
+    ip INET
+);
+
+CREATE TYPE cursorspec_address(
+   street TEXT,
+   city TEXT,
+   state TEXT,
+   zip TEXT,
+   note frozen<cursorspec_note>
+);
+
+CREATE TABLE cursorspec_cursorexampletable(
+    id BIGINT PRIMARY KEY,
+    name TEXT,
+    age SMALLINT,
+    addresses frozen<list<cursorspec_address>>
+);

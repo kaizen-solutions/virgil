@@ -1,6 +1,7 @@
 package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.data.UdtValue
+import io.kaizensolutions.virgil.UdtValueCursor
 import io.kaizensolutions.virgil.annotations.CqlColumn
 import magnolia1._
 
@@ -118,6 +119,17 @@ object CqlUdtValueDecoder extends UdtValueDecoderMagnoliaDerivation {
   def custom[A](f: UdtValue => A): CqlUdtValueDecoder.Object[A] = new CqlUdtValueDecoder.Object[A] {
     override def decode(structure: UdtValue): A = f(structure)
   }
+
+  def cursorEither[A](
+    f: UdtValueCursor => Either[DecoderException, A]
+  ): CqlUdtValueDecoder.Object[Either[DecoderException, A]] =
+    new CqlUdtValueDecoder.Object[Either[DecoderException, A]] {
+      override def decode(structure: UdtValue): Either[DecoderException, A] =
+        f(UdtValueCursor(structure))
+    }
+
+  def cursor[A](f: UdtValueCursor => Either[DecoderException, A]): CqlUdtValueDecoder.Object[A] =
+    cursorEither(f).absolve
 
   implicit def fromCqlPrimitive[A](implicit prim: CqlPrimitiveDecoder[A]): CqlUdtValueDecoder[A] =
     new CqlUdtValueDecoder[A] {

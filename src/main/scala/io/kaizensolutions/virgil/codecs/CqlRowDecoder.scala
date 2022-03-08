@@ -1,6 +1,7 @@
 package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.cql.Row
+import io.kaizensolutions.virgil.RowCursor
 import io.kaizensolutions.virgil.annotations.CqlColumn
 import magnolia1._
 
@@ -114,6 +115,15 @@ object CqlRowDecoder extends RowDecoderMagnoliaDerivation {
   def custom[A](f: Row => A): CqlRowDecoder.Object[A] = new CqlRowDecoder.Object[A] {
     override def decode(row: Row): A = f(row)
   }
+
+  def cursorEither[A](f: RowCursor => Either[DecoderException, A]): CqlRowDecoder.Object[Either[DecoderException, A]] =
+    new CqlRowDecoder.Object[Either[DecoderException, A]] {
+      override def decode(row: Row): Either[DecoderException, A] =
+        f(RowCursor(row))
+    }
+
+  def cursor[A](f: RowCursor => Either[DecoderException, A]): CqlRowDecoder.Object[A] =
+    cursorEither(f).absolve
 
   implicit val cqlRowDecoderForUnderlyingRow: CqlRowDecoder.Object[Row] =
     new CqlRowDecoder.Object[Row] {

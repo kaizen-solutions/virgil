@@ -1,47 +1,86 @@
-//package io.kaizensolutions.virgil
-//
-//import com.datastax.oss.driver.api.core.data.GettableByName
-//import io.kaizensolutions.virgil.codecs.{CqlColumnDecoder, CqlDecoder, UdtDecoder}
-//import zio.Chunk
-//
-//import scala.util.control.NonFatal
-//
-//sealed trait Cursor {
-//  def downUdt(name: String): Either[String, Cursor]
-//  def field[A](name: String)(implicit ev: CqlColumnDecoder[A]): Either[String, A]
-//  def viewCursorAs[A](implicit ev: CqlColumnDecoder[A]): Either[String, A]
-//}
-//object Cursor {
-//  def row[A](cursor: Cursor => Either[String, A]): CqlDecoder[Either[String, A]] =
-//    CqlColumnDecoder
-//      .fromRow(row => cursor(new GettableByNameCursor(Chunk.empty, row)))
-//
-//  def udt[A](cursor: Cursor => Either[String, A]): UdtDecoder[Either[String, A]] =
-//    CqlColumnDecoder.fromUdtValue(row => cursor(new GettableByNameCursor(Chunk.empty, row)))
-//}
-//
-//private class GettableByNameCursor(history: Chunk[String], current: GettableByName) extends Cursor {
-//  override def downUdt(name: String): Either[String, Cursor] =
-//    try Right(new GettableByNameCursor(history :+ "name", current.getUdtValue(name)))
-//    catch {
-//      case NonFatal(e) => Left(renderError(s"focusing down on $name", e))
-//    }
-//
-//  override def field[A](name: String)(implicit ev: CqlColumnDecoder[A]): Either[String, A] =
-//    try Right(ev.decodeFieldByName(current, name))
-//    catch {
-//      case NonFatal(e) => Left(renderError(s"reading $name", e))
-//    }
-//
-//  private def renderError(action: String, error: Throwable): String = {
-//    val renderedHistory = history.mkString(start = "History: ", sep = " -> ", end = " ")
-//    val message         = s"Error $action: ${error.getMessage}"
-//    renderedHistory + message
-//  }
-//
-//  override def viewCursorAs[A](implicit ev: CqlColumnDecoder[A]): Either[String, A] =
-//    try Right(ev.decodeFieldByName(current, null))
-//    catch {
-//      case NonFatal(e) => Left(renderError("viewing current level", e))
-//    }
-//}
+package io.kaizensolutions.virgil
+
+import com.datastax.oss.driver.api.core.cql.Row
+import com.datastax.oss.driver.api.core.data.{GettableByName, UdtValue}
+import io.kaizensolutions.virgil.codecs._
+import zio.Chunk
+
+import scala.util.control.NonFatal
+
+final case class RowCursor(
+  private val history: Chunk[String],
+  private val current: Row
+) {
+  def downUdtValue(name: String): Either[DecoderException, UdtValueCursor] =
+    Cursor.downUdtValue(name, current, history)
+
+  def field[A](name: String)(implicit ev: CqlPrimitiveDecoder[A]): Either[DecoderException, A] =
+    Cursor.field(current, name, history)(ev)
+
+  def viewAs[A](implicit ev: codecs.CqlRowDecoder.Object[A]): Either[DecoderException, A] =
+    ev.either
+      .decode(current)
+      .left
+      .map(Cursor.enrichError(history))
+}
+object RowCursor {
+  def apply(row: Row): RowCursor = RowCursor(Chunk.empty, row)
+}
+
+final case class UdtValueCursor(private val history: Chunk[String], private val current: UdtValue) {
+  def downUdtValue(name: String): Either[DecoderException, UdtValueCursor] = Cursor.downUdtValue(name, current, history)
+
+  def field[A](name: String)(implicit ev: CqlPrimitiveDecoder[A]): Either[DecoderException, A] =
+    Cursor.field(current, name, history)(ev)
+
+  def viewAs[A](implicit ev: CqlUdtValueDecoder.Object[A]): Either[DecoderException, A] =
+    ev.either
+      .decode(current)
+      .left
+      .map(Cursor.enrichError(history))
+}
+object UdtValueCursor {
+  def apply(udtValue: UdtValue): UdtValueCursor = UdtValueCursor(Chunk.empty, udtValue)
+}
+
+private object Cursor {
+  def downUdtValue(
+    fieldName: String,
+    current: GettableByName,
+    history: Chunk[String]
+  ): Either[DecoderException, UdtValueCursor] =
+    try (Right(UdtValueCursor(history :+ fieldName, current.getUdtValue(fieldName))))
+    catch {
+      case NonFatal(cause) =>
+        Left(
+          DecoderException.StructureReadFailure(
+            s"Failed to get UdtValue from Row ${Cursor.renderHistory(history)}",
+            Some(DecoderException.FieldType.Name(fieldName)),
+            current,
+            cause
+          )
+        )
+    }
+
+  def field[A](current: GettableByName, fieldName: String, history: Chunk[String])(implicit
+    ev: CqlPrimitiveDecoder[A]
+  ): Either[DecoderException, A] =
+    CqlPrimitiveDecoder
+      .decodePrimitiveByFieldName(current, fieldName)(ev.either)
+      .left
+      .map(Cursor.enrichError(history))
+
+  def renderHistory(history: Chunk[String]): String =
+    history.mkString(start = "History(", sep = " -> ", end = ")")
+
+  def enrichError(history: Chunk[String])(decoderException: DecoderException): DecoderException = {
+    val historyRendered = renderHistory(history)
+    decoderException match {
+      case s @ DecoderException.StructureReadFailure(message, _, _, _) =>
+        s.copy(message = s"$message. $historyRendered")
+
+      case p @ DecoderException.PrimitiveReadFailure(message, _) =>
+        p.copy(message = s"$message. $historyRendered")
+    }
+  }
+}
