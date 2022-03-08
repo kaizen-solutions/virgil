@@ -4,15 +4,15 @@ import com.datastax.oss.driver.api.core.cql.Row
 import com.datastax.oss.driver.api.core.data.UdtValue
 import io.kaizensolutions.virgil.cql._
 import io.kaizensolutions.virgil.dsl.InsertBuilder
+import zio.ZIO
 import zio.random.Random
 import zio.test.TestAspect.samples
 import zio.test._
-import zio.{Has, ZIO}
 
 import java.net.{InetAddress, InetSocketAddress}
 
 object CursorSpec {
-  def cursorSpec: ZSpec[Has[CQLExecutor] with Random with Sized with TestConfig, Serializable] =
+  def cursorSpec =
     suite("Cursor Specification") {
       suite("Row Cursor Specification") {
         testM("Row Cursor should be able to read a complex structure") {
@@ -37,9 +37,9 @@ object CursorSpec {
               assertTrue(List(address) == row.addresses) &&
               assertTrue(ip == row.addresses.head.note.ip)
           }
-        } @@ samples(10)
+        }
       }
-    }
+    } @@ samples(10)
 }
 
 final case class CursorExampleRow(id: Long, name: String, age: Short, addresses: List[CursorUdtAddress])
