@@ -6,8 +6,8 @@ import io.kaizensolutions.virgil.annotations.CqlColumn
 import magnolia1._
 
 /**
- * A [[CqlUdtValueEncoder]] encodes a Scala type [[A]] as a component of a
- * [[UdtValue]]
+ * A [[CqlUdtValueEncoder]] encodes a Scala type `A` as a component of a
+ * `UdtValue`
  *
  * @tparam A
  */
@@ -18,9 +18,9 @@ trait CqlUdtValueEncoder[-A] {
 object CqlUdtValueEncoder extends UdtValueEncoderMagnoliaDerivation {
 
   /**
-   * A [[CqlUdtValueEncoder.Object]] that encodes a Scala type [[A]] as an
-   * entire [[UdtValue]]. This is really contravariant in A but Magnolia's
-   * automatic derivation process is disrupted
+   * A [[CqlUdtValueEncoder.Object]] that encodes a Scala type `A` as an entire
+   * `UdtValue`. This is really contravariant in A but Magnolia's automatic
+   * derivation process is disrupted
    *
    * @tparam A
    */

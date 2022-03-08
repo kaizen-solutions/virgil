@@ -9,9 +9,9 @@ import scala.util.control.NonFatal
 
 /**
  * A [[CqlUdtValueDecoder]] is a mechanism that provides a way to decode a
- * [[UdtValue]] into its component pieces ([[A]] being one of the components of
- * the [[UdtValue]]). This is really covariant in A but due to Magnolia we
- * cannot mark it as such as it interferes with automatic derivation.
+ * `UdtValue` into its component pieces (`A` being one of the components of the
+ * `UdtValue`). This is really covariant in A but due to Magnolia we cannot mark
+ * it as such as it interferes with automatic derivation.
  *
  * __Design note__: We can abstract over both CqlRowDecoder and
  * CqlUdtValueDecoder (lets call the abstraction: CqlStructureDecoder) because
@@ -36,7 +36,7 @@ object CqlUdtValueDecoder extends UdtValueDecoderMagnoliaDerivation {
 
   /**
    * A [[CqlUdtValueDecoder.Object]] is a mechanism that provides a way to
-   * decode a [[UdtValue]] into a Scala type [[A]]. This is the public interface
+   * decode a `UdtValue` into a Scala type `A`. This is the public interface
    * exposed to the user
    */
   trait Object[A] extends CqlUdtValueDecoder[A] { self =>

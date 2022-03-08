@@ -9,8 +9,8 @@ import scala.util.control.NonFatal
 
 /**
  * A [[CqlRowDecoder]] is an internal mechanism that provides a way to decode a
- * [[Row]] into its component pieces ([[A]] being one of the components of the
- * [[Row]]). This is really covariant in A but Magnolia will not automatically
+ * `Row` into its component pieces (`A` being one of the components of the
+ * `Row`). This is really covariant in A but Magnolia will not automatically
  * derive if you mark it as such. The reason why its covariant is because if B
  * is a supertype of A, and you have a RowDecoder[A], A has more information
  * than B and B is really a subset of A, so you read out more information (A)
@@ -24,7 +24,7 @@ object CqlRowDecoder extends RowDecoderMagnoliaDerivation {
 
   /**
    * A [[CqlRowDecoder.Object]] is a mechanism that provides a way to decode an
-   * entire [[Row]] into some Scala type [[A]].
+   * entire `Row` into some Scala type `A`.
    *
    * NOTE: The automatic derivation mechanism and the custom method can produce
    * the following subtype. The automatic derivation mechanism uses

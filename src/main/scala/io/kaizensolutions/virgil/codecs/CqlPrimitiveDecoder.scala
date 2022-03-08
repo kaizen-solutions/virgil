@@ -8,7 +8,7 @@ import scala.util.control.NonFatal
 
 /**
  * A typeclass that describes how to turn a CQL type into a Scala type. This is
- * really covariant in [[ScalaType]] this interferes with Magnolia's derivation
+ * really covariant in `ScalaType` this interferes with Magnolia's derivation
  * mechanism
  *
  * @tparam ScalaType
