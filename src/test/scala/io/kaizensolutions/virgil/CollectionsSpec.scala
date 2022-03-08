@@ -38,7 +38,7 @@ final case class SimpleCollectionRow(
   id: Int,
   @CqlColumn("map_test") mapTest: Map[Int, String],
   @CqlColumn("set_test") setTest: Set[Long],
-  @CqlColumn("list_test") listTest: List[String]
+  @CqlColumn("list_test") listTest: Vector[String]
 )
 object SimpleCollectionRow {
 
@@ -71,7 +71,7 @@ object SimpleCollectionRow {
       id   <- Gen.int(1, 10000000)
       map  <- Gen.mapOf(key = Gen.anyInt, value = Gen.anyString)
       set  <- Gen.setOf(Gen.anyLong)
-      list <- Gen.listOf(Gen.anyString)
+      list <- Gen.vectorOf(Gen.anyString)
     } yield SimpleCollectionRow(id, map, set, list)
 }
 

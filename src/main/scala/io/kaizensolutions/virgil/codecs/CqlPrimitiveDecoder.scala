@@ -2,6 +2,7 @@ package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.`type`.{DataType, ListType, MapType, SetType}
 import com.datastax.oss.driver.api.core.data.{CqlDuration, GettableByIndex, GettableByName, UdtValue}
+import zio.Chunk
 
 import scala.jdk.CollectionConverters._
 import scala.util.control.NonFatal
@@ -88,7 +89,7 @@ object CqlPrimitiveDecoder {
     case UdtValueDecoderPrimitiveDecoder(decoder) => decoder.decode(structure.getUdtValue(fieldName))
 
     // Collections
-    case l @ ListPrimitiveDecoder(element) =>
+    case l @ ListPrimitiveDecoder(element, _) =>
       l.driver2Scala(
         structure.getList(fieldName, element.driverClass),
         structure.getType(fieldName)
@@ -138,7 +139,7 @@ object CqlPrimitiveDecoder {
     case UdtValueDecoderPrimitiveDecoder(decoder) => decoder.decode(structure.getUdtValue(index))
 
     // Collections
-    case l @ ListPrimitiveDecoder(element) =>
+    case l @ ListPrimitiveDecoder(element, _) =>
       l.driver2Scala(
         structure.getList(index, element.driverClass),
         structure.getType(index)
@@ -320,19 +321,41 @@ object CqlPrimitiveDecoder {
   ): CqlPrimitiveDecoder.WithDriver[A, UdtValue] =
     UdtValueDecoderPrimitiveDecoder(decoder)
 
-  final case class ListPrimitiveDecoder[Scala, Driver](element: CqlPrimitiveDecoder.WithDriver[Scala, Driver])
-      extends CqlPrimitiveDecoder[List[Scala]] {
-    override type DriverType = java.util.List[element.DriverType]
+  final case class ListPrimitiveDecoder[Collection[_], ScalaElem, DriverElem](
+    element: CqlPrimitiveDecoder.WithDriver[ScalaElem, DriverElem],
+    transform: (java.util.List[DriverElem], Function[DriverElem, ScalaElem]) => Collection[ScalaElem]
+  ) extends CqlPrimitiveDecoder[Collection[ScalaElem]] {
+    override type DriverType = java.util.List[DriverElem]
     override def driverClass: Class[DriverType] = classOf[DriverType]
-    override def driver2Scala(driverValue: DriverType, dataType: DataType): List[Scala] = {
-      val elementDataType = dataType.asInstanceOf[ListType].getElementType
-      driverValue.asScala.map(element.driver2Scala(_, elementDataType)).toList
+    override def driver2Scala(driverCollection: DriverType, dataType: DataType): Collection[ScalaElem] = {
+      val elementDataType                           = dataType.asInstanceOf[ListType].getElementType
+      val transformElement: DriverElem => ScalaElem = element.driver2Scala(_, elementDataType)
+      transform(driverCollection, transformElement)
     }
   }
   implicit def listCqlPrimitiveDecoder[A](implicit
     element: CqlPrimitiveDecoder[A]
   ): CqlPrimitiveDecoder.WithDriver[List[A], java.util.List[element.DriverType]] =
-    ListPrimitiveDecoder(element)
+    ListPrimitiveDecoder[List, A, element.DriverType](
+      element,
+      (driverList, transformElement) => driverList.asScala.map(transformElement).toList
+    )
+
+  implicit def chunkCqlPrimitiveDecoder[A](implicit
+    element: CqlPrimitiveDecoder[A]
+  ): CqlPrimitiveDecoder.WithDriver[Chunk[A], java.util.List[element.DriverType]] =
+    ListPrimitiveDecoder[Chunk, A, element.DriverType](
+      element,
+      (driverList, transformElement) => Chunk.fromIterable(driverList.asScala.map(transformElement))
+    )
+
+  implicit def vectorCqlPrimitiveDecoder[A](implicit
+    element: CqlPrimitiveDecoder[A]
+  ): CqlPrimitiveDecoder.WithDriver[Vector[A], java.util.List[element.DriverType]] =
+    ListPrimitiveDecoder[Vector, A, element.DriverType](
+      element,
+      (driverList, transformElement) => driverList.asScala.map(transformElement).toVector
+    )
 
   final case class SetPrimitiveDecoder[Scala, Driver](element: CqlPrimitiveDecoder.WithDriver[Scala, Driver])
       extends CqlPrimitiveDecoder[Set[Scala]] {

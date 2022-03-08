@@ -2,9 +2,10 @@ package io.kaizensolutions.virgil
 
 import com.datastax.oss.driver.api.core.cql.Row
 import com.datastax.oss.driver.api.core.data.UdtValue
+import io.kaizensolutions.virgil.annotations.CqlColumn
 import io.kaizensolutions.virgil.cql._
 import io.kaizensolutions.virgil.dsl.InsertBuilder
-import zio.ZIO
+import zio.{Chunk, ZIO}
 import zio.random.Random
 import zio.test.TestAspect.samples
 import zio.test._
@@ -34,15 +35,20 @@ object CursorSpec {
             } yield assertTrue(resultRow == row) &&
               assertTrue(name == row.name) &&
               assertTrue(age == row.age) &&
-              assertTrue(List(address) == row.addresses) &&
-              assertTrue(ip == row.addresses.head.note.ip)
+              assertTrue(Chunk(address) == row.pastAddresses) &&
+              assertTrue(ip == row.pastAddresses.head.note.ip)
           }
         }
       }
     } @@ samples(10)
 }
 
-final case class CursorExampleRow(id: Long, name: String, age: Short, addresses: List[CursorUdtAddress])
+final case class CursorExampleRow(
+  id: Long,
+  name: String,
+  age: Short,
+  @CqlColumn("addresses") pastAddresses: Chunk[CursorUdtAddress]
+)
 object CursorExampleRow {
   val tableName                     = "cursorspec_cursorexampletable"
   def truncate: CQL[MutationResult] = CQL.truncate(tableName)
@@ -52,7 +58,7 @@ object CursorExampleRow {
       .value("id", row.id)
       .value("name", row.name)
       .value("age", row.age)
-      .value("addresses", row.addresses)
+      .value("addresses", row.pastAddresses)
       .build
 
   def select(id: Long): CQL[Row] = {
@@ -66,7 +72,7 @@ object CursorExampleRow {
       name    <- Gen.anyString
       age     <- Gen.anyShort
       address <- CursorUdtAddress.gen
-    } yield CursorExampleRow(id, name, age, List(address))
+    } yield CursorExampleRow(id, name, age, Chunk(address))
 }
 
 final case class CursorUdtAddress(street: String, city: String, state: String, zip: String, note: CursorUdtNote)
