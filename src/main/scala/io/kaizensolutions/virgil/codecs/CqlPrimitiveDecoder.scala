@@ -2,6 +2,7 @@ package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.`type`.{DataType, ListType, MapType, SetType}
 import com.datastax.oss.driver.api.core.data.{CqlDuration, GettableByIndex, GettableByName, UdtValue}
+import io.kaizensolutions.virgil.codecs.CqlPrimitiveDecoder.UdtValueDecoderPrimitiveDecoder
 import zio.Chunk
 
 import scala.jdk.CollectionConverters._
@@ -59,7 +60,7 @@ trait CqlPrimitiveDecoder[ScalaType] { self =>
     )
 }
 
-object CqlPrimitiveDecoder {
+object CqlPrimitiveDecoder extends LowPriorityCqlPrimitiveDecoderInstances {
   type WithDriver[Scala, Driver] = CqlPrimitiveDecoder[Scala] { type DriverType = Driver }
 
   def apply[Scala](implicit decoder: CqlPrimitiveDecoder[Scala]): CqlPrimitiveDecoder[Scala] = decoder
@@ -67,7 +68,7 @@ object CqlPrimitiveDecoder {
   def decodePrimitiveByFieldName[Structure <: GettableByName, Scala](structure: Structure, fieldName: String)(implicit
     prim: CqlPrimitiveDecoder[Scala]
   ): Scala = prim match {
-    // These special cases allow us to avoid extra calls to the registry and extra function calls
+    // These special cases allow us to avoid extra calls to the registry
     case StringPrimitiveDecoder                   => structure.getString(fieldName)
     case BigIntPrimitiveDecoder                   => BigInt.javaBigInteger2bigInt(structure.getBigInteger(fieldName))
     case ByteBufferPrimitiveDecoder               => structure.getByteBuffer(fieldName)
@@ -328,10 +329,6 @@ object CqlPrimitiveDecoder {
     def driver2Scala(driverValue: DriverType, dataType: DataType): A =
       decoder.decode(driverValue)
   }
-  implicit def scalaTypeViaUdtValuePrimitive[A](implicit
-    decoder: CqlUdtValueDecoder.Object[A]
-  ): CqlPrimitiveDecoder.WithDriver[A, UdtValue] =
-    UdtValueDecoderPrimitiveDecoder(decoder)
 
   final case class ListPrimitiveDecoder[Collection[_], ScalaElem, DriverElem](
     element: CqlPrimitiveDecoder.WithDriver[ScalaElem, DriverElem],
@@ -428,4 +425,10 @@ object CqlPrimitiveDecoder {
     override def driver2Scala(driverValue: DriverType, dataType: DataType): Scala2 =
       f(original.driver2Scala(driverValue, dataType))
   }
+}
+trait LowPriorityCqlPrimitiveDecoderInstances {
+  implicit def scalaTypeViaUdtValuePrimitive[A](implicit
+    decoder: CqlUdtValueDecoder.Object[A]
+  ): CqlPrimitiveDecoder.WithDriver[A, UdtValue] =
+    UdtValueDecoderPrimitiveDecoder(decoder)
 }

@@ -109,5 +109,6 @@ CREATE TABLE cursorspec_cursorexampletable(
     id BIGINT PRIMARY KEY,
     name TEXT,
     age SMALLINT,
-    addresses frozen<list<cursorspec_address>>
+    addresses frozen<list<cursorspec_address>>,
+    may_be_null ASCII
 );
