@@ -6,6 +6,7 @@ import io.kaizensolutions.virgil.codecs.CqlPrimitiveDecoder.UdtValueDecoderPrimi
 import zio.Chunk
 
 import scala.jdk.CollectionConverters._
+import scala.util.Try
 import scala.util.control.NonFatal
 
 /**
@@ -28,26 +29,7 @@ trait CqlPrimitiveDecoder[ScalaType] { self =>
     self.map(identity)
 
   def either: CqlPrimitiveDecoder.WithDriver[Either[DecoderException, ScalaType], DriverType] =
-    new CqlPrimitiveDecoder[Either[DecoderException, ScalaType]] {
-      override type DriverType = self.DriverType
-
-      override def driverClass: Class[DriverType] = self.driverClass
-
-      override def driver2Scala(driverValue: DriverType, dataType: DataType): Either[DecoderException, ScalaType] =
-        try Right(self.driver2Scala(driverValue, dataType))
-        catch {
-          case NonFatal(decoderException: DecoderException) =>
-            Left(decoderException)
-
-          case NonFatal(cause) =>
-            Left(
-              DecoderException.PrimitiveReadFailure(
-                message = s"Failed to decode ${dataType.asCql(true, true)}",
-                cause = cause
-              )
-            )
-        }
-    }
+    CqlPrimitiveDecoder.EitherPrimitiveDecoder(self)
 
   def absolve[ScalaType2](implicit
     ev: ScalaType <:< Either[DecoderException, ScalaType2]
@@ -115,6 +97,22 @@ object CqlPrimitiveDecoder extends LowPriorityCqlPrimitiveDecoderInstances {
       if (structure.isNull(fieldName)) None
       else Option(decodePrimitiveByFieldName(structure, fieldName)(element))
 
+    case EitherPrimitiveDecoder(original) =>
+      try (Right(decodePrimitiveByFieldName(structure, fieldName)(original)))
+      catch {
+        case NonFatal(d: DecoderException) =>
+          Left(d)
+
+        case NonFatal(cause) =>
+          val typeInfo =
+            Try(structure.getType(fieldName).asCql(true, true)).toOption
+              .getOrElse("<type information not present>")
+
+          Left(
+            DecoderException.PrimitiveReadFailure(s"Failed to read $fieldName, type information: ${typeInfo}", cause)
+          )
+      }
+
     // Rely on using get + classType which causes a registry lookup which is slower for all other cases
     case other =>
       if (structure.isNull(fieldName)) null.asInstanceOf[Scala]
@@ -170,6 +168,21 @@ object CqlPrimitiveDecoder extends LowPriorityCqlPrimitiveDecoderInstances {
     case OptionPrimitiveDecoder(element) =>
       if (structure.isNull(index)) None
       else Option(decodePrimitiveByIndex(structure, index)(element))
+
+    case EitherPrimitiveDecoder(original) =>
+      try (Right(decodePrimitiveByIndex(structure, index)(original)))
+      catch {
+        case NonFatal(d: DecoderException) =>
+          Left(d)
+
+        case NonFatal(cause) =>
+          val typeInfo =
+            Try(structure.getType(index).asCql(true, true)).toOption.getOrElse("<type information not present>")
+
+          Left(
+            DecoderException.PrimitiveReadFailure(s"Failed to read $index, type information: ${typeInfo}", cause)
+          )
+      }
 
     // Rely on using get + classType which causes a registry lookup which is slower
     case other =>
@@ -424,6 +437,30 @@ object CqlPrimitiveDecoder extends LowPriorityCqlPrimitiveDecoderInstances {
     override def driverClass: Class[DriverType] = original.driverClass
     override def driver2Scala(driverValue: DriverType, dataType: DataType): Scala2 =
       f(original.driver2Scala(driverValue, dataType))
+  }
+
+  final case class EitherPrimitiveDecoder[Scala, Driver](
+    original: CqlPrimitiveDecoder.WithDriver[Scala, Driver]
+  ) extends CqlPrimitiveDecoder[Either[DecoderException, Scala]] {
+    override type DriverType = original.DriverType
+    override def driverClass: Class[DriverType] = original.driverClass
+    override def driver2Scala(
+      driverValue: DriverType,
+      dataType: DataType
+    ): Either[DecoderException, Scala] =
+      try Right(original.driver2Scala(driverValue, dataType))
+      catch {
+        case NonFatal(decoderException: DecoderException) =>
+          Left(decoderException)
+
+        case NonFatal(cause) =>
+          Left(
+            DecoderException.PrimitiveReadFailure(
+              message = s"Failed to decode ${dataType.asCql(true, true)}",
+              cause = cause
+            )
+          )
+      }
   }
 }
 trait LowPriorityCqlPrimitiveDecoderInstances {
