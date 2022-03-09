@@ -110,8 +110,14 @@ object CqlPrimitiveDecoder {
     case MapFunctionPrimitiveDecoder(original, f) =>
       f(decodePrimitiveByFieldName(structure, fieldName)(original))
 
+    case OptionPrimitiveDecoder(element) =>
+      if (structure.isNull(fieldName)) None
+      else Option(decodePrimitiveByFieldName(structure, fieldName)(element))
+
     // Rely on using get + classType which causes a registry lookup which is slower for all other cases
-    case other => other.driver2Scala(structure.get(fieldName, other.driverClass), structure.getType(fieldName))
+    case other =>
+      if (structure.isNull(fieldName)) null.asInstanceOf[Scala]
+      else other.driver2Scala(structure.get(fieldName, other.driverClass), structure.getType(fieldName))
   }
 
   def decodePrimitiveByIndex[Structure <: GettableByIndex, Scala](structure: Structure, index: Int)(implicit
@@ -160,8 +166,14 @@ object CqlPrimitiveDecoder {
     case MapFunctionPrimitiveDecoder(original, f) =>
       f(decodePrimitiveByIndex(structure, index)(original))
 
+    case OptionPrimitiveDecoder(element) =>
+      if (structure.isNull(index)) None
+      else Option(decodePrimitiveByIndex(structure, index)(element))
+
     // Rely on using get + classType which causes a registry lookup which is slower
-    case other => other.driver2Scala(structure.get(index, other.driverClass), structure.getType(index))
+    case other =>
+      if (structure.isNull(index)) null.asInstanceOf[Scala]
+      else other.driver2Scala(structure.get(index, other.driverClass), structure.getType(index))
   }
 
   case object StringPrimitiveDecoder extends CqlPrimitiveDecoder[String] {

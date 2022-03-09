@@ -1,6 +1,7 @@
 package io.kaizensolutions.virgil
 
 import io.kaizensolutions.virgil.annotations.CqlColumn
+import io.kaizensolutions.virgil.cql._
 import io.kaizensolutions.virgil.dsl._
 import zio.Has
 import zio.random.Random
@@ -29,6 +30,18 @@ object CollectionsSpec {
             result <- select(expected.a).execute.runCollect
             actual  = result.head
           } yield assertTrue(actual == expected) && assertTrue(result.length == 1)
+        }
+      } + testM("Read and write a row that contains an option of collections where the option is None") {
+        checkM(OptionCollectionRow.gen) { popRow =>
+          for {
+            _            <- OptionCollectionRow.truncate.execute.runDrain
+            _            <- OptionCollectionRow.insert(OptionCollectionRow(1, None, None, None)).execute.runDrain
+            dbResults    <- OptionCollectionRow.select(1).execute.runCollect
+            result        = dbResults.head
+            _            <- OptionCollectionRow.insert(popRow).execute.runDrain
+            dbResultsPop <- OptionCollectionRow.select(popRow.id).execute.runCollect
+            resultPop     = dbResultsPop.head
+          } yield assertTrue(result == OptionCollectionRow(1, None, None, None)) && assertTrue(resultPop == popRow)
         }
       }
     } @@ samples(10)
@@ -100,4 +113,48 @@ object NestedCollectionRow {
       a <- Gen.int(1, 10000000)
       b <- Gen.mapOf(key = Gen.anyInt, value = Gen.setOf(Gen.setOf(Gen.setOf(Gen.setOf(Gen.anyInt)))))
     } yield NestedCollectionRow(a, b)
+}
+
+final case class OptionCollectionRow(
+  id: Int,
+  @CqlColumn("opt_map_test") m: Option[Map[Int, String]],
+  @CqlColumn("opt_set_test") s: Option[Set[Long]],
+  @CqlColumn("opt_list_test") l: Option[Vector[String]]
+)
+object OptionCollectionRow {
+  private val tableName = "collectionspec_optioncollectiontable"
+  def truncate: CQL[MutationResult] =
+    (cql"TRUNCATE " ++ tableName.asCql).mutation
+
+  def insert(in: OptionCollectionRow): CQL[MutationResult] =
+    InsertBuilder(tableName)
+      .value("id", in.id)
+      .value("opt_map_test", in.m)
+      .value("opt_set_test", in.s)
+      .value("opt_list_test", in.l)
+      .build
+
+  def select(id: Int): CQL[OptionCollectionRow] =
+    SelectBuilder
+      .from(tableName)
+      .column("id")
+      .column("opt_map_test")
+      .column("opt_set_test")
+      .column("opt_list_test")
+      .where("id" === id)
+      .build[OptionCollectionRow]
+
+  val selectAll: CQL[OptionCollectionRow] =
+    SelectBuilder
+      .from(tableName)
+      .columns("id", "opt_map_test", "opt_set_test", "opt_list_test")
+      .build[OptionCollectionRow]
+
+  def gen: Gen[Random with Sized, OptionCollectionRow] =
+    for {
+      id   <- Gen.int(1, 10000000)
+      map  <- Gen.option(Gen.mapOf(key = Gen.anyInt, value = Gen.anyString))
+      set  <- Gen.option(Gen.setOf(Gen.anyLong))
+      list <- Gen.option(Gen.vectorOf(Gen.anyString))
+    } yield OptionCollectionRow(id, map, set, list)
 }

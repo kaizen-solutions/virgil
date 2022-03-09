@@ -2,15 +2,16 @@ package io.kaizensolutions.virgil
 
 import com.datastax.oss.driver.api.core.cql.Row
 import com.datastax.oss.driver.api.core.data.UdtValue
+import com.datastax.oss.driver.shaded.guava.common.net.InetAddresses
 import io.kaizensolutions.virgil.annotations.CqlColumn
 import io.kaizensolutions.virgil.cql._
 import io.kaizensolutions.virgil.dsl.InsertBuilder
-import zio.{Chunk, ZIO}
 import zio.random.Random
 import zio.test.TestAspect.samples
 import zio.test._
+import zio.{Chunk, ZIO}
 
-import java.net.{InetAddress, InetSocketAddress}
+import java.net.InetAddress
 
 object CursorSpec {
   def cursorSpec =
@@ -93,6 +94,6 @@ object CursorUdtNote {
     for {
       data    <- Gen.stringBounded(2, 4)(Gen.alphaNumericChar)
       ipChunk <- Gen.int(0, 255)
-      ip       = InetSocketAddress.createUnresolved(s"$ipChunk.$ipChunk.$ipChunk.$ipChunk", 0).getAddress
+      ip       = InetAddresses.forString(s"${ipChunk}.${ipChunk}.${ipChunk}.${ipChunk}")
     } yield CursorUdtNote(data, ip)
 }

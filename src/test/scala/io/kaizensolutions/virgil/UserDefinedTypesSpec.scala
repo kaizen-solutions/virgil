@@ -18,28 +18,29 @@ object UserDefinedTypesSpec {
       testM("Write and read Person rows containing UDTs which are nested") {
         import Row_Person._
         checkM(Row_Person.gen) { expected =>
-          val insertPeople = insert(expected).execute.runDrain
+          val insertPerson = insert(expected).execute.runDrain
           val fetchActual  = select(expected.id).execute.runCollect
 
           for {
-            _      <- insertPeople
-            actual <- fetchActual
-          } yield assertTrue(actual.head == expected) && assertTrue(actual.length == 1)
+            _              <- insertPerson
+            actualWithData <- fetchActual
+          } yield assertTrue(actualWithData.head == expected) && assertTrue(actualWithData.length == 1)
         }
-      } + testM(
-        "Write and read rows for a UDT containing nested UDTs within themselves along with nested collections containing UDTs"
-      ) {
-        import Row_HeavilyNestedUDTTable._
-        checkM(gen) { expected =>
-          val insertPeople = insert(expected).execute.runDrain
-          val fetchActual  = select(expected.id).execute.runCollect
+      } +
+        testM(
+          "Write and read rows for a UDT containing nested UDTs within themselves along with nested collections containing UDTs"
+        ) {
+          import Row_HeavilyNestedUDTTable._
+          checkM(gen) { expected =>
+            val insertPeople = insert(expected).execute.runDrain
+            val fetchActual  = select(expected.id).execute.runCollect
 
-          for {
-            _      <- insertPeople
-            actual <- fetchActual
-          } yield assertTrue(actual.head == expected) && assertTrue(actual.length == 1)
+            for {
+              _      <- insertPeople
+              actual <- fetchActual
+            } yield assertTrue(actual.head == expected) && assertTrue(actual.length == 1)
+          }
         }
-      }
     } @@ timeout(1.minute) @@ samples(10)
 }
 

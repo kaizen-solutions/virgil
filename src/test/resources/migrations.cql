@@ -78,6 +78,14 @@ CREATE TABLE collectionspec_simplecollectiontable
     list_test FROZEN<LIST<TEXT>>
 );
 
+CREATE TABLE collectionspec_optioncollectiontable
+(
+    id            INT PRIMARY KEY,
+    opt_map_test  FROZEN<MAP<INT,TEXT>>,
+    opt_set_test  FROZEN<SET<BIGINT>>,
+    opt_list_test FROZEN<LIST<TEXT>>
+);
+
 CREATE TABLE collectionspec_nestedcollectiontable
 (
     a int PRIMARY KEY,
