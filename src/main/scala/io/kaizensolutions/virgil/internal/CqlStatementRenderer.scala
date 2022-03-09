@@ -4,7 +4,7 @@ import io.kaizensolutions.virgil.CQLType
 import io.kaizensolutions.virgil.CQLType.Mutation
 import io.kaizensolutions.virgil.codecs.CqlRowComponentEncoder
 import io.kaizensolutions.virgil.dsl.{Assignment, Relation}
-import zio.{Chunk, NonEmptyChunk}
+import zio.{Chunk, ChunkBuilder, NonEmptyChunk}
 
 private[virgil] object CqlStatementRenderer {
   def render(in: CQLType.Mutation): (String, BindMarkers) =
@@ -35,18 +35,26 @@ private[virgil] object CqlStatementRenderer {
     }
 
   private object insert {
-    def render(table: String, columns: BindMarkers): (String, BindMarkers) =
-      (s"INSERT INTO $table ${renderColumnNames(columns)} VALUES ${renderInterpolatedValues(columns)}", columns)
+    def render(table: String, columns: BindMarkers): (String, BindMarkers) = {
+      val (columnNames, bindMarkers) = {
+        val size          = columns.underlying.size
+        val columnBuilder = ChunkBuilder.make[String](size)
+        val markerBuilder = ChunkBuilder.make[String](size)
 
-    private def renderColumnNames(columns: BindMarkers): String =
-      columns.underlying.keys
-        .map(_.name)
-        .mkString(start = "(", sep = ",", end = ")")
+        columns.underlying.keysIterator.foreach { next =>
+          val columnName = next.name
+          val marker     = s":$columnName"
+          columnBuilder += columnName
+          markerBuilder += marker
+        }
 
-    private def renderInterpolatedValues(columns: BindMarkers): String =
-      columns.underlying.keys
-        .map(colName => s":${colName.name}")
-        .mkString(start = "(", sep = ",", end = ")")
+        val renderedColumnNames = columnBuilder.result().mkString(start = "(", sep = ",", end = ")")
+        val renderedMarkers     = markerBuilder.result().mkString(start = "(", sep = ",", end = ")")
+        (renderedColumnNames, renderedMarkers)
+      }
+
+      (s"INSERT INTO $table $columnNames VALUES ${bindMarkers}", columns)
+    }
   }
 
   private object update {

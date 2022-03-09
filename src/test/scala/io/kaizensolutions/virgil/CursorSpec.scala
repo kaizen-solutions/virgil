@@ -28,7 +28,7 @@ object CursorSpec {
               name         <- ZIO.fromEither(cursor.field[String]("name"))
               age          <- ZIO.fromEither(cursor.field[Short]("age"))
               addresses    <- ZIO.fromEither(cursor.field[List[UdtValue]]("addresses"))
-              adv          <- ZIO.fromEither(cursor.field[Option[String]]("may_be_null"))
+              mayBeEmpty   <- ZIO.fromEither(cursor.field[Option[String]]("may_be_empty"))
               udtAddress   <- ZIO.fromOption(addresses.headOption)
               addressCursor = UdtValueCursor(udtAddress)
               address      <- ZIO.fromEither(addressCursor.viewAs[CursorUdtAddress])
@@ -38,7 +38,7 @@ object CursorSpec {
               assertTrue(name == row.name) &&
               assertTrue(age == row.age) &&
               assertTrue(Chunk(address) == row.pastAddresses) &&
-              assertTrue(adv == row.adversary) &&
+              assertTrue(mayBeEmpty == row.mayBeEmpty) &&
               assertTrue(ip == row.pastAddresses.head.note.ip)
           }
         }
@@ -50,8 +50,8 @@ final case class CursorExampleRow(
   id: Long,
   name: String,
   age: Short,
-  @CqlColumn("addresses") pastAddresses: Chunk[CursorUdtAddress],
-  @CqlColumn("may_be_null") adversary: Option[String]
+  @CqlColumn("may_be_empty") mayBeEmpty: Option[String],
+  @CqlColumn("addresses") pastAddresses: Chunk[CursorUdtAddress]
 )
 object CursorExampleRow {
   val tableName                     = "cursorspec_cursorexampletable"
@@ -63,7 +63,7 @@ object CursorExampleRow {
       .value("name", row.name)
       .value("age", row.age)
       .value("addresses", row.pastAddresses)
-      .value("may_be_null", None: Option[String])
+      .value("may_be_empty", row.mayBeEmpty)
       .build
 
   def select(id: Long): CQL[Row] = {
@@ -77,7 +77,7 @@ object CursorExampleRow {
       name    <- Gen.anyString
       age     <- Gen.anyShort
       address <- CursorUdtAddress.gen
-    } yield CursorExampleRow(id, name, age, Chunk(address), None)
+    } yield CursorExampleRow(id, name, age, None, Chunk(address))
 }
 
 final case class CursorUdtAddress(street: String, city: String, state: String, zip: String, note: CursorUdtNote)

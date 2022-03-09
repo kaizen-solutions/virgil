@@ -65,16 +65,10 @@ private object Cursor {
   def field[A](current: GettableByName, fieldName: String, history: Chunk[String])(implicit
     ev: CqlPrimitiveDecoder[A]
   ): Either[DecoderException, A] =
-    try (Right(CqlPrimitiveDecoder.decodePrimitiveByFieldName(current, fieldName)(ev)))
-    catch {
-      case NonFatal(d: DecoderException) =>
-        Left(d)
-
-      case NonFatal(cause) =>
-        Left(
-          DecoderException.PrimitiveReadFailure(s"Failed to read field $fieldName. ${renderHistory(history)}", cause)
-        )
-    }
+    CqlPrimitiveDecoder
+      .decodePrimitiveByFieldName(current, fieldName)(ev.either)
+      .left
+      .map(Cursor.enrichError(history))
 
   def renderHistory(history: Chunk[String]): String =
     history.mkString(start = "History(", sep = " -> ", end = ")")

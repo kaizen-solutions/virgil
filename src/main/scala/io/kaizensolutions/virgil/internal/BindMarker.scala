@@ -68,7 +68,9 @@ object BindMarkers {
 /**
  * The name of a column in a Cassandra table.
  */
-final class BindMarkerName(val name: String) extends AnyVal
+final class BindMarkerName(val name: String) extends AnyVal {
+  override def toString: String = name
+}
 object BindMarkerName {
   def make(name: String): BindMarkerName = new BindMarkerName(name)
 }
