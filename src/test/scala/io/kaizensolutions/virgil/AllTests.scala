@@ -5,6 +5,7 @@ import io.kaizensolutions.virgil.cql._
 import zio._
 import zio.blocking.{effectBlocking, Blocking}
 import zio.stream.ZStream
+import zio.test.TestAspect._
 import zio.test._
 import zio.test.environment.TestEnvironment
 
@@ -62,11 +63,12 @@ object AllTests extends DefaultRunnableSpec {
 
   override def spec: ZSpec[TestEnvironment, Any] =
     suite("Virgil Test Suite") {
-      (
-        CQLExecutorSpec.sessionSpec +
-          UserDefinedTypesSpec.userDefinedTypesSpec +
-          CollectionsSpec.collectionsSpec +
-          CursorSpec.cursorSpec
-      ) @@ TestAspect.parallel
-    }.provideCustomLayerShared(dependencies)
+      CqlInterpolatorSpec.cqlInterpolatorSpec +
+        (
+          CQLExecutorSpec.sessionSpec +
+            UserDefinedTypesSpec.userDefinedTypesSpec +
+            CollectionsSpec.collectionsSpec +
+            CursorSpec.cursorSpec
+        ).provideCustomLayerShared(dependencies)
+    } @@ parallel
 }
