@@ -2,10 +2,33 @@ package io.kaizensolutions.virgil
 
 import io.kaizensolutions.virgil.codecs.CqlRowDecoder
 import io.kaizensolutions.virgil.dsl.{Assignment, Relation}
-import io.kaizensolutions.virgil.internal.{BindMarkers, PullMode, QueryType}
+import io.kaizensolutions.virgil.internal.{BindMarkers, CqlStatementRenderer, PullMode, QueryType}
 import zio.NonEmptyChunk
 
-sealed trait CQLType[+Result]
+sealed trait CQLType[+Result] { self =>
+  def debug: String = {
+    def renderSingle(queryString: String, markers: BindMarkers): String =
+      s"$queryString ${System.lineSeparator()} - $markers"
+
+    self match {
+      case mutation: CQLType.Mutation =>
+        val (queryString, bindMarkers) = CqlStatementRenderer.render(mutation)
+        renderSingle(queryString, bindMarkers)
+
+      case b: CQLType.Batch =>
+        val batchRendered = b.mutations.map(_.debug)
+        batchRendered.mkString(
+          start = "BATCH(" + System.lineSeparator(),
+          sep = ", " + System.lineSeparator(),
+          end = s", batch-type = ${b.batchType})"
+        )
+
+      case query: CQLType.Query[r] =>
+        val (queryString, bindMarkers) = CqlStatementRenderer.render(query)
+        renderSingle(queryString, bindMarkers)
+    }
+  }
+}
 object CQLType {
   sealed private[virgil] trait Mutation extends CQLType[MutationResult]
   object Mutation {

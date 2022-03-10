@@ -8,6 +8,9 @@ final case class ExecutionAttributes(
   consistencyLevel: Option[ConsistencyLevel] = None,
   idempotent: Option[Boolean] = None
 ) { self =>
+  def debug: String =
+    s"ExecutionAttributes(pageSize = $pageSize, executionProfile = $executionProfile, consistencyLevel = $consistencyLevel, idempotent = $idempotent)"
+
   def withPageSize(pageSize: Int): ExecutionAttributes =
     copy(pageSize = Some(pageSize))
 
