@@ -2,6 +2,7 @@ package io.kaizensolutions.virgil.internal
 
 import io.kaizensolutions.virgil.CQLType
 import io.kaizensolutions.virgil.CQLType.Mutation
+import io.kaizensolutions.virgil.CQLType.Mutation.Update.UpdateConditions
 import io.kaizensolutions.virgil.codecs.CqlRowComponentEncoder
 import io.kaizensolutions.virgil.dsl.{Assignment, Relation}
 import zio.{Chunk, ChunkBuilder, NonEmptyChunk}
@@ -12,8 +13,8 @@ private[virgil] object CqlStatementRenderer {
       case Mutation.Insert(tableName, columns) =>
         insert.render(tableName, columns)
 
-      case Mutation.Update(tableName, assignments, relations) =>
-        update.render(tableName, assignments, relations)
+      case Mutation.Update(tableName, assignments, relations, conditions) =>
+        update.render(tableName, assignments, relations, conditions)
 
       case Mutation.Delete(tableName, relations) =>
         delete.render(tableName, relations)
@@ -48,8 +49,8 @@ private[virgil] object CqlStatementRenderer {
           markerBuilder += marker
         }
 
-        val renderedColumnNames = columnBuilder.result().mkString(start = "(", sep = ",", end = ")")
-        val renderedMarkers     = markerBuilder.result().mkString(start = "(", sep = ",", end = ")")
+        val renderedColumnNames = columnBuilder.result().mkString(start = "(", sep = ", ", end = ")")
+        val renderedMarkers     = markerBuilder.result().mkString(start = "(", sep = ", ", end = ")")
         (renderedColumnNames, renderedMarkers)
       }
 
@@ -61,13 +62,15 @@ private[virgil] object CqlStatementRenderer {
     def render(
       table: String,
       assignments: NonEmptyChunk[Assignment],
-      relations: NonEmptyChunk[Relation]
+      relations: NonEmptyChunk[Relation],
+      conditions: UpdateConditions
     ): (String, BindMarkers) = {
       val (assignmentCql, assignmentColumns) = renderAssignments(assignments)
-      val (relationsCql, relationsColumns)   = renderRelations(relations)
-      val allColumns                         = assignmentColumns ++ relationsColumns
+      val (relationsCql, relationsColumns)   = renderWhere(relations)
+      val (conditionsCql, conditionsColumns) = renderConditions(conditions)
+      val allColumns                         = assignmentColumns ++ relationsColumns ++ conditionsColumns
 
-      (s"UPDATE $table $assignmentCql $relationsCql", allColumns)
+      (s"UPDATE $table $assignmentCql $relationsCql $conditionsCql", allColumns)
     }
 
     private def renderAssignments(assignments: NonEmptyChunk[Assignment]): (String, BindMarkers) = {
@@ -191,11 +194,23 @@ private[virgil] object CqlStatementRenderer {
 
       (queryString, columns)
     }
+
+    private def renderConditions(conditions: UpdateConditions): (String, BindMarkers) =
+      conditions match {
+        case UpdateConditions.NoConditions =>
+          ("", BindMarkers.empty)
+
+        case UpdateConditions.IfExists =>
+          ("IF EXISTS", BindMarkers.empty)
+
+        case UpdateConditions.IfConditions(conditions) =>
+          renderRelations("IF", conditions)
+      }
   }
 
   private object delete {
     def render(table: String, relations: NonEmptyChunk[Relation]): (String, BindMarkers) = {
-      val (relationsCql, relationsColumns) = renderRelations(relations)
+      val (relationsCql, relationsColumns) = renderWhere(relations)
       (s"DELETE FROM $table WHERE $relationsCql", relationsColumns)
     }
   }
@@ -211,25 +226,28 @@ private[virgil] object CqlStatementRenderer {
       columnNames: NonEmptyChunk[String],
       relations: Chunk[Relation]
     ): (String, BindMarkers) = {
-      val (relationsCql, relationBindMarkers) = renderRelations(relations)
+      val (relationsCql, relationBindMarkers) = renderWhere(relations)
       val columnNamesCql                      = columnNames.mkString(start = "", sep = ",", end = "")
 
       (s"SELECT $columnNamesCql FROM $tableName $relationsCql", relationBindMarkers)
     }
   }
 
+  private def renderWhere(relations: Chunk[Relation]): (String, BindMarkers) =
+    renderRelations("WHERE", relations)
+
   /**
    * renderRelations renders a list of relations into a string along with the
    * data that needs to be inserted into the driver's statement
    *
-   * For example Chunk("a" > 1, "b" === 2, "c" < 3) will become "WHERE a >
+   * For example Chunk("a" > 1, "b" === 2, "c" < 3) will become "YourPrefix a >
    * :a_relation AND b = :b_relation AND c < :c_relation" along with
    * Columns(a_relation -> ..., b_relation -> ..., c_relation -> ...)
    *
    * @param relations
    * @return
    */
-  private def renderRelations(relations: Chunk[Relation]): (String, BindMarkers) =
+  private def renderRelations(prefix: String, relations: Chunk[Relation]): (String, BindMarkers) =
     if (relations.isEmpty) ("", BindMarkers.empty)
     else {
       val initial = (Chunk[String](), BindMarkers.empty)
@@ -253,7 +271,7 @@ private[virgil] object CqlStatementRenderer {
               (accExpr :+ expression, accColumns)
           }
         }
-      val relationExpr = "WHERE " ++ exprChunk.mkString(" AND ")
+      val relationExpr = s"$prefix " ++ exprChunk.mkString(" AND ")
       (relationExpr, columns)
     }
 }

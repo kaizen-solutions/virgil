@@ -112,3 +112,9 @@ CREATE TABLE cursorspec_cursorexampletable(
     age SMALLINT,
     addresses frozen<list<cursorspec_address>>,
 );
+
+CREATE TABLE updatebuilderspec_person(
+    id   INT PRIMARY KEY,
+    name TEXT,
+    age  INT
+);

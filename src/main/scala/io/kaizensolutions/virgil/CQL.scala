@@ -1,5 +1,6 @@
 package io.kaizensolutions.virgil
 
+import io.kaizensolutions.virgil.CQLType.Mutation.Update.UpdateConditions
 import io.kaizensolutions.virgil.codecs.CqlRowDecoder
 import io.kaizensolutions.virgil.configuration.{ExecutionAttributes, PageState}
 import io.kaizensolutions.virgil.dsl.{Assignment, Relation}
@@ -146,9 +147,18 @@ object CQL {
   def update(
     tableName: String,
     assignments: NonEmptyChunk[Assignment],
-    relations: NonEmptyChunk[Relation]
+    relations: NonEmptyChunk[Relation],
+    updateConditions: UpdateConditions
   ): CQL[MutationResult] =
-    CQL(CQLType.Mutation.Update(tableName, assignments, relations), ExecutionAttributes.default)
+    CQL(
+      CQLType.Mutation.Update(
+        tableName = tableName,
+        assignments = assignments,
+        relations = relations,
+        updateConditions = updateConditions
+      ),
+      executionAttributes = ExecutionAttributes.default
+    )
 
   implicit class CQLQueryOps[A](in: CQL[A])(implicit ev: A <:!< MutationResult) {
     def readAs[B](implicit reader: CqlRowDecoder.Object[B]): CQL[B] =
