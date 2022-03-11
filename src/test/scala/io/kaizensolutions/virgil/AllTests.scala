@@ -68,7 +68,8 @@ object AllTests extends DefaultRunnableSpec {
           CQLExecutorSpec.sessionSpec +
             UserDefinedTypesSpec.userDefinedTypesSpec +
             CollectionsSpec.collectionsSpec +
-            CursorSpec.cursorSpec
+            CursorSpec.cursorSpec +
+            UpdateBuilderSpec.updateBuilderSpec
         ).provideCustomLayerShared(dependencies)
     } @@ parallel
 }

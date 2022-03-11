@@ -37,8 +37,17 @@ object CQLType {
     final private[virgil] case class Update(
       tableName: String,
       assignments: NonEmptyChunk[Assignment],
-      relations: NonEmptyChunk[Relation]
+      relations: NonEmptyChunk[Relation],
+      updateConditions: Update.UpdateConditions
     ) extends Mutation
+    object Update {
+      sealed trait UpdateConditions
+      object UpdateConditions {
+        case object NoConditions                                           extends UpdateConditions
+        case object IfExists                                               extends UpdateConditions
+        final case class IfConditions(conditions: NonEmptyChunk[Relation]) extends UpdateConditions
+      }
+    }
 
     final private[virgil] case class Delete(
       tableName: String,
