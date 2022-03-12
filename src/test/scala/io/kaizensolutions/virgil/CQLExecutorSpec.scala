@@ -1,12 +1,13 @@
 package io.kaizensolutions.virgil
 
+import com.datastax.oss.driver.api.core.CqlSession
 import com.datastax.oss.driver.api.core.uuid.Uuids
-import com.datastax.oss.driver.api.core.{CqlSession, DriverTimeoutException}
 import io.kaizensolutions.virgil.annotations.CqlColumn
 import io.kaizensolutions.virgil.configuration.{ConsistencyLevel, ExecutionAttributes}
 import io.kaizensolutions.virgil.cql._
 import io.kaizensolutions.virgil.dsl.InsertBuilder
 import zio._
+import zio.clock.Clock
 import zio.duration._
 import zio.random.Random
 import zio.stream.ZStream
@@ -21,12 +22,13 @@ import java.util.UUID
 import scala.util.Try
 
 object CQLExecutorSpec {
-  def executorSpec
-    : Spec[Live with Has[CQLExecutor] with Random with Sized with TestConfig with Has[CassandraContainer], TestFailure[
-      Any
-    ], TestSuccess] =
+  def executorSpec: Spec[
+    Live with Has[CQLExecutor] with Clock with Random with Sized with TestConfig with Has[CassandraContainer],
+    TestFailure[Throwable],
+    TestSuccess
+  ] =
     suite("Cassandra Session Interpreter Specification") {
-      (queries + actions + configuration) @@ timeout(3.minutes) @@ samples(4)
+      (queries + actions + configuration) @@ timeout(2.minutes) @@ samples(4)
     }
 
   def queries: Spec[Has[CQLExecutor] with Random with Sized with TestConfig, TestFailure[Throwable], TestSuccess] =
@@ -131,8 +133,8 @@ object CQLExecutorSpec {
     }
 
   def configuration
-    : Spec[Has[CQLExecutor] with Random with Sized with TestConfig with Has[CassandraContainer], TestFailure[
-      Any
+    : Spec[Has[CQLExecutor] with Clock with Random with Sized with TestConfig with Has[CassandraContainer], TestFailure[
+      Throwable
     ], TestSuccess] =
     suite("Session Configuration") {
       testM("Creating a layer from an existing session allows you to access Cassandra") {
@@ -160,24 +162,24 @@ object CQLExecutorSpec {
           .provideLayer(cqlExecutorLayer)
       } +
         testM("Exceeding a timeout will cause a failure") {
-          checkM(Gen.chunkOfN(1000)(TimeoutCheckRow.gen)) { rows =>
+          checkM(Gen.chunkOfN(4)(TimeoutCheckRow.gen)) { rows =>
             val insert =
               ZStream
                 .fromIterable(rows)
                 .map(TimeoutCheckRow.insert)
-                .map(_.timeout(1.nanosecond))
+                .timeout(1.second)
                 .flatMapPar(rows.length / 2)(_.execute)
 
             val select =
               TimeoutCheckRow.selectAll
-                .pageSize(1000)
-                .timeout(1.nanosecond)
+                .timeout(1.second)
                 .execute
+                .runCount
 
-            (insert.runDrain *> select.runDrain).flip
-              .map(error => assertTrue(error.isInstanceOf[DriverTimeoutException]))
+            (insert.runDrain *> select)
+              .map(c => assertTrue(c == rows.length.toLong))
           }
-        } @@ samples(1)
+        }
     }
 
   // Used to provide a similar API as the `select` method
