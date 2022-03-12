@@ -161,25 +161,25 @@ object CQLExecutorSpec {
           .map(numberOfRows => assertTrue(numberOfRows > 0))
           .provideLayer(cqlExecutorLayer)
       } +
-        testM("Exceeding a timeout will cause a failure") {
+        testM("Timeouts are respected") {
           checkM(Gen.chunkOfN(4)(TimeoutCheckRow.gen)) { rows =>
             val insert =
               ZStream
                 .fromIterable(rows)
                 .map(TimeoutCheckRow.insert)
-                .timeout(1.second)
-                .flatMapPar(rows.length / 2)(_.execute)
+                .timeout(4.seconds)
+                .flatMap(_.execute)
 
             val select =
               TimeoutCheckRow.selectAll
-                .timeout(1.second)
+                .timeout(2.second)
                 .execute
                 .runCount
 
             (insert.runDrain *> select)
               .map(c => assertTrue(c == rows.length.toLong))
           }
-        }
+        } @@ samples(1)
     }
 
   // Used to provide a similar API as the `select` method
