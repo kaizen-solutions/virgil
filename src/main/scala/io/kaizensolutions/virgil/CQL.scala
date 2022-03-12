@@ -7,6 +7,7 @@ import io.kaizensolutions.virgil.dsl.{Assignment, Relation}
 import io.kaizensolutions.virgil.internal.Proofs._
 import io.kaizensolutions.virgil.internal.{BindMarkers, PullMode, QueryType}
 import zio._
+import zio.duration.Duration
 import zio.stream.ZStream
 
 final case class CQL[+Result] private (
@@ -70,6 +71,10 @@ final case class CQL[+Result] private (
   def executePage[Result1 >: Result](state: Option[PageState] = None): RIO[Has[CQLExecutor], Paged[Result1]] =
     CQLExecutor.executePage(self, state)
 
+  def pageSize(in: Int): CQL[Result] =
+    if (in > 0) self.withAttributes(self.executionAttributes.copy(pageSize = Option(in)))
+    else self
+
   def take[Result1 >: Result](n: Long)(implicit ev: Result1 <:!< MutationResult): CQL[Result1] = {
     val _ = ev
     val adjustN = n match {
@@ -83,6 +88,9 @@ final case class CQL[+Result] private (
       case _: CQLType.Batch    => sys.error("It is not possible to take a batch")
     }
   }
+
+  def timeout(in: Duration): CQL[Result] =
+    self.withAttributes(self.executionAttributes.withTimeout(in))
 
   def withAttributes(in: ExecutionAttributes): CQL[Result] =
     copy(executionAttributes = in)

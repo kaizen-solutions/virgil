@@ -19,6 +19,13 @@ CREATE TABLE IF NOT EXISTS ziocassandrasessionspec_selectPage
     PRIMARY KEY ((id), bucket)
 );
 
+CREATE TABLE IF NOT EXISTS ziocassandrasessionspec_timeoutcheck
+(
+    id           INT PRIMARY KEY,
+    info         TEXT,
+    another_info TEXT
+);
+
 CREATE TYPE udt_address (
     number INT,
     street TEXT,
@@ -72,7 +79,7 @@ CREATE TABLE userdefinedtypesspec_heavilynestedudttable
 
 CREATE TABLE collectionspec_simplecollectiontable
 (
-    id       INT PRIMARY KEY,
+    id        INT PRIMARY KEY,
     map_test  FROZEN<MAP<INT,TEXT>>,
     set_test  FROZEN<SET<BIGINT>>,
     list_test FROZEN<LIST<TEXT>>
@@ -95,25 +102,27 @@ CREATE TABLE collectionspec_nestedcollectiontable
 CREATE TYPE cursorspec_note(
     data TEXT,
     ip INET
-);
+    );
 
 CREATE TYPE cursorspec_address(
-   street TEXT,
-   city TEXT,
-   state TEXT,
-   zip TEXT,
-   note frozen<cursorspec_note>
-);
+    street TEXT,
+    city TEXT,
+    state TEXT,
+    zip TEXT,
+    note frozen<cursorspec_note>
+    );
 
-CREATE TABLE cursorspec_cursorexampletable(
-    id BIGINT PRIMARY KEY,
-    name TEXT,
+CREATE TABLE cursorspec_cursorexampletable
+(
+    id           BIGINT PRIMARY KEY,
+    name         TEXT,
     may_be_empty TEXT,
-    age SMALLINT,
-    addresses frozen<list<cursorspec_address>>,
+    age          SMALLINT,
+    addresses    frozen<list<cursorspec_address>>,
 );
 
-CREATE TABLE updatebuilderspec_person(
+CREATE TABLE updatebuilderspec_person
+(
     id   INT PRIMARY KEY,
     name TEXT,
     age  INT
