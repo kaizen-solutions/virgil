@@ -22,7 +22,7 @@ import scala.util.Try
 
 object CQLExecutorSpec {
   def executorSpec
-    : Spec[Live with Has[CassandraContainer] with Has[CQLExecutor] with Random with Sized with TestConfig, TestFailure[
+    : Spec[Live with Has[CQLExecutor] with Random with Sized with TestConfig with Has[CassandraContainer], TestFailure[
       Any
     ], TestSuccess] =
     suite("Cassandra Session Interpreter Specification") {
@@ -160,22 +160,21 @@ object CQLExecutorSpec {
           .provideLayer(cqlExecutorLayer)
       } +
         testM("Exceeding a timeout will cause a failure") {
-          checkM(Gen.chunkOfN(100)(TimeoutCheckRow.gen)) { rows =>
+          checkM(Gen.chunkOfN(1000)(TimeoutCheckRow.gen)) { rows =>
             val insert =
               ZStream
                 .fromIterable(rows)
                 .map(TimeoutCheckRow.insert)
                 .map(_.timeout(1.nanosecond))
-                .flatMap(_.execute)
+                .flatMapPar(rows.length / 2)(_.execute)
 
             val select =
               TimeoutCheckRow.selectAll
+                .pageSize(1000)
                 .timeout(1.nanosecond)
                 .execute
 
-            (insert.runDrain *> select.runDrain)
-              .refineToOrDie[DriverTimeoutException]
-              .flip
+            (insert.runDrain *> select.runDrain).flip
               .map(error => assertTrue(error.isInstanceOf[DriverTimeoutException]))
           }
         } @@ samples(1)

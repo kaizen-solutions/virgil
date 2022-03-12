@@ -71,6 +71,10 @@ final case class CQL[+Result] private (
   def executePage[Result1 >: Result](state: Option[PageState] = None): RIO[Has[CQLExecutor], Paged[Result1]] =
     CQLExecutor.executePage(self, state)
 
+  def pageSize(in: Int): CQL[Result] =
+    if (in > 0) self.withAttributes(self.executionAttributes.copy(pageSize = Option(in)))
+    else self
+
   def take[Result1 >: Result](n: Long)(implicit ev: Result1 <:!< MutationResult): CQL[Result1] = {
     val _ = ev
     val adjustN = n match {
