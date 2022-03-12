@@ -41,7 +41,7 @@ object AllTests extends DefaultRunnableSpec {
     ZLayer.requires[Blocking] ++ containerLayer >+> sessionLayer
   }
 
-  def runMigration(executor: CQLExecutor, fileName: String): ZIO[Blocking, Throwable, Unit] = {
+  def runMigration(cql: CQLExecutor, fileName: String): ZIO[Blocking, Throwable, Unit] = {
     val migrationCql =
       ZStream
         .fromEffect(effectBlocking(scala.io.Source.fromResource(fileName).getLines()))
@@ -57,7 +57,7 @@ object AllTests extends DefaultRunnableSpec {
 
     for {
       migrations <- migrationCql
-      _          <- ZIO.foreach_(migrations)(str => executor.execute(str.asCql.mutation).runDrain)
+      _          <- ZIO.foreach_(migrations)(str => cql.execute(str.asCql.mutation).runDrain)
     } yield ()
   }
 
@@ -65,7 +65,7 @@ object AllTests extends DefaultRunnableSpec {
     suite("Virgil Test Suite") {
       CqlInterpolatorSpec.cqlInterpolatorSpec +
         (
-          CQLExecutorSpec.sessionSpec +
+          CQLExecutorSpec.executorSpec +
             UserDefinedTypesSpec.userDefinedTypesSpec +
             CollectionsSpec.collectionsSpec +
             CursorSpec.cursorSpec +

@@ -1,12 +1,14 @@
 package io.kaizensolutions.virgil.configuration
 
-import com.datastax.oss.driver.api.core.cql.{BatchStatementBuilder, BoundStatementBuilder}
+import com.datastax.oss.driver.api.core.cql._
+import zio.duration._
 
 final case class ExecutionAttributes(
   pageSize: Option[Int] = None,
   executionProfile: Option[String] = None,
   consistencyLevel: Option[ConsistencyLevel] = None,
-  idempotent: Option[Boolean] = None
+  idempotent: Option[Boolean] = None,
+  timeout: Option[Duration] = None
 ) { self =>
   def debug: String =
     s"ExecutionAttributes(pageSize = $pageSize, executionProfile = $executionProfile, consistencyLevel = $consistencyLevel, idempotent = $idempotent)"
@@ -22,6 +24,9 @@ final case class ExecutionAttributes(
 
   def withIdempotent(idempotent: Boolean): ExecutionAttributes =
     copy(idempotent = Some(idempotent))
+
+  def withTimeout(timeout: Duration): ExecutionAttributes =
+    copy(timeout = Some(timeout))
 
   def combine(that: ExecutionAttributes): ExecutionAttributes =
     ExecutionAttributes(
@@ -41,23 +46,30 @@ final case class ExecutionAttributes(
         case (None, Some(b))    => Some(b)
         case (None, None)       => None
       },
-      idempotent = self.idempotent.orElse(that.idempotent)
+      idempotent = self.idempotent.orElse(that.idempotent),
+      timeout = (self.timeout, that.timeout) match {
+        case (Some(a), Some(b)) => Some(a.max(b))
+        case (Some(a), None)    => Some(a)
+        case (None, Some(b))    => Some(b)
+        case (None, None)       => None
+      }
     )
 
-  private[virgil] def configure(s: BoundStatementBuilder): BoundStatementBuilder = {
-    val withPageSz = pageSize.fold(ifEmpty = s)(s.setPageSize)
-    val withEP     = executionProfile.fold(ifEmpty = withPageSz)(withPageSz.setExecutionProfileName)
-    val withCL     = consistencyLevel.fold(ifEmpty = withEP)(cl => withEP.setConsistencyLevel(cl.toDriver))
-    val result     = idempotent.fold(ifEmpty = withCL)(withCL.setIdempotence(_))
-    result
-  }
+  private[virgil] def configure(s: BoundStatementBuilder): BoundStatementBuilder =
+    config[BoundStatement, BoundStatementBuilder](s)
 
-  private[virgil] def configureBatch(s: BatchStatementBuilder): BatchStatementBuilder = {
+  private[virgil] def configureBatch(b: BatchStatementBuilder): BatchStatementBuilder =
+    config[BatchStatement, BatchStatementBuilder](b)
+
+  private def config[SType <: Statement[SType], Builder <: StatementBuilder[Builder, SType]](
+    s: Builder
+  ): Builder = {
     val withPageSz = pageSize.fold(ifEmpty = s)(s.setPageSize)
     val withEP     = executionProfile.fold(ifEmpty = withPageSz)(withPageSz.setExecutionProfileName)
     val withCL     = consistencyLevel.fold(ifEmpty = withEP)(cl => withEP.setConsistencyLevel(cl.toDriver))
-    val result     = idempotent.fold(ifEmpty = withCL)(withCL.setIdempotence(_))
-    result
+    val withIdem   = idempotent.fold(ifEmpty = withCL)(withCL.setIdempotence(_))
+    val withTime   = timeout.fold(ifEmpty = withIdem)(withIdem.setTimeout)
+    withTime
   }
 }
 object ExecutionAttributes {

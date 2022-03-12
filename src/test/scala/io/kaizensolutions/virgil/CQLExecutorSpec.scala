@@ -1,10 +1,11 @@
 package io.kaizensolutions.virgil
 
-import com.datastax.oss.driver.api.core.CqlSession
 import com.datastax.oss.driver.api.core.uuid.Uuids
+import com.datastax.oss.driver.api.core.{CqlSession, DriverTimeoutException}
 import io.kaizensolutions.virgil.annotations.CqlColumn
 import io.kaizensolutions.virgil.configuration.{ConsistencyLevel, ExecutionAttributes}
 import io.kaizensolutions.virgil.cql._
+import io.kaizensolutions.virgil.dsl.InsertBuilder
 import zio._
 import zio.duration._
 import zio.random.Random
@@ -20,9 +21,9 @@ import java.util.UUID
 import scala.util.Try
 
 object CQLExecutorSpec {
-  def sessionSpec
+  def executorSpec
     : Spec[Live with Has[CassandraContainer] with Has[CQLExecutor] with Random with Sized with TestConfig, TestFailure[
-      Throwable
+      Any
     ], TestSuccess] =
     suite("Cassandra Session Interpreter Specification") {
       (queries + actions + configuration) @@ timeout(1.minute) @@ samples(10)
@@ -129,7 +130,10 @@ object CQLExecutorSpec {
         }
     }
 
-  def configuration: Spec[Has[CassandraContainer], TestFailure[Throwable], TestSuccess] =
+  def configuration
+    : Spec[Has[CQLExecutor] with Random with Sized with TestConfig with Has[CassandraContainer], TestFailure[
+      Any
+    ], TestSuccess] =
     suite("Session Configuration") {
       testM("Creating a layer from an existing session allows you to access Cassandra") {
         val sessionManaged: URManaged[Has[CassandraContainer], CqlSession] = {
@@ -154,7 +158,27 @@ object CQLExecutorSpec {
         cql"SELECT * FROM system.local".query.execute.runCount
           .map(numberOfRows => assertTrue(numberOfRows > 0))
           .provideLayer(cqlExecutorLayer)
-      }
+      } +
+        testM("Exceeding a timeout will cause a failure") {
+          checkM(Gen.chunkOfN(100)(TimeoutCheckRow.gen)) { rows =>
+            val insert =
+              ZStream
+                .fromIterable(rows)
+                .map(TimeoutCheckRow.insert)
+                .map(_.timeout(1.nanosecond))
+                .flatMap(_.execute)
+
+            val select =
+              TimeoutCheckRow.selectAll
+                .timeout(1.nanosecond)
+                .execute
+
+            (insert.runDrain *> select.runDrain)
+              .refineToOrDie[DriverTimeoutException]
+              .flip
+              .map(error => assertTrue(error.isInstanceOf[DriverTimeoutException]))
+          }
+        } @@ samples(1)
     }
 
   // Used to provide a similar API as the `select` method
@@ -226,4 +250,25 @@ object SelectPageRow {
       bucket <- Gen.int(1, 50)
       info   <- Gen.alphaNumericStringBounded(10, 15)
     } yield SelectPageRow(id, bucket, info)
+}
+
+final case class TimeoutCheckRow(id: Int, info: String, @CqlColumn("another_info") anotherInfo: String)
+object TimeoutCheckRow {
+  val table = "ziocassandrasessionspec_timeoutcheck"
+
+  val selectAll: CQL[TimeoutCheckRow] =
+    s"SELECT id, info, another_info FROM $table".asCql.query[TimeoutCheckRow]
+
+  def insert(in: TimeoutCheckRow): CQL[MutationResult] =
+    InsertBuilder(table)
+      .value("id", in.id)
+      .value("info", in.info)
+      .value("another_info", in.anotherInfo)
+      .build
+
+  def gen: Gen[Random with Sized, TimeoutCheckRow] = for {
+    id          <- Gen.int(1, 1000)
+    info        <- Gen.alphaNumericStringBounded(100, 150)
+    anotherInfo <- Gen.alphaNumericStringBounded(200, 400)
+  } yield TimeoutCheckRow(id, info, anotherInfo)
 }

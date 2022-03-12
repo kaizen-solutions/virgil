@@ -7,6 +7,7 @@ import io.kaizensolutions.virgil.dsl.{Assignment, Relation}
 import io.kaizensolutions.virgil.internal.Proofs._
 import io.kaizensolutions.virgil.internal.{BindMarkers, PullMode, QueryType}
 import zio._
+import zio.duration.Duration
 import zio.stream.ZStream
 
 final case class CQL[+Result] private (
@@ -83,6 +84,9 @@ final case class CQL[+Result] private (
       case _: CQLType.Batch    => sys.error("It is not possible to take a batch")
     }
   }
+
+  def timeout(in: Duration): CQL[Result] =
+    self.withAttributes(self.executionAttributes.withTimeout(in))
 
   def withAttributes(in: ExecutionAttributes): CQL[Result] =
     copy(executionAttributes = in)
