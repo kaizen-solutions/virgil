@@ -26,7 +26,7 @@ object CQLExecutorSpec {
       Any
     ], TestSuccess] =
     suite("Cassandra Session Interpreter Specification") {
-      (queries + actions + configuration) @@ timeout(1.minute) @@ samples(10)
+      (queries + actions + configuration) @@ timeout(3.minutes) @@ samples(4)
     }
 
   def queries: Spec[Has[CQLExecutor] with Random with Sized with TestConfig, TestFailure[Throwable], TestSuccess] =

@@ -71,5 +71,5 @@ object AllTests extends DefaultRunnableSpec {
             CursorSpec.cursorSpec +
             UpdateBuilderSpec.updateBuilderSpec
         ).provideCustomLayerShared(dependencies)
-    } @@ parallel
+    } @@ parallel @@ timed
 }
