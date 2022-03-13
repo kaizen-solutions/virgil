@@ -63,7 +63,8 @@ object AllTests extends DefaultRunnableSpec {
 
   override def spec: ZSpec[TestEnvironment, Any] =
     suite("Virgil Test Suite") {
-      CqlInterpolatorSpec.cqlInterpolatorSpec +
+      TupleCodecSpec.tupleCodecSpec +
+        CqlInterpolatorSpec.cqlInterpolatorSpec +
         (
           CQLExecutorSpec.executorSpec +
             UserDefinedTypesSpec.userDefinedTypesSpec +
