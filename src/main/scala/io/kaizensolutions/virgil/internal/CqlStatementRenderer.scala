@@ -227,7 +227,7 @@ private[virgil] object CqlStatementRenderer {
       relations: Chunk[Relation]
     ): (String, BindMarkers) = {
       val (relationsCql, relationBindMarkers) = renderWhere(relations)
-      val columnNamesCql                      = columnNames.mkString(start = "", sep = ",", end = "")
+      val columnNamesCql                      = columnNames.mkString(start = "", sep = ", ", end = "")
 
       (s"SELECT $columnNamesCql FROM $tableName $relationsCql", relationBindMarkers)
     }
@@ -263,11 +263,11 @@ private[virgil] object CqlStatementRenderer {
               (accExpr :+ expression, accColumns + column)
 
             case Relation.IsNotNull(columnName) =>
-              val expression = s"${columnName.name} IS NOT NULL"
+              val expression = s"${columnName.name} != NULL"
               (accExpr :+ expression, accColumns)
 
             case Relation.IsNull(columnName) =>
-              val expression = s"${columnName.name} == NULL"
+              val expression = s"${columnName.name} = NULL"
               (accExpr :+ expression, accColumns)
           }
         }

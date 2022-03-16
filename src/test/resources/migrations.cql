@@ -127,3 +127,9 @@ CREATE TABLE updatebuilderspec_person
     name TEXT,
     age  INT
 );
+
+CREATE TABLE relationspec_person(
+    id   INT PRIMARY KEY,
+    name TEXT,
+    age  INT
+);

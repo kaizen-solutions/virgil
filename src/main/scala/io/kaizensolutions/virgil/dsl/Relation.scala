@@ -57,5 +57,8 @@ trait RelationSyntax {
 
     def isNotNull: Relation.IsNotNull =
       Relation.IsNotNull(column)
+
+    def isNull: Relation.IsNull =
+      Relation.IsNull(column)
   }
 }
