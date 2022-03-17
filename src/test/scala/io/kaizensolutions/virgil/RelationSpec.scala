@@ -9,7 +9,7 @@ import zio.test.TestAspect.{samples, sequential}
 import zio.test._
 
 object RelationSpec {
-  def relationSpec: ZSpec[Has[CQLExecutor] with Random with TestConfig, Serializable] =
+  def relationSpec: ZSpec[TestConfig with Random with Has[CQLExecutor], Any] =
     suite("Relational Operators Specification") {
       testM("isNull") {
         checkM(gen) { person =>
