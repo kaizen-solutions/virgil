@@ -2,22 +2,29 @@ package io.kaizensolutions.virgil.internal
 
 import io.kaizensolutions.virgil.CQLType
 import io.kaizensolutions.virgil.CQLType.Mutation
-import io.kaizensolutions.virgil.CQLType.Mutation.Update.UpdateConditions
+import io.kaizensolutions.virgil.CQLType.Mutation.Delete.DeleteCriteria
 import io.kaizensolutions.virgil.codecs.CqlRowComponentEncoder
-import io.kaizensolutions.virgil.dsl.{Assignment, Relation}
+import io.kaizensolutions.virgil.dsl.{
+  Assignment,
+  Conditions,
+  DeleteConditions,
+  InsertConditions,
+  Relation,
+  UpdateConditions
+}
 import zio.{Chunk, ChunkBuilder, NonEmptyChunk}
 
 private[virgil] object CqlStatementRenderer {
   def render(in: CQLType.Mutation): (String, BindMarkers) =
     in match {
-      case Mutation.Insert(tableName, columns) =>
-        insert.render(tableName, columns)
+      case Mutation.Insert(tableName, columns, conditions) =>
+        insert.render(tableName, columns, conditions)
 
       case Mutation.Update(tableName, assignments, relations, conditions) =>
         update.render(tableName, assignments, relations, conditions)
 
-      case Mutation.Delete(tableName, relations) =>
-        delete.render(tableName, relations)
+      case Mutation.Delete(tableName, criteria, relations, conditions) =>
+        delete.render(tableName, criteria, relations, conditions)
 
       case Mutation.Truncate(tableName) =>
         truncate.render(tableName)
@@ -36,8 +43,8 @@ private[virgil] object CqlStatementRenderer {
     }
 
   private object insert {
-    def render(table: String, columns: BindMarkers): (String, BindMarkers) = {
-      val (columnNames, bindMarkers) = {
+    def render(table: String, columns: BindMarkers, conditions: InsertConditions): (String, BindMarkers) = {
+      val (columnNamesCql, bindMarkersCql) = {
         val size          = columns.underlying.size
         val columnBuilder = ChunkBuilder.make[String](size)
         val markerBuilder = ChunkBuilder.make[String](size)
@@ -54,7 +61,10 @@ private[virgil] object CqlStatementRenderer {
         (renderedColumnNames, renderedMarkers)
       }
 
-      (s"INSERT INTO $table $columnNames VALUES ${bindMarkers}", columns)
+      val (conditionsCql, conditionColumns) = renderConditions(conditions)
+      val allColumns                        = columns ++ conditionColumns
+
+      (s"INSERT INTO $table $columnNamesCql VALUES $bindMarkersCql $conditionsCql", allColumns)
     }
   }
 
@@ -194,24 +204,26 @@ private[virgil] object CqlStatementRenderer {
 
       (queryString, columns)
     }
-
-    private def renderConditions(conditions: UpdateConditions): (String, BindMarkers) =
-      conditions match {
-        case UpdateConditions.NoConditions =>
-          ("", BindMarkers.empty)
-
-        case UpdateConditions.IfExists =>
-          ("IF EXISTS", BindMarkers.empty)
-
-        case UpdateConditions.IfConditions(conditions) =>
-          renderRelations("IF", conditions)
-      }
   }
 
   private object delete {
-    def render(table: String, relations: NonEmptyChunk[Relation]): (String, BindMarkers) = {
-      val (relationsCql, relationsColumns) = renderWhere(relations)
-      (s"DELETE FROM $table WHERE $relationsCql", relationsColumns)
+    def render(
+      table: String,
+      criteria: DeleteCriteria,
+      relations: NonEmptyChunk[Relation],
+      conditions: DeleteConditions
+    ): (String, BindMarkers) = {
+      val criteriaCql                        = renderCriteria(criteria)
+      val (whereCql, relationsColumns)       = renderWhere(relations)
+      val (conditionsCql, conditionsColumns) = renderConditions(conditions)
+      val allColumns                         = relationsColumns ++ conditionsColumns
+
+      (s"DELETE $criteriaCql FROM $table $whereCql $conditionsCql", allColumns)
+    }
+
+    private def renderCriteria(in: DeleteCriteria): String = in match {
+      case DeleteCriteria.Columns(columnNames) => columnNames.mkString(", ")
+      case DeleteCriteria.EntireRow            => ""
     }
   }
 
@@ -235,6 +247,21 @@ private[virgil] object CqlStatementRenderer {
 
   private def renderWhere(relations: Chunk[Relation]): (String, BindMarkers) =
     renderRelations("WHERE", relations)
+
+  private def renderConditions(conditions: Conditions): (String, BindMarkers) =
+    conditions match {
+      case Conditions.NoConditions =>
+        ("", BindMarkers.empty)
+
+      case Conditions.IfExists =>
+        ("IF EXISTS", BindMarkers.empty)
+
+      case Conditions.IfNotExists =>
+        ("IF NOT EXISTS", BindMarkers.empty)
+
+      case Conditions.IfConditions(conditions) =>
+        renderRelations("IF", conditions)
+    }
 
   /**
    * renderRelations renders a list of relations into a string along with the

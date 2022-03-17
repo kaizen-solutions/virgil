@@ -9,7 +9,7 @@ class InsertBuilder[State <: InsertState](
   private val columns: BindMarkers,
   private val timeToLive: Option[Int] = None,
   private val timestamp: Option[Long] = None,
-  private val ifNotExists: Boolean = false
+  private val conditions: InsertConditions = Conditions.NoConditions
 ) {
   def value[ScalaType](columnName: String, inputValue: ScalaType)(implicit
     ev: CqlRowComponentEncoder[ScalaType]
@@ -27,7 +27,7 @@ class InsertBuilder[State <: InsertState](
       columns = columns,
       timeToLive = timeToLive,
       timestamp = timestamp,
-      ifNotExists = true
+      conditions = Conditions.IfNotExists
     )
   }
 
@@ -48,39 +48,8 @@ class InsertBuilder[State <: InsertState](
   def build(implicit stateEvidence: State <:< InsertState.ColumnAdded): CQL[MutationResult] = {
     // Make unused variables check happy
     val _ = stateEvidence
-    CQL.insert(table, columns)
+    CQL.insert(table, columns, conditions)
   }
-
-  override def toString: String =
-    s"""Insert(
-       |  query = $renderInsertString,
-       |  table = $table,
-       |  columns = ${columns.toString},
-       |)""".stripMargin
-
-  private def renderInsertString: String =
-    s"INSERT INTO $table $renderColumnNamesForInsertString VALUES $renderInterpolatedValuesForInsertString $renderIfNotExists $renderTimestampTTL"
-
-  private def renderColumnNamesForInsertString: String =
-    columns.underlying.keys
-      .map(_.name)
-      .mkString(start = "(", sep = ",", end = ")")
-
-  private def renderInterpolatedValuesForInsertString: String =
-    columns.underlying.keys
-      .map(colName => s":${colName.name}")
-      .mkString(start = "(", sep = ",", end = ")")
-
-  private def renderIfNotExists: String =
-    if (ifNotExists) "IF NOT EXISTS" else ""
-
-  private def renderTimestampTTL: String =
-    (timeToLive, timestamp) match {
-      case (Some(ttl), Some(ts)) => s"USING TTL $ttl AND TIMESTAMP $ts"
-      case (Some(ttl), None)     => s"USING TTL $ttl"
-      case (None, Some(ts))      => s"USING TIMESTAMP $ts"
-      case (None, None)          => ""
-    }
 }
 object InsertBuilder {
   def apply(table: String): InsertBuilder[InsertState.Empty] =

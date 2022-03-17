@@ -1,9 +1,9 @@
 package io.kaizensolutions.virgil
 
-import io.kaizensolutions.virgil.CQLType.Mutation.Update.UpdateConditions
+import io.kaizensolutions.virgil.CQLType.Mutation.Delete
 import io.kaizensolutions.virgil.codecs.CqlRowDecoder
 import io.kaizensolutions.virgil.configuration.{ExecutionAttributes, PageState}
-import io.kaizensolutions.virgil.dsl.{Assignment, Relation}
+import io.kaizensolutions.virgil.dsl.{Assignment, DeleteConditions, InsertConditions, Relation, UpdateConditions}
 import io.kaizensolutions.virgil.internal.Proofs._
 import io.kaizensolutions.virgil.internal.{BindMarkers, PullMode, QueryType}
 import zio._
@@ -117,14 +117,28 @@ object CQL {
   ): CQL[Scala] =
     CQL(CQLType.Query(QueryType.RawCql(queryString, bindMarkers), reader, pullMode), ExecutionAttributes.default)
 
-  def delete(tableName: String, relations: NonEmptyChunk[Relation]): CQL[MutationResult] =
-    CQL(CQLType.Mutation.Delete(tableName, relations), ExecutionAttributes.default)
+  def delete(
+    tableName: String,
+    criteria: Delete.DeleteCriteria,
+    relations: NonEmptyChunk[Relation],
+    conditions: DeleteConditions
+  ): CQL[MutationResult] =
+    CQL(
+      cqlType = CQLType.Mutation.Delete(
+        tableName = tableName,
+        criteria = criteria,
+        relations = relations,
+        deleteConditions = conditions
+      ),
+      executionAttributes = ExecutionAttributes.default
+    )
 
   def insert(
     tableName: String,
-    data: BindMarkers
+    data: BindMarkers,
+    conditions: InsertConditions
   ): CQL[MutationResult] =
-    CQL(CQLType.Mutation.Insert(tableName, data), ExecutionAttributes.default)
+    CQL(CQLType.Mutation.Insert(tableName, data, conditions), ExecutionAttributes.default)
 
   def logged(cql: CQL[MutationResult]): CQL[MutationResult] = cql.batchType(BatchType.Logged)
 

@@ -1,6 +1,5 @@
 package io.kaizensolutions.virgil.dsl
 
-import io.kaizensolutions.virgil.CQLType.Mutation.Update.UpdateConditions
 import io.kaizensolutions.virgil.{CQL, MutationResult}
 import zio.{Chunk, NonEmptyChunk}
 
@@ -29,7 +28,7 @@ class UpdateBuilder[State <: UpdateState](
 
   def ifExists(implicit ev: State =:= UpdateState.Where): UpdateBuilder[UpdateState.IfExists] = {
     val _ = ev
-    new UpdateBuilder(table, assignments, relations, UpdateConditions.IfExists)
+    new UpdateBuilder(table, assignments, relations, Conditions.IfExists)
   }
 
   def ifCondition(
@@ -61,9 +60,9 @@ class UpdateBuilder[State <: UpdateState](
 
   private def addIfCondition(condition: Relation): UpdateConditions =
     conditions match {
-      case UpdateConditions.NoConditions             => UpdateConditions.IfConditions(NonEmptyChunk.single(condition))
-      case UpdateConditions.IfExists                 => UpdateConditions.IfConditions(NonEmptyChunk.single(condition))
-      case UpdateConditions.IfConditions(conditions) => UpdateConditions.IfConditions(conditions :+ condition)
+      case Conditions.NoConditions             => Conditions.IfConditions(NonEmptyChunk.single(condition))
+      case Conditions.IfExists                 => Conditions.IfConditions(NonEmptyChunk.single(condition))
+      case Conditions.IfConditions(conditions) => Conditions.IfConditions(conditions :+ condition)
     }
 }
 
@@ -73,7 +72,7 @@ object UpdateBuilder {
       table = tableName,
       assignments = Chunk.empty,
       relations = Chunk.empty,
-      conditions = UpdateConditions.NoConditions
+      conditions = Conditions.NoConditions
     )
 }
 

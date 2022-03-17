@@ -133,3 +133,9 @@ CREATE TABLE relationspec_person(
     name TEXT,
     age  INT
 );
+
+CREATE TABLE deletebuilderspec_person(
+    id   INT PRIMARY KEY,
+    name TEXT,
+    age  INT
+);

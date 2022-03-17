@@ -71,7 +71,8 @@ object AllTests extends DefaultRunnableSpec {
             CollectionsSpec.collectionsSpec +
             CursorSpec.cursorSpec +
             UpdateBuilderSpec.updateBuilderSpec +
-            RelationSpec.relationSpec
+            RelationSpec.relationSpec +
+            DeleteBuilderSpec.deleteBuilderSpec
         ).provideCustomLayerShared(dependencies)
     } @@ parallel @@ timed
 }

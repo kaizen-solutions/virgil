@@ -1,7 +1,7 @@
 package io.kaizensolutions.virgil
 
 import io.kaizensolutions.virgil.codecs.CqlRowDecoder
-import io.kaizensolutions.virgil.dsl.{Assignment, Relation}
+import io.kaizensolutions.virgil.dsl.{Assignment, DeleteConditions, InsertConditions, Relation, UpdateConditions}
 import io.kaizensolutions.virgil.internal.{BindMarkers, CqlStatementRenderer, PullMode, QueryType}
 import zio.NonEmptyChunk
 
@@ -32,27 +32,29 @@ sealed trait CQLType[+Result] { self =>
 object CQLType {
   sealed private[virgil] trait Mutation extends CQLType[MutationResult]
   object Mutation {
-    final private[virgil] case class Insert(tableName: String, data: BindMarkers) extends Mutation
+    final private[virgil] case class Insert(tableName: String, data: BindMarkers, insertConditions: InsertConditions)
+        extends Mutation
 
     final private[virgil] case class Update(
       tableName: String,
       assignments: NonEmptyChunk[Assignment],
       relations: NonEmptyChunk[Relation],
-      updateConditions: Update.UpdateConditions
+      updateConditions: UpdateConditions
     ) extends Mutation
-    object Update {
-      sealed trait UpdateConditions
-      object UpdateConditions {
-        case object NoConditions                                           extends UpdateConditions
-        case object IfExists                                               extends UpdateConditions
-        final case class IfConditions(conditions: NonEmptyChunk[Relation]) extends UpdateConditions
-      }
-    }
 
     final private[virgil] case class Delete(
       tableName: String,
-      relations: NonEmptyChunk[Relation]
+      criteria: Delete.DeleteCriteria,
+      relations: NonEmptyChunk[Relation],
+      deleteConditions: DeleteConditions
     ) extends Mutation
+    object Delete {
+      sealed trait DeleteCriteria
+      object DeleteCriteria {
+        final case class Columns(columnNames: NonEmptyChunk[String]) extends DeleteCriteria
+        case object EntireRow                                        extends DeleteCriteria
+      }
+    }
 
     final private[virgil] case class Truncate(tableName: String) extends Mutation
 
