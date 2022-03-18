@@ -9,6 +9,7 @@ import io.kaizensolutions.virgil.dsl.InsertBuilder
 import zio.random.Random
 import zio.test.TestAspect.samples
 import zio.test._
+import zio.test.Assertion._
 import zio.{Chunk, ZIO}
 
 import java.net.InetAddress
@@ -20,26 +21,28 @@ object CursorSpec {
         testM("Row Cursor should be able to read a complex structure") {
           checkM(CursorExampleRow.gen) { row =>
             for {
-              _            <- CursorExampleRow.truncate.execute.runDrain
-              _            <- CursorExampleRow.insert(row).execute.runDrain
-              result       <- CursorExampleRow.select(row.id).execute.runHead.some
-              cursor        = RowCursor(result)
-              resultRow    <- ZIO.fromEither(cursor.viewAs[CursorExampleRow])
-              name         <- ZIO.fromEither(cursor.field[String]("name"))
-              age          <- ZIO.fromEither(cursor.field[Short]("age"))
-              addresses    <- ZIO.fromEither(cursor.field[List[UdtValue]]("addresses"))
-              mayBeEmpty   <- ZIO.fromEither(cursor.field[Option[String]]("may_be_empty"))
-              udtAddress   <- ZIO.fromOption(addresses.headOption)
-              addressCursor = UdtValueCursor(udtAddress)
-              address      <- ZIO.fromEither(addressCursor.viewAs[CursorUdtAddress])
-              noteCursor   <- ZIO.fromEither(addressCursor.downUdtValue("note"))
-              ip           <- ZIO.fromEither(noteCursor.field[InetAddress]("ip"))
+              _             <- CursorExampleRow.truncate.execute.runDrain
+              _             <- CursorExampleRow.insert(row).execute.runDrain
+              result        <- CursorExampleRow.select(row.id).execute.runHead.some
+              cursor         = RowCursor(result)
+              resultRow     <- ZIO.fromEither(cursor.viewAs[CursorExampleRow])
+              name          <- ZIO.fromEither(cursor.field[String]("name"))
+              age           <- ZIO.fromEither(cursor.field[Short]("age"))
+              addresses     <- ZIO.fromEither(cursor.field[List[UdtValue]]("addresses"))
+              mayBeEmpty    <- ZIO.fromEither(cursor.field[Option[String]]("may_be_empty"))
+              leftMayBeEmpty = cursor.field[String]("may_be_empty")
+              udtAddress    <- ZIO.fromOption(addresses.headOption)
+              addressCursor  = UdtValueCursor(udtAddress)
+              address       <- ZIO.fromEither(addressCursor.viewAs[CursorUdtAddress])
+              noteCursor    <- ZIO.fromEither(addressCursor.downUdtValue("note"))
+              ip            <- ZIO.fromEither(noteCursor.field[InetAddress]("ip"))
             } yield assertTrue(resultRow == row) &&
               assertTrue(name == row.name) &&
               assertTrue(age == row.age) &&
               assertTrue(Chunk(address) == row.pastAddresses) &&
               assertTrue(mayBeEmpty == row.mayBeEmpty) &&
-              assertTrue(ip == row.pastAddresses.head.note.ip)
+              assertTrue(ip == row.pastAddresses.head.note.ip) &&
+              assert(leftMayBeEmpty.left.map(_.debug))(isLeft(containsString("is not an optional field")))
           }
         }
       }

@@ -40,6 +40,12 @@ trait CqlPrimitiveDecoder[ScalaType] { self =>
         case Right(value)           => value
       }
     )
+
+  def isOptional: Boolean =
+    self match {
+      case _: CqlPrimitiveDecoder.OptionPrimitiveDecoder[_, _] => true
+      case _                                                   => false
+    }
 }
 
 object CqlPrimitiveDecoder extends LowPriorityCqlPrimitiveDecoderInstances {
@@ -49,146 +55,165 @@ object CqlPrimitiveDecoder extends LowPriorityCqlPrimitiveDecoderInstances {
 
   def decodePrimitiveByFieldName[Structure <: GettableByName, Scala](structure: Structure, fieldName: String)(implicit
     prim: CqlPrimitiveDecoder[Scala]
-  ): Scala = prim match {
-    // These special cases allow us to avoid extra calls to the registry
-    case StringPrimitiveDecoder                   => structure.getString(fieldName)
-    case BigIntPrimitiveDecoder                   => BigInt.javaBigInteger2bigInt(structure.getBigInteger(fieldName))
-    case ByteBufferPrimitiveDecoder               => structure.getByteBuffer(fieldName)
-    case BooleanPrimitiveDecoder                  => structure.getBoolean(fieldName)
-    case LongPrimitiveDecoder                     => structure.getLong(fieldName)
-    case LocalDatePrimitiveDecoder                => structure.getLocalDate(fieldName)
-    case BigDecimalPrimitiveDecoder               => BigDecimal.javaBigDecimal2bigDecimal(structure.getBigDecimal(fieldName))
-    case DoublePrimitiveDecoder                   => structure.getDouble(fieldName)
-    case CqlDurationPrimitiveDecoder              => structure.getCqlDuration(fieldName)
-    case FloatPrimitiveDecoder                    => structure.getFloat(fieldName)
-    case InetAddressPrimitiveDecoder              => structure.getInetAddress(fieldName)
-    case IntPrimitiveDecoder                      => structure.getInt(fieldName)
-    case ShortPrimitiveDecoder                    => structure.getShort(fieldName)
-    case LocalTimePrimitiveDecoder                => structure.getLocalTime(fieldName)
-    case InstantPrimitiveDecoder                  => structure.getInstant(fieldName)
-    case UUIDPrimitiveDecoder                     => structure.getUuid(fieldName)
-    case BytePrimitiveDecoder                     => structure.getByte(fieldName)
-    case UdtValuePrimitiveDecoder                 => structure.getUdtValue(fieldName)
-    case UdtValueDecoderPrimitiveDecoder(decoder) => decoder.decode(structure.getUdtValue(fieldName))
+  ): Scala =
+    if (prim.isOptional && structure.isNull(fieldName)) None.asInstanceOf[Scala]
+    else if (!prim.isOptional && structure.isNull(fieldName)) {
+      val typeName = structure.getType(fieldName).asCql(true, true)
+      val error =
+        s"Field $fieldName (type: $typeName) is not an optional field but the database came back with a null value"
+      throw DecoderException.PrimitiveReadFailure(error, new IllegalStateException(error))
+    } else
+      prim match {
+        // These special cases allow us to avoid extra calls to the registry
+        case StringPrimitiveDecoder                   => structure.getString(fieldName)
+        case BigIntPrimitiveDecoder                   => BigInt.javaBigInteger2bigInt(structure.getBigInteger(fieldName))
+        case ByteBufferPrimitiveDecoder               => structure.getByteBuffer(fieldName)
+        case BooleanPrimitiveDecoder                  => structure.getBoolean(fieldName)
+        case LongPrimitiveDecoder                     => structure.getLong(fieldName)
+        case LocalDatePrimitiveDecoder                => structure.getLocalDate(fieldName)
+        case BigDecimalPrimitiveDecoder               => BigDecimal.javaBigDecimal2bigDecimal(structure.getBigDecimal(fieldName))
+        case DoublePrimitiveDecoder                   => structure.getDouble(fieldName)
+        case CqlDurationPrimitiveDecoder              => structure.getCqlDuration(fieldName)
+        case FloatPrimitiveDecoder                    => structure.getFloat(fieldName)
+        case InetAddressPrimitiveDecoder              => structure.getInetAddress(fieldName)
+        case IntPrimitiveDecoder                      => structure.getInt(fieldName)
+        case ShortPrimitiveDecoder                    => structure.getShort(fieldName)
+        case LocalTimePrimitiveDecoder                => structure.getLocalTime(fieldName)
+        case InstantPrimitiveDecoder                  => structure.getInstant(fieldName)
+        case UUIDPrimitiveDecoder                     => structure.getUuid(fieldName)
+        case BytePrimitiveDecoder                     => structure.getByte(fieldName)
+        case UdtValuePrimitiveDecoder                 => structure.getUdtValue(fieldName)
+        case UdtValueDecoderPrimitiveDecoder(decoder) => decoder.decode(structure.getUdtValue(fieldName))
 
-    // Collections
-    case l @ ListPrimitiveDecoder(element, _) =>
-      l.driver2Scala(
-        structure.getList(fieldName, element.driverClass),
-        structure.getType(fieldName)
-      )
-
-    case s @ SetPrimitiveDecoder(element) =>
-      s.driver2Scala(
-        structure.getSet(fieldName, element.driverClass),
-        structure.getType(fieldName)
-      )
-
-    case m @ MapPrimitiveDecoder(key, value) =>
-      m.driver2Scala(
-        structure.getMap(fieldName, key.driverClass, value.driverClass),
-        structure.getType(fieldName)
-      )
-
-    case MapFunctionPrimitiveDecoder(original, f) =>
-      f(decodePrimitiveByFieldName(structure, fieldName)(original))
-
-    case OptionPrimitiveDecoder(element) =>
-      if (structure.isNull(fieldName)) None
-      else Option(decodePrimitiveByFieldName(structure, fieldName)(element))
-
-    case EitherPrimitiveDecoder(original) =>
-      try (Right(decodePrimitiveByFieldName(structure, fieldName)(original)))
-      catch {
-        case NonFatal(d: DecoderException) =>
-          Left(d)
-
-        case NonFatal(cause) =>
-          val typeInfo =
-            Try(structure.getType(fieldName).asCql(true, true)).toOption
-              .getOrElse("<type information not present>")
-
-          Left(
-            DecoderException.PrimitiveReadFailure(s"Failed to read $fieldName, type information: ${typeInfo}", cause)
+        // Collections
+        case l @ ListPrimitiveDecoder(element, _) =>
+          l.driver2Scala(
+            structure.getList(fieldName, element.driverClass),
+            structure.getType(fieldName)
           )
-      }
 
-    // Rely on using get + classType which causes a registry lookup which is slower for all other cases
-    case other =>
-      if (structure.isNull(fieldName)) null.asInstanceOf[Scala]
-      else other.driver2Scala(structure.get(fieldName, other.driverClass), structure.getType(fieldName))
-  }
+        case s @ SetPrimitiveDecoder(element) =>
+          s.driver2Scala(
+            structure.getSet(fieldName, element.driverClass),
+            structure.getType(fieldName)
+          )
+
+        case m @ MapPrimitiveDecoder(key, value) =>
+          m.driver2Scala(
+            structure.getMap(fieldName, key.driverClass, value.driverClass),
+            structure.getType(fieldName)
+          )
+
+        case MapFunctionPrimitiveDecoder(original, f) =>
+          f(decodePrimitiveByFieldName(structure, fieldName)(original))
+
+        case OptionPrimitiveDecoder(element) =>
+          if (structure.isNull(fieldName)) None
+          else Option(decodePrimitiveByFieldName(structure, fieldName)(element))
+
+        case EitherPrimitiveDecoder(original) =>
+          try (Right(decodePrimitiveByFieldName(structure, fieldName)(original)))
+          catch {
+            case NonFatal(d: DecoderException) =>
+              Left(d)
+
+            case NonFatal(cause) =>
+              val typeInfo =
+                Try(structure.getType(fieldName).asCql(true, true)).toOption
+                  .getOrElse("<type information not present>")
+
+              Left(
+                DecoderException.PrimitiveReadFailure(
+                  s"Failed to read $fieldName, type information: ${typeInfo}",
+                  cause
+                )
+              )
+          }
+
+        // Rely on using get + classType which causes a registry lookup which is slower for all other cases
+        case other =>
+          if (structure.isNull(fieldName)) null.asInstanceOf[Scala]
+          else other.driver2Scala(structure.get(fieldName, other.driverClass), structure.getType(fieldName))
+      }
 
   def decodePrimitiveByIndex[Structure <: GettableByIndex, Scala](structure: Structure, index: Int)(implicit
     prim: CqlPrimitiveDecoder[Scala]
-  ): Scala = prim match {
-    // These special cases allow us to avoid extra calls to the registry and extra function calls
-    case StringPrimitiveDecoder                   => structure.getString(index)
-    case BigIntPrimitiveDecoder                   => BigInt.javaBigInteger2bigInt(structure.getBigInteger(index))
-    case ByteBufferPrimitiveDecoder               => structure.getByteBuffer(index)
-    case BooleanPrimitiveDecoder                  => structure.getBoolean(index)
-    case LongPrimitiveDecoder                     => structure.getLong(index)
-    case LocalDatePrimitiveDecoder                => structure.getLocalDate(index)
-    case BigDecimalPrimitiveDecoder               => BigDecimal.javaBigDecimal2bigDecimal(structure.getBigDecimal(index))
-    case DoublePrimitiveDecoder                   => structure.getDouble(index)
-    case CqlDurationPrimitiveDecoder              => structure.getCqlDuration(index)
-    case FloatPrimitiveDecoder                    => structure.getFloat(index)
-    case InetAddressPrimitiveDecoder              => structure.getInetAddress(index)
-    case IntPrimitiveDecoder                      => structure.getInt(index)
-    case ShortPrimitiveDecoder                    => structure.getShort(index)
-    case LocalTimePrimitiveDecoder                => structure.getLocalTime(index)
-    case InstantPrimitiveDecoder                  => structure.getInstant(index)
-    case UUIDPrimitiveDecoder                     => structure.getUuid(index)
-    case BytePrimitiveDecoder                     => structure.getByte(index)
-    case UdtValuePrimitiveDecoder                 => structure.getUdtValue(index)
-    case UdtValueDecoderPrimitiveDecoder(decoder) => decoder.decode(structure.getUdtValue(index))
+  ): Scala =
+    if (prim.isOptional && structure.isNull(index)) None.asInstanceOf[Scala]
+    else if (!prim.isOptional && structure.isNull(index)) {
+      val typeName = structure.getType(index).asCql(true, true)
+      val error =
+        s"Index $index (type: $typeName) is not an optional field but the database came back with a null value"
+      throw DecoderException.PrimitiveReadFailure(error, new IllegalStateException(error))
+    } else
+      prim match {
+        // These special cases allow us to avoid extra calls to the registry and extra function calls
+        case StringPrimitiveDecoder                   => structure.getString(index)
+        case BigIntPrimitiveDecoder                   => BigInt.javaBigInteger2bigInt(structure.getBigInteger(index))
+        case ByteBufferPrimitiveDecoder               => structure.getByteBuffer(index)
+        case BooleanPrimitiveDecoder                  => structure.getBoolean(index)
+        case LongPrimitiveDecoder                     => structure.getLong(index)
+        case LocalDatePrimitiveDecoder                => structure.getLocalDate(index)
+        case BigDecimalPrimitiveDecoder               => BigDecimal.javaBigDecimal2bigDecimal(structure.getBigDecimal(index))
+        case DoublePrimitiveDecoder                   => structure.getDouble(index)
+        case CqlDurationPrimitiveDecoder              => structure.getCqlDuration(index)
+        case FloatPrimitiveDecoder                    => structure.getFloat(index)
+        case InetAddressPrimitiveDecoder              => structure.getInetAddress(index)
+        case IntPrimitiveDecoder                      => structure.getInt(index)
+        case ShortPrimitiveDecoder                    => structure.getShort(index)
+        case LocalTimePrimitiveDecoder                => structure.getLocalTime(index)
+        case InstantPrimitiveDecoder                  => structure.getInstant(index)
+        case UUIDPrimitiveDecoder                     => structure.getUuid(index)
+        case BytePrimitiveDecoder                     => structure.getByte(index)
+        case UdtValuePrimitiveDecoder                 => structure.getUdtValue(index)
+        case UdtValueDecoderPrimitiveDecoder(decoder) => decoder.decode(structure.getUdtValue(index))
 
-    // Collections
-    case l @ ListPrimitiveDecoder(element, _) =>
-      l.driver2Scala(
-        structure.getList(index, element.driverClass),
-        structure.getType(index)
-      )
-
-    case s @ SetPrimitiveDecoder(element) =>
-      s.driver2Scala(
-        structure.getSet(index, element.driverClass),
-        structure.getType(index)
-      )
-
-    case m @ MapPrimitiveDecoder(key, value) =>
-      m.driver2Scala(
-        structure.getMap(index, key.driverClass, value.driverClass),
-        structure.getType(index)
-      )
-
-    case MapFunctionPrimitiveDecoder(original, f) =>
-      f(decodePrimitiveByIndex(structure, index)(original))
-
-    case OptionPrimitiveDecoder(element) =>
-      if (structure.isNull(index)) None
-      else Option(decodePrimitiveByIndex(structure, index)(element))
-
-    case EitherPrimitiveDecoder(original) =>
-      try (Right(decodePrimitiveByIndex(structure, index)(original)))
-      catch {
-        case NonFatal(d: DecoderException) =>
-          Left(d)
-
-        case NonFatal(cause) =>
-          val typeInfo =
-            Try(structure.getType(index).asCql(true, true)).toOption.getOrElse("<type information not present>")
-
-          Left(
-            DecoderException.PrimitiveReadFailure(s"Failed to read $index, type information: ${typeInfo}", cause)
+        // Collections
+        case l @ ListPrimitiveDecoder(element, _) =>
+          l.driver2Scala(
+            structure.getList(index, element.driverClass),
+            structure.getType(index)
           )
-      }
 
-    // Rely on using get + classType which causes a registry lookup which is slower
-    case other =>
-      if (structure.isNull(index)) null.asInstanceOf[Scala]
-      else other.driver2Scala(structure.get(index, other.driverClass), structure.getType(index))
-  }
+        case s @ SetPrimitiveDecoder(element) =>
+          s.driver2Scala(
+            structure.getSet(index, element.driverClass),
+            structure.getType(index)
+          )
+
+        case m @ MapPrimitiveDecoder(key, value) =>
+          m.driver2Scala(
+            structure.getMap(index, key.driverClass, value.driverClass),
+            structure.getType(index)
+          )
+
+        case MapFunctionPrimitiveDecoder(original, f) =>
+          f(decodePrimitiveByIndex(structure, index)(original))
+
+        case OptionPrimitiveDecoder(element) =>
+          if (structure.isNull(index)) None
+          else Option(decodePrimitiveByIndex(structure, index)(element))
+
+        case EitherPrimitiveDecoder(original) =>
+          try (Right(decodePrimitiveByIndex(structure, index)(original)))
+          catch {
+            case NonFatal(d: DecoderException) =>
+              Left(d)
+
+            case NonFatal(cause) =>
+              val typeInfo =
+                Try(structure.getType(index).asCql(true, true)).toOption.getOrElse("<type information not present>")
+
+              Left(
+                DecoderException.PrimitiveReadFailure(s"Failed to read $index, type information: ${typeInfo}", cause)
+              )
+          }
+
+        // Rely on using get + classType which causes a registry lookup which is slower
+        case other =>
+          if (structure.isNull(index)) null.asInstanceOf[Scala]
+          else other.driver2Scala(structure.get(index, other.driverClass), structure.getType(index))
+      }
 
   case object StringPrimitiveDecoder extends CqlPrimitiveDecoder[String] {
     type DriverType = java.lang.String
