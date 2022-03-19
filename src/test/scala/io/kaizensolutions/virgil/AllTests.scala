@@ -65,6 +65,7 @@ object AllTests extends DefaultRunnableSpec {
     suite("Virgil Test Suite") {
       TupleCodecSpec.tupleCodecSpec +
         CqlInterpolatorSpec.cqlInterpolatorSpec +
+        CodecSpec.codecSpec +
         (
           CQLExecutorSpec.executorSpec +
             UserDefinedTypesSpec.userDefinedTypesSpec +

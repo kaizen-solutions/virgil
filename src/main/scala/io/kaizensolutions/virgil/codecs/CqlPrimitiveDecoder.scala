@@ -31,6 +31,9 @@ trait CqlPrimitiveDecoder[ScalaType] { self =>
   def either: CqlPrimitiveDecoder.WithDriver[Either[DecoderException, ScalaType], DriverType] =
     CqlPrimitiveDecoder.EitherPrimitiveDecoder(self)
 
+  def optional: CqlPrimitiveDecoder.WithDriver[Option[ScalaType], DriverType] =
+    CqlPrimitiveDecoder.OptionPrimitiveDecoder(self)
+
   def absolve[ScalaType2](implicit
     ev: ScalaType <:< Either[DecoderException, ScalaType2]
   ): CqlPrimitiveDecoder.WithDriver[ScalaType2, DriverType] =
@@ -41,11 +44,16 @@ trait CqlPrimitiveDecoder[ScalaType] { self =>
       }
     )
 
-  def isOptional: Boolean =
+  private[codecs] val isOptional: Boolean =
     self match {
       case _: CqlPrimitiveDecoder.OptionPrimitiveDecoder[_, _] => true
       case _                                                   => false
     }
+
+  private[codecs] val isEither: Boolean = self match {
+    case _: CqlPrimitiveDecoder.EitherPrimitiveDecoder[_, _] => true
+    case _                                                   => false
+  }
 }
 
 object CqlPrimitiveDecoder extends LowPriorityCqlPrimitiveDecoderInstances {
@@ -57,11 +65,16 @@ object CqlPrimitiveDecoder extends LowPriorityCqlPrimitiveDecoderInstances {
     prim: CqlPrimitiveDecoder[Scala]
   ): Scala =
     if (prim.isOptional && structure.isNull(fieldName)) None.asInstanceOf[Scala]
-    else if (!prim.isOptional && structure.isNull(fieldName)) {
+    else if (!prim.isOptional && !prim.isEither && structure.isNull(fieldName)) {
       val typeName = structure.getType(fieldName).asCql(true, true)
       val error =
         s"Field $fieldName (type: $typeName) is not an optional field but the database came back with a null value"
-      throw DecoderException.PrimitiveReadFailure(error, new IllegalStateException(error))
+      throw DecoderException.StructureReadFailure(
+        message = error,
+        field = Some(DecoderException.FieldType.Name(fieldName)),
+        structure = structure,
+        cause = new IllegalStateException(error)
+      )
     } else
       prim match {
         // These special cases allow us to avoid extra calls to the registry
@@ -108,8 +121,7 @@ object CqlPrimitiveDecoder extends LowPriorityCqlPrimitiveDecoderInstances {
           f(decodePrimitiveByFieldName(structure, fieldName)(original))
 
         case OptionPrimitiveDecoder(element) =>
-          if (structure.isNull(fieldName)) None
-          else Option(decodePrimitiveByFieldName(structure, fieldName)(element))
+          Option(decodePrimitiveByFieldName(structure, fieldName)(element))
 
         case EitherPrimitiveDecoder(original) =>
           try (Right(decodePrimitiveByFieldName(structure, fieldName)(original)))
@@ -132,15 +144,14 @@ object CqlPrimitiveDecoder extends LowPriorityCqlPrimitiveDecoderInstances {
 
         // Rely on using get + classType which causes a registry lookup which is slower for all other cases
         case other =>
-          if (structure.isNull(fieldName)) null.asInstanceOf[Scala]
-          else other.driver2Scala(structure.get(fieldName, other.driverClass), structure.getType(fieldName))
+          other.driver2Scala(structure.get(fieldName, other.driverClass), structure.getType(fieldName))
       }
 
   def decodePrimitiveByIndex[Structure <: GettableByIndex, Scala](structure: Structure, index: Int)(implicit
     prim: CqlPrimitiveDecoder[Scala]
   ): Scala =
     if (prim.isOptional && structure.isNull(index)) None.asInstanceOf[Scala]
-    else if (!prim.isOptional && structure.isNull(index)) {
+    else if (!prim.isOptional & !prim.isEither && structure.isNull(index)) {
       val typeName = structure.getType(index).asCql(true, true)
       val error =
         s"Index $index (type: $typeName) is not an optional field but the database came back with a null value"
