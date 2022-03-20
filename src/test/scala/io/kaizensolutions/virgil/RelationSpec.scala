@@ -31,7 +31,7 @@ object RelationSpec {
         }
       } + testM("isNotNull") {
         checkM(RelationSpec_Person.gen) { person =>
-          val insert = RelationSpec_Person.insert(person).execute.runDrain
+          val insert  = RelationSpec_Person.insert(person).execute.runDrain
           val newName = person.name + " " + person.name
           val update =
             UpdateBuilder(RelationSpec_Person.table)
@@ -54,14 +54,14 @@ object RelationSpec {
 }
 
 final case class RelationSpec_Person(
-    id: Int,
-    name: String,
-    age: Int
+  id: Int,
+  name: String,
+  age: Int
 )
 object RelationSpec_Person {
-  val Id = "id"
+  val Id   = "id"
   val Name = "name"
-  val Age = "age"
+  val Age  = "age"
 
   val table: String = "relationspec_person"
 
@@ -83,8 +83,8 @@ object RelationSpec_Person {
 
   def gen: Gen[Random, RelationSpec_Person] =
     for {
-      id <- Gen.int(1, 1000)
+      id   <- Gen.int(1, 1000)
       name <- Gen.stringBounded(2, 4)(Gen.alphaChar)
-      age <- Gen.int(1, 100)
-    } yield  RelationSpec_Person(id, name, age)
+      age  <- Gen.int(1, 100)
+    } yield RelationSpec_Person(id, name, age)
 }

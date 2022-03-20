@@ -136,7 +136,7 @@ object CQLExecutorSpec {
     : Spec[Has[CQLExecutor] with Clock with Random with Sized with TestConfig with Has[CassandraContainer], TestFailure[
       Throwable
     ], TestSuccess] =
-    suite("Session Configuration") {
+    suite("Session Configuration")(
       testM("Creating a layer from an existing session allows you to access Cassandra") {
         val sessionManaged: URManaged[Has[CassandraContainer], CqlSession] = {
           val createSession = for {
@@ -160,27 +160,48 @@ object CQLExecutorSpec {
         cql"SELECT * FROM system.local".query.execute.runCount
           .map(numberOfRows => assertTrue(numberOfRows > 0))
           .provideLayer(cqlExecutorLayer)
-      } +
-        testM("Timeouts are respected") {
-          checkM(Gen.chunkOfN(4)(TimeoutCheckRow.gen)) { rows =>
-            val insert =
-              ZStream
-                .fromIterable(rows)
-                .map(TimeoutCheckRow.insert)
-                .timeout(4.seconds)
-                .flatMap(_.execute)
+      },
+      testM("Timeouts are respected") {
+        checkM(Gen.chunkOfN(4)(TimeoutCheckRow.gen)) { rows =>
+          val insert =
+            ZStream
+              .fromIterable(rows)
+              .map(TimeoutCheckRow.insert)
+              .timeout(4.seconds)
+              .flatMap(_.execute)
 
-            val select =
-              TimeoutCheckRow.selectAll
-                .timeout(2.second)
-                .execute
-                .runCount
+          val select =
+            TimeoutCheckRow.selectAll
+              .timeout(2.second)
+              .execute
+              .runCount
 
-            (insert.runDrain *> select)
-              .map(c => assertTrue(c == rows.length.toLong))
-          }
-        } @@ samples(1)
-    }
+          (insert.runDrain *> select)
+            .map(c => assertTrue(c == rows.length.toLong))
+        }
+      } @@ samples(1),
+      testM("PageSize are respected and matches with chunk size") {
+        checkM(Gen.chunkOfN(4)(PageSizeCheckRow.gen)) { rows =>
+          val insert =
+            ZStream
+              .fromIterable(rows)
+              .map(PageSizeCheckRow.insert)
+              .map(_.timeout(4.seconds))
+              .flatMap(_.execute)
+
+          val select =
+            PageSizeCheckRow.selectAll
+              .pageSize(2)
+              .timeout(2.second)
+              .execute
+              .mapChunks(s => Chunk.single(s.size))
+              .runCollect
+
+          (insert.runDrain *> select)
+            .map(c => assertTrue(c.size == 2 && c.forall(_ == 2)))
+        }
+      } @@ samples(1) @@ shrinks(0)
+    )
 
   // Used to provide a similar API as the `select` method
   private def selectPageStream[ScalaType](
@@ -216,6 +237,7 @@ final case class PreparedStatementsResponse(
 )
 
 final case class ExecuteTestTable(id: Int, info: String)
+
 object ExecuteTestTable {
   val table      = "ziocassandrasessionspec_executeAction"
   val batchTable = "ziocassandrasessionspec_executeBatchAction"
@@ -236,6 +258,7 @@ object ExecuteTestTable {
 }
 
 final case class SelectPageRow(id: Int, bucket: Int, info: String)
+
 object SelectPageRow {
   val truncate: CQL[MutationResult] = CQL.truncate("ziocassandrasessionspec_selectPage")
 
@@ -254,6 +277,7 @@ object SelectPageRow {
 }
 
 final case class TimeoutCheckRow(id: Int, info: String, @CqlColumn("another_info") anotherInfo: String)
+
 object TimeoutCheckRow {
   val table = "ziocassandrasessionspec_timeoutcheck"
 
@@ -272,4 +296,24 @@ object TimeoutCheckRow {
     info        <- Gen.alphaNumericStringBounded(100, 150)
     anotherInfo <- Gen.alphaNumericStringBounded(200, 400)
   } yield TimeoutCheckRow(id, info, anotherInfo)
+}
+
+final case class PageSizeCheckRow(id: Int, info: String)
+
+object PageSizeCheckRow {
+  val table = "ziocassandrasessionspec_pageSizeCheck"
+
+  val selectAll: CQL[PageSizeCheckRow] =
+    s"SELECT id, info FROM $table".asCql.query[PageSizeCheckRow]
+
+  def insert(in: PageSizeCheckRow): CQL[MutationResult] =
+    InsertBuilder(table)
+      .value("id", in.id)
+      .value("info", in.info)
+      .build
+
+  def gen: Gen[Random with Sized, PageSizeCheckRow] = for {
+    id   <- Gen.int(1, 1000)
+    info <- Gen.alphaNumericStringBounded(100, 150)
+  } yield PageSizeCheckRow(id, info)
 }
