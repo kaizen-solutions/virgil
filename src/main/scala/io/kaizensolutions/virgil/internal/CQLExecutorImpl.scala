@@ -146,8 +146,8 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
         _ <- rs match {
                case _ if rs.hasMorePages =>
                  ref.set(Task.fromCompletionStage(rs.fetchNextPage()).mapError(Option(_)))
-               case _ if rs.currentPage().iterator().hasNext => ref.set(IO.fail(None))
-               case _                                        => IO.fail(None)
+               case _ if rs.remaining() > 0 => ref.set(IO.fail(None))
+               case _                       => IO.fail(None)
              }
       } yield Chunk.fromIterable(rs.currentPage().asScala)
 
