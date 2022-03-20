@@ -98,7 +98,9 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
     for {
       boundStatement <- ZStream.fromEffect(buildStatement(queryString, bindMarkers, config))
       reader          = input.reader
-      element        <- select(boundStatement).mapM(row => ZIO.effect(reader.decode(row)))
+      element <- select(boundStatement).mapChunksM { chunk =>
+                   chunk.mapM(row => ZIO.effect(reader.decode(row)))
+                 }
     } yield element
   }
 
@@ -137,12 +139,22 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
   private def select(query: Statement[_]): ZStream[Any, Throwable, Row] = {
     val initialEffect = ZIO.fromCompletionStage(underlyingSession.executeAsync(query))
 
-    ZStream.paginateChunkM(initialEffect) { eff =>
-      eff.map { resultSet =>
-        val emit = Chunk.fromIterable(resultSet.currentPage().asScala)
-        val nextState = if (resultSet.hasMorePages) Option(ZIO.fromCompletionStage(resultSet.fetchNextPage())) else None
-        emit -> nextState
-      }
+    def pull(ref: Ref[ZIO[Any, Option[Throwable], AsyncResultSet]]): ZIO[Any, Option[Throwable], Chunk[Row]] =
+      for {
+        io <- ref.get
+        rs <- io
+        _ <- rs match {
+               case _ if rs.hasMorePages =>
+                 ref.set(Task.fromCompletionStage(rs.fetchNextPage()).mapError(Option(_)))
+               case _ if rs.currentPage().iterator().hasNext => ref.set(IO.fail(None))
+               case _                                        => IO.fail(None)
+             }
+      } yield Chunk.fromIterable(rs.currentPage().asScala)
+
+    Stream {
+      for {
+        ref <- Ref.make(initialEffect.mapError(Option(_))).toManaged_
+      } yield pull(ref)
     }
   }
 

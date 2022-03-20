@@ -26,6 +26,12 @@ CREATE TABLE IF NOT EXISTS ziocassandrasessionspec_timeoutcheck
     another_info TEXT
 );
 
+CREATE TABLE IF NOT EXISTS ziocassandrasessionspec_pageSizeCheck
+(
+    id   INT PRIMARY KEY,
+    info TEXT
+);
+
 CREATE TYPE udt_address (
     number INT,
     street TEXT,
