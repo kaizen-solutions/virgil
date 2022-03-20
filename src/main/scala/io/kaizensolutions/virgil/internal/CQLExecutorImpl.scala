@@ -137,16 +137,11 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
   private def select(query: Statement[_]): ZStream[Any, Throwable, Row] = {
     val initialEffect = ZIO.fromCompletionStage(underlyingSession.executeAsync(query))
 
-    ZStream.fromEffect(initialEffect).flatMap { initial =>
-      ZStream.paginateChunkM(initial) { resultSet =>
+    ZStream.paginateChunkM(initialEffect) { eff =>
+      eff.map { resultSet =>
         val emit = Chunk.fromIterable(resultSet.currentPage().asScala)
-        if (resultSet.hasMorePages) {
-          ZIO
-            .fromCompletionStage(resultSet.fetchNextPage())
-            .map(nextState => emit -> Option(nextState))
-        } else {
-          ZIO.succeed(emit -> None)
-        }
+        val nextState = if (resultSet.hasMorePages) Option(ZIO.fromCompletionStage(resultSet.fetchNextPage())) else None
+        emit -> nextState
       }
     }
   }
