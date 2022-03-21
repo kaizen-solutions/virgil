@@ -68,6 +68,9 @@ final case class CQL[+Result] private (
 
   def execute: ZStream[Has[CQLExecutor], Throwable, Result] = CQLExecutor.execute(self)
 
+  def executeMutation(implicit ev: Result <:< MutationResult): RIO[Has[CQLExecutor], MutationResult] =
+    CQLExecutor.executeMutation(self.widen[MutationResult])
+
   def executePage[Result1 >: Result](state: Option[PageState] = None): RIO[Has[CQLExecutor], Paged[Result1]] =
     CQLExecutor.executePage(self, state)
 

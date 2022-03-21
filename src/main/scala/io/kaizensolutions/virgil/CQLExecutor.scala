@@ -9,11 +9,16 @@ import zio.{Has, RIO, RLayer, Task, TaskManaged, URLayer, ZIO, ZLayer, ZManaged}
 trait CQLExecutor {
   def execute[A](in: CQL[A]): Stream[Throwable, A]
 
+  def executeMutation(in: CQL[MutationResult]): Task[MutationResult]
+
   def executePage[A](in: CQL[A], pageState: Option[PageState])(implicit ev: A =:!= MutationResult): Task[Paged[A]]
 }
 object CQLExecutor {
   def execute[A](in: CQL[A]): ZStream[Has[CQLExecutor], Throwable, A] =
     ZStream.serviceWithStream(_.execute(in))
+
+  def executeMutation(in: CQL[MutationResult]): RIO[Has[CQLExecutor], MutationResult] =
+    ZIO.serviceWith(_.executeMutation(in))
 
   def executePage[A](in: CQL[A], pageState: Option[PageState] = None)(implicit
     ev: A =:!= MutationResult

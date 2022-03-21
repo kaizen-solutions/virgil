@@ -19,7 +19,7 @@ import scala.jdk.CollectionConverters._
  *   is the underlying Datastax Java driver session
  */
 private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQLExecutor {
-  def execute[A](in: CQL[A]): Stream[Throwable, A] =
+  override def execute[A](in: CQL[A]): Stream[Throwable, A] =
     in.cqlType match {
       case m: CQLType.Mutation =>
         ZStream.fromEffect(executeMutation(m, in.executionAttributes))
@@ -40,7 +40,21 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
         }
     }
 
-  def executePage[A](in: CQL[A], pageState: Option[PageState])(implicit ev: A =:!= MutationResult): Task[Paged[A]] = {
+  override def executeMutation(in: CQL[MutationResult]): Task[MutationResult] =
+    in.cqlType match {
+      case mutation: CQLType.Mutation =>
+        executeMutation(mutation, in.executionAttributes)
+
+      case batch: CQLType.Batch =>
+        executeBatch(batch, in.executionAttributes)
+
+      case CQLType.Query(_, _, _) =>
+        sys.error("Cannot perform a query using executeMutation")
+    }
+
+  override def executePage[A](in: CQL[A], pageState: Option[PageState])(implicit
+    ev: A =:!= MutationResult
+  ): Task[Paged[A]] = {
     val _ = ev
     in.cqlType match {
       case _: CQLType.Mutation =>
@@ -139,15 +153,48 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
   private def select(query: Statement[_]): ZStream[Any, Throwable, Row] = {
     val initialEffect = ZIO.fromCompletionStage(underlyingSession.executeAsync(query))
 
-    def pull(ref: Ref[ZIO[Any, Option[Throwable], AsyncResultSet]]): ZIO[Any, Option[Throwable], Chunk[Row]] =
+    /**
+     * pull describes how to pull one page of data from the underlying driver
+     * and keeping track of how to pull the next page of data via the ref.
+     *
+     * Note that failing with a None indicates that there is no more data to
+     * pull. Failing with Some(throwable) indicates that there was an error
+     *
+     * pull does has to choose __one__ of the following strategies once a page
+     * of data is retrieved:
+     *
+     *   - The retrieved page tells us that there are more paged to be retrieved
+     *     so we update the ref to the next page before emitting the current
+     *     page's results
+     *
+     *   - The retrieved page tells us that there are no more pages to be
+     *     retrieved and the retrieved page has some results so we emit the
+     *     current page's results and then update the ref to signal that the
+     *     next pull should stop
+     *
+     *   - The retrieved page tells us that there are no more pages to be pages
+     *     to retrieved and the current page has no results so we stop
+     *     immediately
+     *
+     * @param ref
+     *   holds the next set of results to be read which involve fetching data
+     *   from the database
+     *
+     * @return
+     */
+    def pull(ref: Ref[IO[Option[Throwable], AsyncResultSet]]): IO[Option[Throwable], Chunk[Row]] =
       for {
         io <- ref.get
         rs <- io
         _ <- rs match {
                case _ if rs.hasMorePages =>
                  ref.set(Task.fromCompletionStage(rs.fetchNextPage()).mapError(Option(_)))
-               case _ if rs.remaining() > 0 => ref.set(IO.fail(None))
-               case _                       => IO.fail(None)
+
+               case _ if rs.remaining() > 0 =>
+                 ref.set(IO.fail(None))
+
+               case _ =>
+                 IO.fail(None)
              }
       } yield Chunk.fromIterable(rs.currentPage().asScala)
 
