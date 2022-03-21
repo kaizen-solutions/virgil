@@ -129,8 +129,17 @@ object CQLExecutorSpec {
               expected <- expected.runCollect
             } yield assert(actual)(hasSameElements(expected))
           }
+        } +
+        testM("executeMutation") {
+          import ExecuteTestTable._
+          checkM(gen) { data =>
+            val truncateData = truncate(table).executeMutation
+            val toInsert     = insert(table)(data).executeMutation
+            val search       = selectAllIn(table)(data.id :: Nil).execute.runCollect
+            truncateData *> toInsert *> search.map(result => assert(result)(hasSameElements(List(data))))
+          }
         }
-    }
+    } @@ sequential
 
   def configuration
     : Spec[Has[CQLExecutor] with Clock with Random with Sized with TestConfig with Has[CassandraContainer], TestFailure[
