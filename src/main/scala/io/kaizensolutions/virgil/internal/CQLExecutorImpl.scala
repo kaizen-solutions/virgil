@@ -153,7 +153,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
   private def select(query: Statement[_]): ZStream[Any, Throwable, Row] = {
     val initialEffect = ZIO.fromCompletionStage(underlyingSession.executeAsync(query))
 
-    /**
+    /*
      * pull describes how to pull one page of data from the underlying driver
      * and keeping track of how to pull the next page of data via the ref.
      *
