@@ -1,10 +1,14 @@
 package io.kaizensolutions.virgil.dsl
 
+import io.kaizensolutions.virgil.CQL
+import io.kaizensolutions.virgil.MutationResult
 import io.kaizensolutions.virgil.codecs.CqlRowComponentEncoder
-import io.kaizensolutions.virgil.internal.{BindMarker, BindMarkerName, BindMarkers}
-import io.kaizensolutions.virgil.{CQL, MutationResult}
+import io.kaizensolutions.virgil.cql.ValueInCql
+import io.kaizensolutions.virgil.internal.BindMarkers
 
-class InsertBuilder[State <: InsertState](
+import scala.collection.immutable.ListMap
+
+final class InsertBuilder[State <: InsertState](
   private val table: String,
   private val columns: BindMarkers,
   private val timeToLive: Option[Int] = None,
@@ -13,10 +17,14 @@ class InsertBuilder[State <: InsertState](
 ) {
   def value[ScalaType](columnName: String, inputValue: ScalaType)(implicit
     ev: CqlRowComponentEncoder[ScalaType]
-  ): InsertBuilder[InsertState.ColumnAdded] = {
-    val name   = BindMarkerName.make(columnName)
-    val column = BindMarker.make(name, inputValue)(ev)
-    new InsertBuilder(table, columns + column)
+  ): InsertBuilder[InsertState.ColumnAdded] =
+    values(columnName -> inputValue)
+
+  def values(column: (String, ValueInCql), rest: (String, ValueInCql)*): InsertBuilder[InsertState.ColumnAdded] = {
+    val allColumns   = column +: rest
+    val columnsToAdd = BindMarkers.from(ListMap.from(allColumns))
+
+    new InsertBuilder(table, columns ++ columnsToAdd)
   }
 
   def ifNotExists(implicit stateEvidence: State <:< InsertState.ColumnAdded): InsertBuilder[State] = {
