@@ -34,7 +34,7 @@ lazy val root =
         Seq(
           datastax                        % "java-driver-core"        % datastaxV,
           "org.scala-lang.modules"       %% "scala-collection-compat" % "2.6.0",
-          "com.softwaremill.magnolia1_2" %% "magnolia"                % "1.1.1",
+          "com.softwaremill.magnolia1_2" %% "magnolia"                % "1.1.2",
           "org.scala-lang"                % "scala-reflect"           % scalaVersion.value,
           zio                            %% "zio"                     % zioV,
           zio                            %% "zio-streams"             % zioV,
