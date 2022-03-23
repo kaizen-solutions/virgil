@@ -75,9 +75,11 @@ object DeleteBuilderSpec_Person {
 
   def insert(in: DeleteBuilderSpec_Person): CQL[MutationResult] =
     InsertBuilder(tableName)
-      .value(Id, in.id)
-      .value(Name, in.name)
-      .value(Age, in.age)
+      .values(
+        Id   -> in.id,
+        Name -> in.name,
+        Age  -> in.age
+      )
       .ifNotExists
       .build
 

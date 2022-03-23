@@ -62,11 +62,13 @@ object CursorExampleRow {
 
   def insert(row: CursorExampleRow): CQL[MutationResult] =
     InsertBuilder(tableName)
-      .value("id", row.id)
-      .value("name", row.name)
-      .value("age", row.age)
-      .value("addresses", row.pastAddresses)
-      .value("may_be_empty", row.mayBeEmpty)
+      .values(
+        "id"           -> row.id,
+        "name"         -> row.name,
+        "age"          -> row.age,
+        "addresses"    -> row.pastAddresses,
+        "may_be_empty" -> row.mayBeEmpty
+      )
       .build
 
   def select(id: Long): CQL[Row] = {
