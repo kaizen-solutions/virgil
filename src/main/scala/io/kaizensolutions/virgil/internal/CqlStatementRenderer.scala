@@ -256,7 +256,7 @@ private[virgil] object CqlStatementRenderer {
   }
 
   private def renderUsingTtlAndTimestamp(timeToLive: Option[Duration], timestamp: Option[Long]): String = {
-    val renderedTTL       = timeToLive.map(d => s"TTL ${d.toSeconds}")
+    val renderedTTL       = timeToLive.map(d => s"TTL ${d.getSeconds}")
     val renderedTimestamp = timestamp.map(t => s"TIMESTAMP $t")
 
     (renderedTTL, renderedTimestamp) match {
