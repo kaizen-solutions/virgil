@@ -3,7 +3,7 @@ package io.kaizensolutions.virgil.dsl
 import io.kaizensolutions.virgil.{CQL, MutationResult}
 import zio.{Chunk, NonEmptyChunk}
 
-class UpdateBuilder[State <: UpdateState](
+final case class UpdateBuilder[State <: UpdateState](
   private val table: String,
   private val assignments: Chunk[Assignment],
   private val relations: Chunk[Relation],
@@ -13,36 +13,36 @@ class UpdateBuilder[State <: UpdateState](
     ev: UpdateState.ColumnSet <:< State
   ): UpdateBuilder[UpdateState.ColumnSet] = {
     val _ = ev
-    new UpdateBuilder(table, assignments :+ assignment, relations, conditions)
+    copy(assignments = assignments :+ assignment)
   }
 
   def where(relation: Relation)(implicit ev: State =:= UpdateState.ColumnSet): UpdateBuilder[UpdateState.Where] = {
     val _ = ev
-    new UpdateBuilder(table, assignments, relations :+ relation, conditions)
+    copy(relations = relations :+ relation)
   }
 
   def and(relation: Relation)(implicit ev: State =:= UpdateState.Where): UpdateBuilder[UpdateState.Where] = {
     val _ = ev
-    new UpdateBuilder(table, assignments, relations :+ relation, conditions)
+    copy(relations = relations :+ relation)
   }
 
   def ifExists(implicit ev: State =:= UpdateState.Where): UpdateBuilder[UpdateState.IfExists] = {
     val _ = ev
-    new UpdateBuilder(table, assignments, relations, Conditions.IfExists)
+    copy(conditions = Conditions.IfExists)
   }
 
   def ifCondition(
     condition: Relation
   )(implicit ev: State =:= UpdateState.Where): UpdateBuilder[UpdateState.IfConditions] = {
     val _ = ev
-    new UpdateBuilder(table, assignments, relations, addIfCondition(condition))
+    copy(conditions = addIfCondition(condition))
   }
 
   def andIfCondition(
     condition: Relation
   )(implicit ev: State =:= UpdateState.IfConditions): UpdateBuilder[UpdateState.IfConditions] = {
     val _ = ev
-    new UpdateBuilder(table, assignments, relations, addIfCondition(condition))
+    copy(conditions = addIfCondition(condition))
   }
 
   def build(implicit ev: State <:< UpdateState.Where): CQL[MutationResult] = {

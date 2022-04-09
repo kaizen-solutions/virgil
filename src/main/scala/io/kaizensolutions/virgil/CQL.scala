@@ -139,9 +139,11 @@ object CQL {
   def insert(
     tableName: String,
     data: BindMarkers,
-    conditions: InsertConditions
+    conditions: InsertConditions,
+    timeToLive: Option[Duration],
+    timestamp: Option[Long]
   ): CQL[MutationResult] =
-    CQL(CQLType.Mutation.Insert(tableName, data, conditions), ExecutionAttributes.default)
+    CQL(CQLType.Mutation.Insert(tableName, data, conditions, timeToLive, timestamp), ExecutionAttributes.default)
 
   def logged(cql: CQL[MutationResult]): CQL[MutationResult] = cql.batchType(BatchType.Logged)
 

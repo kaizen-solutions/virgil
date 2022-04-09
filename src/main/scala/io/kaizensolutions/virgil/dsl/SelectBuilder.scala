@@ -5,14 +5,19 @@ import io.kaizensolutions.virgil.CQL
 import io.kaizensolutions.virgil.codecs.CqlRowDecoder
 import zio.{Chunk, NonEmptyChunk}
 
-class SelectBuilder[State <: SelectState](
+final case class SelectBuilder[State <: SelectState](
   private val tableName: String,
   private val columnNames: Chunk[String],
   private val relations: Chunk[Relation]
 ) {
+  def allColumns(implicit ev: State =:= SelectState.Empty): SelectBuilder[SelectState.NonEmpty] = {
+    val _ = ev
+    copy(columnNames = Chunk("*"))
+  }
+
   def column(name: String)(implicit ev: State <:< SelectState.Empty): SelectBuilder[SelectState.NonEmpty] = {
     val _ = ev
-    new SelectBuilder(tableName, columnNames :+ name, relations)
+    copy(columnNames = columnNames :+ name)
   }
 
   def columns(name: String, names: String*)(implicit
@@ -20,17 +25,24 @@ class SelectBuilder[State <: SelectState](
   ): SelectBuilder[SelectState.NonEmpty] = {
     val _        = ev
     val allNames = Chunk.fromIterable(name +: names)
-    new SelectBuilder(tableName, columnNames ++ allNames, relations)
+    copy(columnNames = columnNames ++ allNames)
+  }
+
+  def columns(names: NonEmptyChunk[String])(implicit
+    ev: State <:< SelectState.Empty
+  ): SelectBuilder[SelectState.NonEmpty] = {
+    val _ = ev
+    copy(columnNames = columnNames ++ names)
   }
 
   def where(relation: Relation)(implicit ev: State =:= SelectState.NonEmpty): SelectBuilder[SelectState.Relation] = {
     val _ = ev
-    new SelectBuilder(tableName, columnNames, relations :+ relation)
+    copy(relations = relations :+ relation)
   }
 
   def and(relation: Relation)(implicit ev: State =:= SelectState.Relation): SelectBuilder[SelectState.Relation] = {
     val _ = ev
-    new SelectBuilder(tableName, columnNames, relations :+ relation)
+    copy(relations = relations :+ relation)
   }
 
   def buildRow(implicit ev: State <:< SelectState.NonEmpty): CQL[Row] = {

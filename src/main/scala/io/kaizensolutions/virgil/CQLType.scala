@@ -4,6 +4,7 @@ import io.kaizensolutions.virgil.codecs.CqlRowDecoder
 import io.kaizensolutions.virgil.dsl.{Assignment, DeleteConditions, InsertConditions, Relation, UpdateConditions}
 import io.kaizensolutions.virgil.internal.{BindMarkers, CqlStatementRenderer, PullMode, QueryType}
 import zio.NonEmptyChunk
+import zio.duration.Duration
 
 sealed trait CQLType[+Result] { self =>
   def debug: String = {
@@ -32,8 +33,13 @@ sealed trait CQLType[+Result] { self =>
 object CQLType {
   sealed private[virgil] trait Mutation extends CQLType[MutationResult]
   object Mutation {
-    final private[virgil] case class Insert(tableName: String, data: BindMarkers, insertConditions: InsertConditions)
-        extends Mutation
+    final private[virgil] case class Insert(
+      tableName: String,
+      data: BindMarkers,
+      insertConditions: InsertConditions,
+      timeToLive: Option[Duration],
+      timestamp: Option[Long]
+    ) extends Mutation
 
     final private[virgil] case class Update(
       tableName: String,

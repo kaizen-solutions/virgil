@@ -12,13 +12,14 @@ import io.kaizensolutions.virgil.dsl.{
   Relation,
   UpdateConditions
 }
+import zio.duration.Duration
 import zio.{Chunk, ChunkBuilder, NonEmptyChunk}
 
 private[virgil] object CqlStatementRenderer {
   def render(in: CQLType.Mutation): (String, BindMarkers) =
     in match {
-      case Mutation.Insert(tableName, columns, conditions) =>
-        insert.render(tableName, columns, conditions)
+      case Mutation.Insert(tableName, columns, conditions, timeToLive, timestamp) =>
+        insert.render(tableName, columns, conditions, timeToLive, timestamp)
 
       case Mutation.Update(tableName, assignments, relations, conditions) =>
         update.render(tableName, assignments, relations, conditions)
@@ -43,7 +44,13 @@ private[virgil] object CqlStatementRenderer {
     }
 
   private object insert {
-    def render(table: String, columns: BindMarkers, conditions: InsertConditions): (String, BindMarkers) = {
+    def render(
+      table: String,
+      columns: BindMarkers,
+      conditions: InsertConditions,
+      timeToLive: Option[Duration],
+      timestamp: Option[Long]
+    ): (String, BindMarkers) = {
       val (columnNamesCql, bindMarkersCql) = {
         val size          = columns.underlying.size
         val columnBuilder = ChunkBuilder.make[String](size)
@@ -62,9 +69,12 @@ private[virgil] object CqlStatementRenderer {
       }
 
       val (conditionsCql, conditionColumns) = renderConditions(conditions)
-      val allColumns                        = columns ++ conditionColumns
+      val ttlTimestampCql                   = renderUsingTtlAndTimestamp(timeToLive, timestamp)
 
-      (s"INSERT INTO $table $columnNamesCql VALUES $bindMarkersCql $conditionsCql", allColumns)
+      val allColumns = columns ++ conditionColumns
+      val insertCql  = s"INSERT INTO $table $columnNamesCql VALUES $bindMarkersCql $conditionsCql $ttlTimestampCql".trim
+
+      (insertCql, allColumns)
     }
   }
 
@@ -242,6 +252,18 @@ private[virgil] object CqlStatementRenderer {
       val columnNamesCql                      = columnNames.mkString(start = "", sep = ", ", end = "")
 
       (s"SELECT $columnNamesCql FROM $tableName $relationsCql", relationBindMarkers)
+    }
+  }
+
+  private def renderUsingTtlAndTimestamp(timeToLive: Option[Duration], timestamp: Option[Long]): String = {
+    val renderedTTL       = timeToLive.map(d => s"TTL ${d.toSeconds}")
+    val renderedTimestamp = timestamp.map(t => s"TIMESTAMP $t")
+
+    (renderedTTL, renderedTimestamp) match {
+      case (Some(ttl), Some(ts)) => s"USING $ttl AND $ts"
+      case (Some(ttl), None)     => s"USING $ttl"
+      case (None, Some(ts))      => s"USING $ts"
+      case (None, None)          => ""
     }
   }
 

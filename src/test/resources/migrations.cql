@@ -145,3 +145,9 @@ CREATE TABLE deletebuilderspec_person(
     name TEXT,
     age  INT
 );
+
+CREATE TABLE insertbuilderspec_person(
+    id   INT PRIMARY KEY,
+    name TEXT,
+    age  INT
+);

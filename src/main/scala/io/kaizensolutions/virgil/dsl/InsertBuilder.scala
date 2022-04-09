@@ -5,13 +5,14 @@ import io.kaizensolutions.virgil.MutationResult
 import io.kaizensolutions.virgil.codecs.CqlRowComponentEncoder
 import io.kaizensolutions.virgil.cql.ValueInCql
 import io.kaizensolutions.virgil.internal.BindMarkers
+import zio.duration.Duration
 
 import scala.collection.immutable.ListMap
 
-final class InsertBuilder[State <: InsertState](
+final case class InsertBuilder[State <: InsertState](
   private val table: String,
   private val columns: BindMarkers,
-  private val timeToLive: Option[Int] = None,
+  private val timeToLive: Option[Duration] = None,
   private val timestamp: Option[Long] = None,
   private val conditions: InsertConditions = Conditions.NoConditions
 ) {
@@ -29,25 +30,21 @@ final class InsertBuilder[State <: InsertState](
     }
     val columnsToAdd = BindMarkers.from(underlying)
 
-    new InsertBuilder(table, columns ++ columnsToAdd)
+    copy(columns = columns ++ columnsToAdd)
   }
 
   def ifNotExists(implicit stateEvidence: State <:< InsertState.ColumnAdded): InsertBuilder[State] = {
     // Make unused variables check happy
     val _ = stateEvidence
-    new InsertBuilder(
-      table = table,
-      columns = columns,
-      timeToLive = timeToLive,
-      timestamp = timestamp,
-      conditions = Conditions.IfNotExists
-    )
+    copy(conditions = Conditions.IfNotExists)
   }
 
-  def usingTTL(timeToLive: Int)(implicit stateEvidence: State <:< InsertState.ColumnAdded): InsertBuilder[State] = {
+  def usingTTL(
+    timeToLive: Duration
+  )(implicit stateEvidence: State <:< InsertState.ColumnAdded): InsertBuilder[State] = {
     // Make unused variables check happy
     val _ = stateEvidence
-    new InsertBuilder(table, columns, Some(timeToLive))
+    copy(timeToLive = Option(timeToLive))
   }
 
   def usingTimestamp(
@@ -55,13 +52,13 @@ final class InsertBuilder[State <: InsertState](
   )(implicit stateEvidence: State <:< InsertState.ColumnAdded): InsertBuilder[State] = {
     // Make unused variables check happy
     val _ = stateEvidence
-    new InsertBuilder(table, columns, timeToLive, Some(timestamp))
+    copy(timestamp = Option(timestamp))
   }
 
   def build(implicit stateEvidence: State <:< InsertState.ColumnAdded): CQL[MutationResult] = {
     // Make unused variables check happy
     val _ = stateEvidence
-    CQL.insert(table, columns, conditions)
+    CQL.insert(table, columns, conditions, timeToLive, timestamp)
   }
 }
 object InsertBuilder {
