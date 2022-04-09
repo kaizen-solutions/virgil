@@ -1,5 +1,2 @@
-before_install:
-  - sdk install java 22.0.0.2.r11-grl
-  - sdk use java 22.0.0.2.r11-grl
 install:
   - sbt +publishM2
