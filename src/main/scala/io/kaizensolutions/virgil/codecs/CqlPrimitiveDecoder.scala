@@ -54,6 +54,13 @@ trait CqlPrimitiveDecoder[ScalaType] { self =>
     case _: CqlPrimitiveDecoder.EitherPrimitiveDecoder[_, _] => true
     case _                                                   => false
   }
+
+  private[codecs] val isCollection: Boolean = self match {
+    case _: CqlPrimitiveDecoder.ListPrimitiveDecoder[_, _, _]   => true
+    case _: CqlPrimitiveDecoder.SetPrimitiveDecoder[_, _]       => true
+    case _: CqlPrimitiveDecoder.MapPrimitiveDecoder[_, _, _, _] => true
+    case _                                                      => false
+  }
 }
 
 object CqlPrimitiveDecoder extends LowPriorityCqlPrimitiveDecoderInstances {
@@ -61,11 +68,12 @@ object CqlPrimitiveDecoder extends LowPriorityCqlPrimitiveDecoderInstances {
 
   def apply[Scala](implicit decoder: CqlPrimitiveDecoder[Scala]): CqlPrimitiveDecoder[Scala] = decoder
 
+  // NOTE: Cassandra stores empty collections as nulls and does not have the concept of nullable collections
   def decodePrimitiveByFieldName[Structure <: GettableByName, Scala](structure: Structure, fieldName: String)(implicit
     prim: CqlPrimitiveDecoder[Scala]
   ): Scala =
     if (prim.isOptional && structure.isNull(fieldName)) None.asInstanceOf[Scala]
-    else if (!prim.isOptional && !prim.isEither && structure.isNull(fieldName)) {
+    else if (!prim.isOptional && !prim.isEither && !prim.isCollection && structure.isNull(fieldName)) {
       val typeName = structure.getType(fieldName).asCql(true, true)
       val error =
         s"Field $fieldName (type: $typeName) is not an optional field but the database came back with a null value"
@@ -151,7 +159,7 @@ object CqlPrimitiveDecoder extends LowPriorityCqlPrimitiveDecoderInstances {
     prim: CqlPrimitiveDecoder[Scala]
   ): Scala =
     if (prim.isOptional && structure.isNull(index)) None.asInstanceOf[Scala]
-    else if (!prim.isOptional & !prim.isEither && structure.isNull(index)) {
+    else if (!prim.isOptional & !prim.isEither && !prim.isCollection && structure.isNull(index)) {
       val typeName = structure.getType(index).asCql(true, true)
       val error =
         s"Index $index (type: $typeName) is not an optional field but the database came back with a null value"

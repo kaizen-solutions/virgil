@@ -3,13 +3,12 @@ package io.kaizensolutions.virgil
 import io.kaizensolutions.virgil.annotations.CqlColumn
 import io.kaizensolutions.virgil.cql._
 import io.kaizensolutions.virgil.dsl._
-import zio.Has
 import zio.random.Random
 import zio.test.TestAspect.samples
 import zio.test._
 
 object CollectionsSpec {
-  def collectionsSpec: ZSpec[Has[CQLExecutor] with Random with Sized with TestConfig, Throwable] =
+  def collectionsSpec =
     suite("Collections Specification") {
       testM("Read and write a row containing collections") {
         import SimpleCollectionRow._
@@ -22,6 +21,15 @@ object CollectionsSpec {
           } yield assertTrue(actual == expected) && assertTrue(result.length == 1) &&
             assertTrue(resultAll.contains(expected))
         }
+      } + testM("Persisting empty data into a collection will allow you to retrieve it") {
+        import SimpleCollectionRow._
+        val id        = 1000009
+        val emptyData = SimpleCollectionRow(id = id, mapTest = Map.empty, setTest = Set.empty, listTest = Vector.empty)
+        insert(emptyData).executeMutation *>
+          select(id).execute.runHead.some.map(r =>
+            assertTrue(r.id == id) && assertTrue(r.mapTest.isEmpty) && assertTrue(r.setTest.isEmpty) &&
+              assertTrue(r.listTest.isEmpty)
+          )
       } + testM("Read and write a row containing nested collections") {
         import NestedCollectionRow._
         checkM(gen) { expected =>
@@ -34,6 +42,8 @@ object CollectionsSpec {
       } + testM("Read and write a row that contains an option of collections where the option is None") {
         checkM(OptionCollectionRow.gen) { popRow =>
           for {
+            // Please note that Cassandra does not have the concept of nullable collection data.
+            // So if you persist an empty collection wrapped in an Option, you'll get back None
             _            <- OptionCollectionRow.truncate.execute.runDrain
             _            <- OptionCollectionRow.insert(OptionCollectionRow(1, None, None, None)).execute.runDrain
             dbResults    <- OptionCollectionRow.select(1).execute.runCollect
