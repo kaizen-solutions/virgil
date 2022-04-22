@@ -12,6 +12,7 @@ inThisBuild {
     githubWorkflowBuild += WorkflowStep.Sbt(
       name = Option("Coverage Coveralls"),
       commands = List("clean", "coverage", "test", "coverageReport", "coverageAggregate", "coveralls"),
+      cond = Some("${{ matrix.scala != '3.1.2' }}"),  // Disable coverage for Scala 3.1.2
       env = Map(
         "COVERALLS_REPO_TOKEN" -> "${{ secrets.GITHUB_TOKEN }}",
         "COVERALLS_FLAG_NAME"  -> "Scala ${{ matrix.scala }}"
