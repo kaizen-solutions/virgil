@@ -7,17 +7,18 @@ import io.kaizensolutions.virgil.{CQL, MutationResult}
 import zio.Chunk
 
 import scala.collection.immutable.ListMap
+import scala.collection.mutable
 
 /**
  * CqlInterpolatedString is an intermediate representation that can render
  * itself into the final representation that can be submitted to Cassandra for
  * execution.
  */
-final case class CqlInterpolatedString private (
+final case class CqlInterpolatedString(
   private[cql] val rawQueryRepresentation: Chunk[CqlPartRepr]
 ) {
   private[virgil] def render: (String, ListMap[String, ValueInCql]) = {
-    val queryString         = new StringBuilder
+    val queryString         = new mutable.StringBuilder
     var markers             = ListMap.empty[String, ValueInCql]
     var markerCounter       = 0
     val parameterNamePrefix = "param"

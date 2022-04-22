@@ -10,7 +10,7 @@ import zio._
 import zio.duration.Duration
 import zio.stream.ZStream
 
-final case class CQL[+Result] private (
+final case class CQL[+Result](
   private[virgil] val cqlType: CQLType[Result],
   private[virgil] val executionAttributes: ExecutionAttributes
 ) { self =>

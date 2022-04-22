@@ -2,8 +2,6 @@ package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.cql.Row
 import io.kaizensolutions.virgil.RowCursor
-import io.kaizensolutions.virgil.annotations.CqlColumn
-import magnolia1._
 
 import scala.util.control.NonFatal
 
@@ -162,6 +160,7 @@ object CqlRowDecoder extends RowDecoderMagnoliaDerivation {
       }
   }
 
+  // $COVERAGE-OFF$Disabling because coverage incorrectly picks this up as untested even though it is
   implicit def tuple1RowDecoder[A](implicit one: CqlPrimitiveDecoder[A]): CqlRowDecoder.Object[Tuple1[A]] =
     new CqlRowDecoder.Object[Tuple1[A]] {
       override def decode(row: Row): Tuple1[A] =
@@ -839,19 +838,5 @@ object CqlRowDecoder extends RowDecoderMagnoliaDerivation {
           CqlPrimitiveDecoder.decodePrimitiveByIndex(structure = row, index = 21)(twentyTwo)
         )
     }
-}
-
-trait RowDecoderMagnoliaDerivation {
-  type Typeclass[T] = CqlRowDecoder[T]
-
-  def join[T](ctx: CaseClass[CqlRowDecoder, T]): CqlRowDecoder.Object[T] =
-    new CqlRowDecoder.Object[T] {
-      override def decode(row: Row): T =
-        ctx.construct { p =>
-          val fieldName = CqlColumn.extractFieldName(p.annotations).getOrElse(p.label)
-          p.typeclass.decodeByFieldName(row, fieldName)
-        }
-    }
-
-  implicit def derive[T]: CqlRowDecoder.Object[T] = macro Magnolia.gen[T]
+  // $COVERAGE-ON$
 }

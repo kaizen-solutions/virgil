@@ -1,15 +1,12 @@
 package io.kaizensolutions.virgil
 
-import com.datastax.oss.driver.api.core.cql.Row
 import com.datastax.oss.driver.api.core.data.UdtValue
 import com.datastax.oss.driver.shaded.guava.common.net.InetAddresses
-import io.kaizensolutions.virgil.annotations.CqlColumn
-import io.kaizensolutions.virgil.cql._
-import io.kaizensolutions.virgil.dsl.InsertBuilder
+import io.kaizensolutions.virgil.CursorSpecDatatypes._
 import zio.random.Random
+import zio.test.Assertion._
 import zio.test.TestAspect.samples
 import zio.test._
-import zio.test.Assertion._
 import zio.{Chunk, ZIO}
 
 import java.net.InetAddress
@@ -19,7 +16,7 @@ object CursorSpec {
     suite("Cursor Specification") {
       suite("Row Cursor Specification") {
         testM("Row Cursor should be able to read a complex structure") {
-          checkM(CursorExampleRow.gen) { row =>
+          checkM(cursorExampleRowGen) { row =>
             for {
               _             <- CursorExampleRow.truncate.execute.runDrain
               _             <- CursorExampleRow.insert(row).execute.runDrain
@@ -47,59 +44,25 @@ object CursorSpec {
         }
       }
     } @@ samples(10)
-}
 
-final case class CursorExampleRow(
-  id: Long,
-  name: String,
-  age: Short,
-  @CqlColumn("may_be_empty") mayBeEmpty: Option[String],
-  @CqlColumn("addresses") pastAddresses: Chunk[CursorUdtAddress]
-)
-object CursorExampleRow {
-  val tableName                     = "cursorspec_cursorexampletable"
-  def truncate: CQL[MutationResult] = CQL.truncate(tableName)
-
-  def insert(row: CursorExampleRow): CQL[MutationResult] =
-    InsertBuilder(tableName)
-      .values(
-        "id"           -> row.id,
-        "name"         -> row.name,
-        "age"          -> row.age,
-        "addresses"    -> row.pastAddresses,
-        "may_be_empty" -> row.mayBeEmpty
-      )
-      .build
-
-  def select(id: Long): CQL[Row] = {
-    val cql = cql"SELECT * FROM " ++ tableName.asCql ++ cql" WHERE id = $id"
-    cql.query
-  }
-
-  def gen: Gen[Random with Sized, CursorExampleRow] =
+  def cursorExampleRowGen: Gen[Random with Sized, CursorExampleRow] =
     for {
       id      <- Gen.long(1, 10000)
       name    <- Gen.anyString
       age     <- Gen.anyShort
-      address <- CursorUdtAddress.gen
+      address <- cursorUdtAddressGen
     } yield CursorExampleRow(id, name, age, None, Chunk(address))
-}
 
-final case class CursorUdtAddress(street: String, city: String, state: String, zip: String, note: CursorUdtNote)
-object CursorUdtAddress {
-  def gen: Gen[Random, CursorUdtAddress] =
+  def cursorUdtAddressGen: Gen[Random, CursorUdtAddress] =
     for {
       street <- Gen.stringBounded(4, 8)(Gen.alphaChar)
       city   <- Gen.stringBounded(4, 8)(Gen.alphaChar)
       state  <- Gen.stringBounded(2, 2)(Gen.alphaChar)
       zip    <- Gen.stringBounded(5, 5)(Gen.alphaChar)
-      note   <- CursorUdtNote.gen
+      note   <- cursorUdtNoteGen
     } yield CursorUdtAddress(street = street, city = city, state = state, zip = zip, note = note)
-}
 
-final case class CursorUdtNote(data: String, ip: InetAddress)
-object CursorUdtNote {
-  def gen: Gen[Random, CursorUdtNote] =
+  def cursorUdtNoteGen: Gen[Random, CursorUdtNote] =
     for {
       data    <- Gen.stringBounded(2, 4)(Gen.alphaNumericChar)
       ipChunk <- Gen.int(0, 255)

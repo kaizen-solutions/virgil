@@ -13,9 +13,9 @@ object TupleCodecSpec {
         assertM(typeCheck {
           """
           import io.kaizensolutions.virgil.codecs.CqlRowDecoder
-          
-          CqlRowDecoder[Tuple1[String]]   
-          CqlRowDecoder[(String, Int)]  
+
+          CqlRowDecoder[Tuple1[String]]
+          CqlRowDecoder[(String, Int)]
           CqlRowDecoder[(String, Int, Float)]
           CqlRowDecoder[(String, Int, Float, Double)]
           CqlRowDecoder[(String, Int, Float, Double, Boolean)]
@@ -43,9 +43,9 @@ object TupleCodecSpec {
           assertM(typeCheck {
             """
           import io.kaizensolutions.virgil.codecs.CqlUdtValueDecoder
-          
-          CqlUdtValueDecoder[Tuple1[String]]   
-          CqlUdtValueDecoder[(String, Int)]  
+
+          CqlUdtValueDecoder[Tuple1[String]]
+          CqlUdtValueDecoder[(String, Int)]
           CqlUdtValueDecoder[(String, Int, Float)]
           CqlUdtValueDecoder[(String, Int, Float, Double)]
           CqlUdtValueDecoder[(String, Int, Float, Double, Boolean)]

@@ -20,7 +20,7 @@ resolvers           += "jitpack" at "https://jitpack.io"
 libraryDependencies += "com.github.kaizen-solutions.virgil" %% "virgil" % "<please-see-jitpack-badge-for-latest-version>"
 ```
 
-Please note that Virgil is only built for Scala 2.12.x and 2.13.x, Scala 3.x support will be coming soon 🥰
+Please note that Virgil is built for Scala 2.12.x, 2.13.x and 3.1.x but fully-automatic derivation is not present for 3.1.x.
 
 ## Introduction
 
@@ -94,6 +94,32 @@ final case class Person(
 
 Note that the `CqlColumn` annotation can be used if the column/field name in the Cassandra table is different from the 
 Scala representation. This can also be used inside User Defined Types as well.
+
+### Scala 3 caveats
+
+If you are using Scala 3.1.x, you will need to use semi-automatic derivation as I have not yet figured out how to enable 
+fully automatic derivation like Scala 2.x has.
+
+```scala3
+final case class Info(favorite: Boolean, comment: String)
+object Info:
+    given cqlUdtValueEncoderForInfo: CqlUdtValueEncoder.Object[Info] = CqlUdtValueEncoder.derive[Info]
+    given cqlUdtValueDecoderForInfo: CqlUdtValueDecoder.Object[Info] = CqlUdtValueDecoder.derive[Info]
+
+final case class Address(street: String, city: String, state: String, zip: Int, data: List[Info])
+object Address:
+    given cqlUdtValueEncoderForAddress: CqlUdtValueEncoder.Object[Address] = CqlUdtValueEncoder.derive[Address]
+    given cqlUdtValueDecoderForAddress: CqlUdtValueDecoder.Object[Address] = CqlUdtValueDecoder.derive[Address]
+
+final case class Person(
+    id: String,
+    name: String,
+    age: Int,
+    @CqlColumn("past_addresses") addresses: Set[Address]
+)
+object Person:
+    given cqlRowDecoderForPersonForPerson: CqlRowDecoder.Object[Person] = CqlRowDecoder.derive[Person]
+```
 
 ### Writing data
 

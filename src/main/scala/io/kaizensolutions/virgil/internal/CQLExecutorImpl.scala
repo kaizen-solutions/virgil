@@ -22,13 +22,13 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
   override def execute[A](in: CQL[A]): Stream[Throwable, A] =
     in.cqlType match {
       case m: CQLType.Mutation =>
-        ZStream.fromEffect(executeMutation(m, in.executionAttributes))
+        ZStream.fromEffect(executeMutation(m, in.executionAttributes).asInstanceOf[Task[A]])
 
       case b: CQLType.Batch =>
-        ZStream.fromEffect(executeBatch(b, in.executionAttributes))
+        ZStream.fromEffect(executeBatch(b, in.executionAttributes).asInstanceOf[Task[A]])
 
-      case q: CQLType.Query[A] =>
-        q.pullMode match {
+      case q @ CQLType.Query(_, _, pullMode) =>
+        pullMode match {
           case PullMode.TakeUpto(n) if n <= 1 =>
             ZStream.fromEffectOption(executeSingleResultQuery(q, in.executionAttributes).some)
 
@@ -63,8 +63,9 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
       case CQLType.Batch(_, _) =>
         sys.error("Batch Mutations cannot be used with page queries")
 
-      case q: CQLType.Query[A] =>
+      case q @ CQLType.Query(_, _, _) =>
         fetchSinglePage(q, pageState, in.executionAttributes)
+          .asInstanceOf[Task[Paged[A]]]
     }
   }
 

@@ -1,8 +1,6 @@
 package io.kaizensolutions.virgil
 
-import io.kaizensolutions.virgil.annotations.CqlColumn
-import io.kaizensolutions.virgil.cql._
-import io.kaizensolutions.virgil.dsl._
+import io.kaizensolutions.virgil.UserDefinedTypesSpecDatatypes._
 import zio.Has
 import zio.duration._
 import zio.random.Random
@@ -17,7 +15,7 @@ object UserDefinedTypesSpec {
     suite("User Defined Types specification") {
       testM("Write and read Person rows containing UDTs which are nested") {
         import Row_Person._
-        checkM(Row_Person.gen) { expected =>
+        checkM(row_PersonGen) { expected =>
           val insertPerson = insert(expected).execute.runDrain
           val fetchActual  = select(expected.id).execute.runCollect
 
@@ -31,7 +29,7 @@ object UserDefinedTypesSpec {
           "Write and read rows for a UDT containing nested UDTs within themselves along with nested collections containing UDTs"
         ) {
           import Row_HeavilyNestedUDTTable._
-          checkM(gen) { expected =>
+          checkM(row_HeavilyNestedUDTTableGen) { expected =>
             val insertPeople = insert(expected).execute.runDrain
             val fetchActual  = select(expected.id).execute.runCollect
 
@@ -42,106 +40,42 @@ object UserDefinedTypesSpec {
           }
         }
     } @@ timeout(1.minute) @@ samples(10)
-}
 
-final case class Row_Person(
-  id: Int,
-  name: String,
-  age: Int,
-  data: UDT_Data
-)
-object Row_Person {
-  def insert(person: Row_Person): CQL[MutationResult] =
-    cql"INSERT INTO userdefinedtypesspec_person (id, name, age, data) VALUES (${person.id}, ${person.name}, ${person.age}, ${person.data})".mutation
-
-  def select(id: Int): CQL[Row_Person] =
-    cql"SELECT id, name, age, data FROM userdefinedtypesspec_person WHERE id = $id".query[Row_Person]
-
-  def gen: Gen[Random, Row_Person] =
+  def row_PersonGen: Gen[Random, Row_Person] =
     for {
       id   <- Gen.int(1, 100000)
       name <- Gen.stringBounded(4, 10)(Gen.alphaNumericChar)
       age  <- Gen.int(18, 100)
-      data <- UDT_Data.gen
+      data <- uDT_DataGen
     } yield Row_Person(id, name, age, data)
-}
 
-final case class UDT_Data(
-  addresses: List[UDT_Address],
-  email: Option[UDT_Email]
-)
-object UDT_Data {
-  def gen: Gen[Random, UDT_Data] =
+  def row_HeavilyNestedUDTTableGen: Gen[Random with Sized, Row_HeavilyNestedUDTTable] =
     for {
-      addresses <- Gen.listOfBounded(10, 20)(UDT_Address.gen)
-      email     <- Gen.option(UDT_Email.gen)
+      id   <- Gen.anyInt
+      data <- uDT_ExampleCollectionNestedUDTTypeGen
+    } yield Row_HeavilyNestedUDTTable(id, data)
+
+  def uDT_DataGen: Gen[Random, UDT_Data] =
+    for {
+      addresses <- Gen.listOfBounded(10, 20)(uDT_AddressGen)
+      email     <- Gen.option(uDT_EmailGen)
     } yield UDT_Data(addresses, email)
-}
 
-final case class UDT_Address(
-  number: Int,
-  street: String,
-  city: String
-)
-object UDT_Address {
-
-  def gen: Gen[Random, UDT_Address] =
+  def uDT_AddressGen: Gen[Random, UDT_Address] =
     for {
       number <- Gen.int(1, 10000)
       street <- Gen.stringBounded(4, 10)(Gen.alphaNumericChar)
       city   <- Gen.stringBounded(4, 10)(Gen.alphaNumericChar)
     } yield UDT_Address(number, street, city)
-}
 
-final case class UDT_Email(
-  username: String,
-  @CqlColumn("domain_name") domainName: String,
-  domain: String
-)
-object UDT_Email {
-
-  def gen: Gen[Random, UDT_Email] =
+  def uDT_EmailGen: Gen[Random, UDT_Email] =
     for {
       username   <- Gen.stringBounded(3, 10)(Gen.alphaNumericChar)
       domainName <- Gen.stringBounded(4, 32)(Gen.alphaNumericChar)
       domain     <- Gen.oneOf(Gen.const("com"), Gen.const("org"), Gen.const("net"))
     } yield UDT_Email(username, domainName, domain)
-}
 
-final case class Row_HeavilyNestedUDTTable(
-  id: Int,
-  data: UDT_ExampleCollectionNestedUDTType
-)
-object Row_HeavilyNestedUDTTable {
-  def gen: Gen[Random with Sized, Row_HeavilyNestedUDTTable] =
-    for {
-      id   <- Gen.anyInt
-      data <- UDT_ExampleCollectionNestedUDTType.gen
-    } yield Row_HeavilyNestedUDTTable(id, data)
-
-  def insert(in: Row_HeavilyNestedUDTTable): CQL[MutationResult] =
-    InsertBuilder("userdefinedtypesspec_heavilynestedudttable")
-      .value("id", in.id)
-      .value("data", in.data)
-      .build
-
-  def select(id: Int): CQL[Row_HeavilyNestedUDTTable] =
-    SelectBuilder
-      .from("userdefinedtypesspec_heavilynestedudttable")
-      .column("id")
-      .column("data")
-      .where("id" === id)
-      .build[Row_HeavilyNestedUDTTable]
-
-}
-final case class UDT_ExampleType(
-  x: Long,
-  y: Long,
-  date: LocalDate,
-  time: LocalTime
-)
-object UDT_ExampleType {
-  def gen: Gen[Random, UDT_ExampleType] =
+  def uDT_ExampleTypeGen: Gen[Random, UDT_ExampleType] =
     for {
       x <- Gen.anyLong
       y <- Gen.anyLong
@@ -159,29 +93,15 @@ object UDT_ExampleType {
       date = date,
       time = time
     )
-}
 
-final case class UDT_ExampleNestedType(
-  a: Int,
-  b: String,
-  c: UDT_ExampleType
-)
-object UDT_ExampleNestedType {
-  def gen =
+  def uDT_ExampleNestedTypeGen: Gen[Random with Sized, UDT_ExampleNestedType] =
     for {
       a <- Gen.anyInt
       b <- Gen.alphaNumericStringBounded(4, 10)
-      c <- UDT_ExampleType.gen
+      c <- uDT_ExampleTypeGen
     } yield UDT_ExampleNestedType(a, b, c)
-}
 
-final case class UDT_ExampleCollectionNestedUDTType(
-  a: Int,
-  b: Map[Int, Set[Set[Set[Set[UDT_ExampleNestedType]]]]],
-  c: UDT_ExampleNestedType
-)
-object UDT_ExampleCollectionNestedUDTType {
-  def gen: Gen[Random with Sized, UDT_ExampleCollectionNestedUDTType] =
+  def uDT_ExampleCollectionNestedUDTTypeGen: Gen[Random with Sized, UDT_ExampleCollectionNestedUDTType] =
     for {
       a <- Gen.anyInt
       b <- Gen.mapOf(
@@ -189,13 +109,11 @@ object UDT_ExampleCollectionNestedUDTType {
              value = Gen.setOf(
                Gen.setOf(
                  Gen.setOf(
-                   Gen.setOf(
-                     UDT_ExampleNestedType.gen
-                   )
+                   Gen.setOf(uDT_ExampleNestedTypeGen)
                  )
                )
              )
            )
-      c <- UDT_ExampleNestedType.gen
+      c <- uDT_ExampleNestedTypeGen
     } yield UDT_ExampleCollectionNestedUDTType(a, b, c)
 }

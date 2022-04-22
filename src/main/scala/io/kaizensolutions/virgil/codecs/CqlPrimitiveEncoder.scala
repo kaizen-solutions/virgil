@@ -302,7 +302,7 @@ object CqlPrimitiveEncoder {
   }
   implicit def scalaTypeViaUdtValuePrimitive[A](implicit
     encoder: CqlUdtValueEncoder.Object[A]
-  ): CqlPrimitiveEncoder[A] =
+  ): CqlPrimitiveEncoder.WithDriver[A, UdtValue] =
     UdtValueEncoderPrimitiveEncoder(encoder)
 
   final case class ListPrimitiveEncoder[Collection[_], ScalaElem, DriverElem](

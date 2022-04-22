@@ -64,7 +64,7 @@ object CQLType {
 
     final private[virgil] case class Truncate(tableName: String) extends Mutation
 
-    final private[virgil] case class RawCql private (queryString: String, bindMarkers: BindMarkers) extends Mutation
+    final private[virgil] case class RawCql(queryString: String, bindMarkers: BindMarkers) extends Mutation
   }
 
   final private[virgil] case class Batch(mutations: NonEmptyChunk[Mutation], batchType: BatchType)
