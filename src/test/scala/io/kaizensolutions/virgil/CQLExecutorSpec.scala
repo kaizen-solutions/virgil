@@ -1,11 +1,9 @@
 package io.kaizensolutions.virgil
 
 import com.datastax.oss.driver.api.core.CqlSession
-import com.datastax.oss.driver.api.core.uuid.Uuids
-import io.kaizensolutions.virgil.annotations.CqlColumn
+import io.kaizensolutions.virgil.CqlExecutorSpecDatatypes._
 import io.kaizensolutions.virgil.configuration.{ConsistencyLevel, ExecutionAttributes}
 import io.kaizensolutions.virgil.cql._
-import io.kaizensolutions.virgil.dsl.InsertBuilder
 import zio._
 import zio.clock.Clock
 import zio.duration._
@@ -17,9 +15,6 @@ import zio.test._
 import zio.test.environment.Live
 
 import java.net.InetSocketAddress
-import java.nio.ByteBuffer
-import java.util.UUID
-import scala.util.Try
 
 object CQLExecutorSpec {
   def executorSpec: Spec[
@@ -39,7 +34,7 @@ object CQLExecutorSpec {
           .withAttributes(ExecutionAttributes.default.withConsistencyLevel(ConsistencyLevel.LocalOne))
           .execute
           .runLast
-          .map(result => assertTrue(result.flatMap(_.time.toOption).get > 0))
+          .map(result => assertTrue(result.flatMap(_.time.toOption).get > 0L))
       } +
         testM("select") {
           cql"SELECT prepared_id, logged_keyspace, query_string FROM system.prepared_statements"
@@ -62,7 +57,7 @@ object CQLExecutorSpec {
         } +
         testM("selectPage") {
           import SelectPageRow._
-          checkM(Gen.chunkOfN(50)(gen)) { actual =>
+          checkM(Gen.chunkOfN(50)(selectPageRowGen)) { actual =>
             for {
               _                             <- truncate.execute.runDrain
               _                             <- ZIO.foreachPar_(actual.map(insert))(_.execute.runDrain)
@@ -80,7 +75,7 @@ object CQLExecutorSpec {
             .take(1)
             .execute
             .runCount
-            .map(rowCount => assertTrue(rowCount > 0))
+            .map(rowCount => assertTrue(rowCount > 0L))
         } +
         testM("take(n > 1)") {
           checkM(Gen.long(2, 1000)) { n =>
@@ -88,7 +83,7 @@ object CQLExecutorSpec {
               .take(n)
               .execute
               .runCount
-              .map(rowCount => assertTrue(rowCount > 0))
+              .map(rowCount => assertTrue(rowCount > 0L))
           }
         }
     }
@@ -167,11 +162,11 @@ object CQLExecutorSpec {
         val cqlExecutorLayer = sessionLayer >>> CQLExecutor.sessionLive
 
         cql"SELECT * FROM system.local".query.execute.runCount
-          .map(numberOfRows => assertTrue(numberOfRows > 0))
+          .map(numberOfRows => assertTrue(numberOfRows > 0L))
           .provideLayer(cqlExecutorLayer)
       },
       testM("Timeouts are respected") {
-        checkM(Gen.chunkOfN(4)(TimeoutCheckRow.gen)) { rows =>
+        checkM(Gen.chunkOfN(4)(timeoutCheckRowGen)) { rows =>
           val insert =
             ZStream
               .fromIterable(rows)
@@ -190,7 +185,7 @@ object CQLExecutorSpec {
         }
       } @@ samples(1),
       testM("PageSize are respected and matches with chunk size") {
-        checkM(Gen.chunkOfN(4)(PageSizeCheckRow.gen)) { rows =>
+        checkM(Gen.chunkOfN(4)(pageSizeCheckRowGen)) { rows =>
           val insert =
             ZStream
               .fromIterable(rows)
@@ -230,98 +225,21 @@ object CQLExecutorSpec {
         case Paged(chunk, None) =>
           ZStream.fromChunk(chunk)
       }
-}
 
-final case class SystemLocalResponse(
-  @CqlColumn("system.now()") now: UUID
-) {
-  def time: Either[Throwable, Long] =
-    Try(Uuids.unixTimestamp(now)).toEither
-}
-
-final case class PreparedStatementsResponse(
-  @CqlColumn("prepared_id") preparedId: ByteBuffer,
-  @CqlColumn("logged_keyspace") keyspace: Option[String],
-  @CqlColumn("query_string") query: String
-)
-
-final case class ExecuteTestTable(id: Int, info: String)
-
-object ExecuteTestTable {
-  val table      = "ziocassandrasessionspec_executeAction"
-  val batchTable = "ziocassandrasessionspec_executeBatchAction"
-
-  def truncate(tbl: String): CQL[MutationResult] = CQL.truncate(tbl)
-
-  val gen: Gen[Random with Sized, ExecuteTestTable] = for {
-    id   <- Gen.int(1, 1000)
-    info <- Gen.alphaNumericStringBounded(10, 15)
-  } yield ExecuteTestTable(id, info)
-
-  def insert(table: String)(in: ExecuteTestTable): CQL[MutationResult] =
-    (cql"INSERT INTO ".appendString(table) ++ cql"(id, info) VALUES (${in.id}, ${in.info})").mutation
-
-  def selectAllIn(table: String)(ids: List[Int]): CQL[ExecuteTestTable] =
-    (cql"SELECT id, info FROM ".appendString(table) ++ cql" WHERE id IN $ids")
-      .query[ExecuteTestTable]
-}
-
-final case class SelectPageRow(id: Int, bucket: Int, info: String)
-
-object SelectPageRow {
-  val truncate: CQL[MutationResult] = CQL.truncate("ziocassandrasessionspec_selectPage")
-
-  def insert(in: SelectPageRow): CQL[MutationResult] =
-    cql"INSERT INTO ziocassandrasessionspec_selectPage (id, bucket, info) VALUES (${in.id}, ${in.bucket}, ${in.info})".mutation
-
-  def selectAll: CQL[SelectPageRow] =
-    cql"SELECT id, bucket, info FROM ziocassandrasessionspec_selectPage".query[SelectPageRow]
-
-  val gen: Gen[Random with Sized, SelectPageRow] =
+  val selectPageRowGen: Gen[Random with Sized, SelectPageRow] =
     for {
       id     <- Gen.int(1, 1000)
       bucket <- Gen.int(1, 50)
       info   <- Gen.alphaNumericStringBounded(10, 15)
     } yield SelectPageRow(id, bucket, info)
-}
 
-final case class TimeoutCheckRow(id: Int, info: String, @CqlColumn("another_info") anotherInfo: String)
-
-object TimeoutCheckRow {
-  val table = "ziocassandrasessionspec_timeoutcheck"
-
-  val selectAll: CQL[TimeoutCheckRow] =
-    s"SELECT id, info, another_info FROM $table".asCql.query[TimeoutCheckRow]
-
-  def insert(in: TimeoutCheckRow): CQL[MutationResult] =
-    InsertBuilder(table)
-      .value("id", in.id)
-      .value("info", in.info)
-      .value("another_info", in.anotherInfo)
-      .build
-
-  def gen: Gen[Random with Sized, TimeoutCheckRow] = for {
+  val timeoutCheckRowGen: Gen[Random with Sized, TimeoutCheckRow] = for {
     id          <- Gen.int(1, 1000)
     info        <- Gen.alphaNumericStringBounded(100, 150)
     anotherInfo <- Gen.alphaNumericStringBounded(200, 400)
   } yield TimeoutCheckRow(id, info, anotherInfo)
-}
 
-final case class PageSizeCheckRow(id: Int, info: String)
-
-object PageSizeCheckRow {
-  val table = "ziocassandrasessionspec_pageSizeCheck"
-
-  val selectAll: CQL[PageSizeCheckRow] =
-    s"SELECT id, info FROM $table".asCql.query[PageSizeCheckRow]
-
-  def insert(in: PageSizeCheckRow): CQL[MutationResult] =
-    InsertBuilder(table)
-      .value("id", in.id)
-      .value("info", in.info)
-      .build
-
-  def gen: Gen[Random with Sized, PageSizeCheckRow] = for {
+  val pageSizeCheckRowGen: Gen[Random with Sized, PageSizeCheckRow] = for {
     id   <- Gen.int(1, 1000)
     info <- Gen.alphaNumericStringBounded(100, 150)
   } yield PageSizeCheckRow(id, info)
