@@ -12,7 +12,7 @@ inThisBuild {
     githubWorkflowBuild += WorkflowStep.Sbt(
       name = Option("Coverage Coveralls"),
       commands = List("clean", "coverage", "test", "coverageReport", "coverageAggregate", "coveralls"),
-      cond = Some("${{ matrix.scala != '3.1.2' }}"),  // Disable coverage for Scala 3.1.2
+      cond = Some("${{ matrix.scala != '3.1.2' }}"), // Disable coverage for Scala 3.1.2
       env = Map(
         "COVERALLS_REPO_TOKEN" -> "${{ secrets.GITHUB_TOKEN }}",
         "COVERALLS_FLAG_NAME"  -> "Scala ${{ matrix.scala }}"
@@ -47,7 +47,7 @@ lazy val root =
             zio                      %% "zio-streams"             % zioV,
             zio                      %% "zio-test"                % zioV     % Test,
             zio                      %% "zio-test-sbt"            % zioV     % Test,
-            "com.dimafeng"           %% "testcontainers-scala"    % "0.40.5" % Test,
+            "com.dimafeng"           %% "testcontainers-scala"    % "0.40.6" % Test,
             "com.outr"               %% "scribe-slf4j"            % "3.8.2"  % Test
           )
 
