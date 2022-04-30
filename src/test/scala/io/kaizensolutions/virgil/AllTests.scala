@@ -3,20 +3,18 @@ package io.kaizensolutions.virgil
 import com.datastax.oss.driver.api.core.CqlSession
 import io.kaizensolutions.virgil.cql._
 import zio._
-import zio.blocking.{effectBlocking, Blocking}
 import zio.stream.ZStream
 import zio.test.TestAspect._
 import zio.test._
-import zio.test.environment.TestEnvironment
 
 import java.net.InetSocketAddress
 
-object AllTests extends DefaultRunnableSpec {
-  val dependencies: URLayer[Blocking, Has[CassandraContainer] with Has[CQLExecutor]] = {
-    val managedSession =
+object AllTests extends ZIOSpecDefault {
+  val dependencies: ULayer[CassandraContainer & CQLExecutor] = {
+    val keyspaceAndMigrations =
       for {
-        c           <- ZManaged.service[CassandraContainer]
-        details     <- (c.getHost).zip(c.getPort).toManaged_
+        c           <- ZIO.service[CassandraContainer]
+        details     <- (c.getHost).zip(c.getPort)
         (host, port) = details
         session <- CQLExecutor(
                      CqlSession
@@ -31,20 +29,20 @@ object AllTests extends DefaultRunnableSpec {
             'replication_factor': 1
           }""".mutation
         useKeyspace = cql"USE virgil".mutation
-        _          <- session.execute(createKeyspace).runDrain.toManaged_
-        _          <- session.execute(useKeyspace).runDrain.toManaged_
-        _          <- runMigration(session, "migrations.cql").toManaged_
+        _          <- session.execute(createKeyspace).runDrain
+        _          <- session.execute(useKeyspace).runDrain
+        _          <- runMigration(session, "migrations.cql")
       } yield session
 
-    val containerLayer = CassandraContainer(CassandraType.Plain).toLayer
-    val sessionLayer   = managedSession.toLayer.orDie
-    ZLayer.requires[Blocking] ++ containerLayer >+> sessionLayer
+    val containerLayer: ULayer[CassandraContainer]             = ZLayer.scoped(CassandraContainer(CassandraType.Plain))
+    val sessionLayer: URLayer[CassandraContainer, CQLExecutor] = ZLayer.scoped(keyspaceAndMigrations).orDie
+    containerLayer >+> sessionLayer
   }
 
-  def runMigration(cql: CQLExecutor, fileName: String): ZIO[Blocking, Throwable, Unit] = {
+  def runMigration(cql: CQLExecutor, fileName: String): Task[Unit] = {
     val migrationCql =
       ZStream
-        .fromEffect(effectBlocking(scala.io.Source.fromResource(fileName).getLines()))
+        .fromZIO(ZIO.attemptBlocking(scala.io.Source.fromResource(fileName).getLines()))
         .flatMap(ZStream.fromIterator(_))
         .map(_.strip())
         .filterNot { l =>
@@ -52,12 +50,12 @@ object AllTests extends DefaultRunnableSpec {
           l.startsWith("--") ||
           l.startsWith("//")
         }
-        .fold("")(_ ++ _)
+        .runFold("")(_ ++ _)
         .map(_.split(";"))
 
     for {
       migrations <- migrationCql
-      _          <- ZIO.foreach_(migrations)(str => cql.execute(str.asCql.mutation).runDrain)
+      _          <- ZIO.foreachDiscard(migrations)(str => cql.execute(str.asCql.mutation).runDrain)
     } yield ()
   }
 
@@ -75,6 +73,6 @@ object AllTests extends DefaultRunnableSpec {
             RelationSpec.relationSpec +
             DeleteBuilderSpec.deleteBuilderSpec +
             InsertBuilderSpec.insertBuilderSpec
-        ).provideCustomLayerShared(dependencies)
+        ).provideCustomLayerShared(Clock.live ++ Random.live ++ dependencies)
     } @@ parallel @@ timed
 }

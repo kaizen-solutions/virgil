@@ -6,9 +6,9 @@ import io.kaizensolutions.virgil.annotations.CqlColumn
 import io.kaizensolutions.virgil.cql.*
 import io.kaizensolutions.virgil.dsl.*
 import io.kaizensolutions.virgil.codecs.*
+import zio.Random
 import zio.test.*
 import zio.Chunk
-import zio.random.Random
 import java.net.InetAddress
 
 object CursorSpecDatatypes {

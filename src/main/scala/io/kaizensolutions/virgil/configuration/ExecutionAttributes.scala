@@ -1,7 +1,7 @@
 package io.kaizensolutions.virgil.configuration
 
 import com.datastax.oss.driver.api.core.cql._
-import zio.duration._
+import zio._
 
 final case class ExecutionAttributes(
   pageSize: Option[Int] = None,

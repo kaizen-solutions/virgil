@@ -22,15 +22,15 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
   override def execute[A](in: CQL[A]): Stream[Throwable, A] =
     in.cqlType match {
       case m: CQLType.Mutation =>
-        ZStream.fromEffect(executeMutation(m, in.executionAttributes).asInstanceOf[Task[A]])
+        ZStream.fromZIO(executeMutation(m, in.executionAttributes).asInstanceOf[Task[A]])
 
       case b: CQLType.Batch =>
-        ZStream.fromEffect(executeBatch(b, in.executionAttributes).asInstanceOf[Task[A]])
+        ZStream.fromZIO(executeBatch(b, in.executionAttributes).asInstanceOf[Task[A]])
 
       case q @ CQLType.Query(_, _, pullMode) =>
         pullMode match {
           case PullMode.TakeUpto(n) if n <= 1 =>
-            ZStream.fromEffectOption(executeSingleResultQuery(q, in.executionAttributes).some)
+            ZStream.fromZIOOption(executeSingleResultQuery(q, in.executionAttributes).some)
 
           case PullMode.TakeUpto(n) =>
             executeGeneralQuery(q, in.executionAttributes).take(n)
@@ -82,7 +82,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
       boundStatementWithPage = boundStatement.setPagingState(driverPageState)
       rp                    <- selectPage(boundStatementWithPage)
       (results, nextPage)    = rp
-      chunksToOutput        <- results.mapM(row => ZIO.effect(reader.decode(row)))
+      chunksToOutput        <- results.mapZIO(row => ZIO.attempt(reader.decode(row)))
     } yield Paged(chunksToOutput, nextPage)
   }
 
@@ -95,7 +95,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
   private def executeBatch(m: CQLType.Batch, config: ExecutionAttributes): Task[MutationResult] =
     ZIO
       .foreach(m.mutations)(buildMutation(_))
-      .mapEffect { statementsToBatch =>
+      .mapAttempt { statementsToBatch =>
         val batch = BatchStatement
           .builder(m.batchType.toDriver)
           .addStatements(statementsToBatch.toSeq.asJava)
@@ -111,10 +111,10 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
   ): ZStream[Any, Throwable, Output] = {
     val (queryString, bindMarkers) = CqlStatementRenderer.render(input)
     for {
-      boundStatement <- ZStream.fromEffect(buildStatement(queryString, bindMarkers, config))
+      boundStatement <- ZStream.from(buildStatement(queryString, bindMarkers, config))
       reader          = input.reader
-      element <- select(boundStatement).mapChunksM { chunk =>
-                   chunk.mapM(row => ZIO.effect(reader.decode(row)))
+      element <- select(boundStatement).mapChunksZIO { chunk =>
+                   chunk.mapZIO(row => ZIO.attempt(reader.decode(row)))
                  }
     } yield element
   }
@@ -128,7 +128,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
       boundStatement <- buildStatement(queryString, bindMarkers, config)
       reader          = input.reader
       optRow         <- selectFirst(boundStatement)
-      element        <- Task(optRow.map(reader.decode))
+      element        <- ZIO.attempt(optRow.map(reader.decode))
     } yield element
   }
 
@@ -199,11 +199,12 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
              }
       } yield Chunk.fromIterable(rs.currentPage().asScala)
 
-    Stream {
-      for {
-        ref <- Ref.make(initialEffect.mapError(Option(_))).toManaged_
-      } yield pull(ref)
-    }
+    Stream.fromPull(
+      ZIO.scope *>
+        Ref
+          .make(initialEffect.mapError(Option(_)))
+          .map(pull)
+    )
   }
 
   private def selectPage(queryConfiguredWithPageState: Statement[_]): Task[(Chunk[Row], Option[PageState])] =
@@ -220,7 +221,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
     columns: BindMarkers,
     config: ExecutionAttributes
   ): Task[BoundStatement] =
-    prepare(queryString).mapEffect { preparedStatement =>
+    prepare(queryString).mapAttempt { preparedStatement =>
       val result: BoundStatementBuilder = {
         val initial = preparedStatement.boundStatementBuilder()
         val boundColumns = columns.underlying.foldLeft(initial) { case (accBuilder, (colName, column)) =>

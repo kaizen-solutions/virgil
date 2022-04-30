@@ -3,8 +3,8 @@ import com.datastax.oss.driver.api.core.{CqlSession, CqlSessionBuilder}
 import io.kaizensolutions.virgil.configuration.PageState
 import io.kaizensolutions.virgil.internal.CQLExecutorImpl
 import io.kaizensolutions.virgil.internal.Proofs.=:!=
+import zio._
 import zio.stream._
-import zio.{Has, RIO, RLayer, Task, TaskManaged, URLayer, ZIO, ZLayer, ZManaged}
 
 trait CQLExecutor {
   def execute[A](in: CQL[A]): Stream[Throwable, A]
@@ -14,21 +14,26 @@ trait CQLExecutor {
   def executePage[A](in: CQL[A], pageState: Option[PageState])(implicit ev: A =:!= MutationResult): Task[Paged[A]]
 }
 object CQLExecutor {
-  def execute[A](in: CQL[A]): ZStream[Has[CQLExecutor], Throwable, A] =
+  def execute[A](in: CQL[A]): ZStream[CQLExecutor, Throwable, A] =
     ZStream.serviceWithStream(_.execute(in))
 
-  def executeMutation(in: CQL[MutationResult]): RIO[Has[CQLExecutor], MutationResult] =
-    ZIO.serviceWith(_.executeMutation(in))
+  def executeMutation(in: CQL[MutationResult]): RIO[CQLExecutor, MutationResult] =
+    ZIO.serviceWithZIO(_.executeMutation(in))
 
   def executePage[A](in: CQL[A], pageState: Option[PageState] = None)(implicit
     ev: A =:!= MutationResult
-  ): RIO[Has[CQLExecutor], Paged[A]] = ZIO.serviceWith[CQLExecutor](_.executePage(in, pageState))
+  ): RIO[CQLExecutor, Paged[A]] = ZIO.serviceWithZIO[CQLExecutor](_.executePage(in, pageState))
 
-  val live: RLayer[Has[CqlSessionBuilder], Has[CQLExecutor]] =
-    ZLayer.fromServiceManaged[CqlSessionBuilder, Any, Throwable, CQLExecutor](apply)
+  val live: RLayer[CqlSessionBuilder, CQLExecutor] =
+    ZLayer.scoped(
+      for {
+        builder  <- ZIO.service[CqlSessionBuilder]
+        executor <- apply(builder)
+      } yield executor
+    )
 
-  val sessionLive: URLayer[Has[CqlSession], Has[CQLExecutor]] =
-    ZLayer.fromService[CqlSession, CQLExecutor](fromCqlSession)
+  val sessionLive: URLayer[CqlSession, CQLExecutor] =
+    ZLayer.fromFunction[CqlSession, CQLExecutor](fromCqlSession)
 
   /**
    * Create a CQL Executor from an existing Datastax Java Driver's CqlSession
@@ -42,12 +47,12 @@ object CQLExecutor {
   def fromCqlSession(session: CqlSession): CQLExecutor =
     new CQLExecutorImpl(session)
 
-  def apply(builder: CqlSessionBuilder): TaskManaged[CQLExecutor] = {
-    val acquire = Task.effect(builder.build())
-    val release = (session: CqlSession) => ZIO(session.close()).ignore
+  def apply(builder: CqlSessionBuilder): RIO[Scope, CQLExecutor] = {
+    val acquire = ZIO.attempt(builder.build())
+    val release = (session: CqlSession) => ZIO.attempt(session.close()).ignore
 
-    ZManaged
-      .make(acquire)(release)
+    ZIO
+      .acquireRelease(acquire)(release)
       .map(new CQLExecutorImpl(_))
   }
 }

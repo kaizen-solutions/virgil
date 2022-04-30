@@ -2,16 +2,16 @@ package io.kaizensolutions.virgil
 
 import io.kaizensolutions.virgil.UpdateBuilderSpecDatatypes.UpdateBuilderSpecPerson
 import io.kaizensolutions.virgil.dsl._
-import zio.random.Random
 import zio.test.TestAspect._
 import zio.test._
+import zio.{test => _, _}
 
 object UpdateBuilderSpec {
   def updateBuilderSpec =
     suite("UpdateBuilder Specification") {
-      testM("Performing an update will upsert a row") {
+      test("Performing an update will upsert a row") {
         import UpdateBuilderSpecPerson._
-        checkM(updateBuilderSpecPersonGen) { person =>
+        check(updateBuilderSpecPersonGen) { person =>
           val update =
             UpdateBuilder(tableName)
               .set(Name := person.name)
@@ -24,9 +24,9 @@ object UpdateBuilderSpec {
           )
         }
       } +
-        testM("Updating a column (using IF EXISTS) that does not exist will have no effect") {
+        test("Updating a column (using IF EXISTS) that does not exist will have no effect") {
           import UpdateBuilderSpecPerson._
-          checkM(updateBuilderSpecPersonGen) { person =>
+          check(updateBuilderSpecPersonGen) { person =>
             val updatedAge = person.age + 2
             val update =
               UpdateBuilder(tableName)
@@ -41,9 +41,9 @@ object UpdateBuilderSpec {
             } yield assertTrue(results.isEmpty) && assertTrue(!wasUpdated.result)
           }
         } +
-        testM("Updating a column using if conditions will update if met") {
+        test("Updating a column using if conditions will update if met") {
           import UpdateBuilderSpecPerson._
-          checkM(updateBuilderSpecPersonGen) { person =>
+          check(updateBuilderSpecPersonGen) { person =>
             val updatedAge = person.age + 10
             val update =
               UpdateBuilder(tableName)

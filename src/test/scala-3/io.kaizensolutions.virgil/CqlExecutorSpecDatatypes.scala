@@ -5,7 +5,7 @@ import io.kaizensolutions.virgil.annotations.CqlColumn
 import io.kaizensolutions.virgil.cql._
 import io.kaizensolutions.virgil.dsl._
 import io.kaizensolutions.virgil.codecs._
-import zio.random.Random
+import zio.Random
 import zio.test.{Gen, Sized}
 
 import java.nio.ByteBuffer

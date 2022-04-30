@@ -7,7 +7,6 @@ import io.kaizensolutions.virgil.dsl.{Assignment, DeleteConditions, InsertCondit
 import io.kaizensolutions.virgil.internal.Proofs._
 import io.kaizensolutions.virgil.internal.{BindMarkers, PullMode, QueryType}
 import zio._
-import zio.duration.Duration
 import zio.stream.ZStream
 
 final case class CQL[+Result](
@@ -64,14 +63,14 @@ final case class CQL[+Result](
     }
 
   def debug: String =
-    s"Query: ${cqlType.debug}" + System.lineSeparator() + s" - ${executionAttributes.debug}"
+    s"Query: ${cqlType.debug}" + java.lang.System.lineSeparator() + s" - ${executionAttributes.debug}"
 
-  def execute: ZStream[Has[CQLExecutor], Throwable, Result] = CQLExecutor.execute(self)
+  def execute: ZStream[CQLExecutor, Throwable, Result] = CQLExecutor.execute(self)
 
-  def executeMutation(implicit ev: Result <:< MutationResult): RIO[Has[CQLExecutor], MutationResult] =
+  def executeMutation(implicit ev: Result <:< MutationResult): RIO[CQLExecutor, MutationResult] =
     CQLExecutor.executeMutation(self.widen[MutationResult])
 
-  def executePage[Result1 >: Result](state: Option[PageState] = None): RIO[Has[CQLExecutor], Paged[Result1]] =
+  def executePage[Result1 >: Result](state: Option[PageState] = None): RIO[CQLExecutor, Paged[Result1]] =
     CQLExecutor.executePage(self, state)
 
   def pageSize(in: Int): CQL[Result] =

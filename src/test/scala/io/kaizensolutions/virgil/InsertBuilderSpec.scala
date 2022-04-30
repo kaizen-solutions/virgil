@@ -2,18 +2,15 @@ package io.kaizensolutions.virgil
 
 import io.kaizensolutions.virgil.InsertBuilderSpecDatatypes._
 import io.kaizensolutions.virgil.cql._
-import zio.ZIO
-import zio.duration._
-import zio.random.Random
+import zio.{test => _, _}
 import zio.test.TestAspect.{samples, sequential}
 import zio.test._
-import zio.test.environment.Live
 
 object InsertBuilderSpec {
   def insertBuilderSpec =
     suite("Insert Builder Specification") {
-      testM("Using TTL and exceeding it will cause the result to not be found") {
-        checkM(insertBuilderSpecPersonGen) { person =>
+      test("Using TTL and exceeding it will cause the result to not be found") {
+        check(insertBuilderSpecPersonGen) { person =>
           val insert = InsertBuilderSpecPerson
             .insert(person)
             .usingTTL(1.second)
@@ -28,8 +25,8 @@ object InsertBuilderSpec {
 
           insert *> Live.live(ZIO.sleep(1001.milliseconds)) *> find.map(res => assertTrue(res.isEmpty))
         }
-      } + testM("Using a timestamp is enforced") {
-        checkM(insertBuilderSpecPersonGen, Gen.long(13370000, 13371337)) { (person, timestamp) =>
+      } + test("Using a timestamp is enforced") {
+        check(insertBuilderSpecPersonGen, Gen.long(13370000, 13371337)) { (person, timestamp) =>
           val insert = InsertBuilderSpecPerson
             .insert(person)
             .usingTimestamp(timestamp)

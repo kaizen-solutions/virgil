@@ -9,7 +9,7 @@ object TupleCodecSpec {
 
   private def tupleDecodeSpec =
     suite("Tuple Decoder specification") {
-      testM("Row Decoders for tuples compile") {
+      test("Row Decoders for tuples compile") {
         assertM(typeCheck {
           """
           import io.kaizensolutions.virgil.codecs.CqlRowDecoder
@@ -39,7 +39,7 @@ object TupleCodecSpec {
           """
         })(isRight(anything))
       } +
-        testM("UdtValue Decoders for tuples compile") {
+        test("UdtValue Decoders for tuples compile") {
           assertM(typeCheck {
             """
           import io.kaizensolutions.virgil.codecs.CqlUdtValueDecoder

@@ -1,18 +1,17 @@
 package io.kaizensolutions.virgil
 
+import io.kaizensolutions.virgil.RelationSpecDatatypes.RelationSpec_Person._
 import io.kaizensolutions.virgil.RelationSpecDatatypes._
-import RelationSpec_Person._
 import io.kaizensolutions.virgil.dsl._
-import zio.Has
-import zio.random.Random
 import zio.test.TestAspect.{samples, sequential}
 import zio.test._
+import zio.{test => _, _}
 
 object RelationSpec {
-  def relationSpec: ZSpec[TestConfig with Random with Has[CQLExecutor], Any] =
+  def relationSpec: ZSpec[TestConfig with Random with CQLExecutor, Any] =
     suite("Relational Operators Specification") {
-      testM("isNull") {
-        checkM(relationSpec_PersonGen) { person =>
+      test("isNull") {
+        check(relationSpec_PersonGen) { person =>
           val update =
             UpdateBuilder(table)
               .set(Name := person.name)
@@ -29,8 +28,8 @@ object RelationSpec {
             update *>
             find.map(actual => assertTrue(actual == person))
         }
-      } + testM("isNotNull") {
-        checkM(relationSpec_PersonGen) { person =>
+      } + test("isNotNull") {
+        check(relationSpec_PersonGen) { person =>
           val insert  = RelationSpec_Person.insert(person).execute.runDrain
           val newName = person.name + " " + person.name
           val update =

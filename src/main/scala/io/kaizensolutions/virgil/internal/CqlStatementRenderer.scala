@@ -12,8 +12,7 @@ import io.kaizensolutions.virgil.dsl.{
   Relation,
   UpdateConditions
 }
-import zio.duration.Duration
-import zio.{Chunk, ChunkBuilder, NonEmptyChunk}
+import zio._
 
 private[virgil] object CqlStatementRenderer {
   def render(in: CQLType.Mutation): (String, BindMarkers) =

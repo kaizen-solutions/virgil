@@ -4,7 +4,7 @@ import com.datastax.oss.driver.api.core.`type`.codec.CodecNotFoundException
 import com.datastax.oss.driver.api.core.`type`.{DataTypes, UserDefinedType}
 import com.datastax.oss.driver.internal.core.`type`.UserDefinedTypeBuilder
 import io.kaizensolutions.virgil.codecs.CqlPrimitiveDecoder
-import zio.Task
+import zio.ZIO
 import zio.test.Assertion._
 import zio.test._
 
@@ -49,13 +49,13 @@ object CodecSpec {
               val result        = CqlPrimitiveDecoder.decodePrimitiveByFieldName(udt, "a")(stringDecoder.optional)
               assert(result)(isSome(containsString("yay")))
             } +
-            testM("Reading an incorrect type will throw an exception") {
+            test("Reading an incorrect type will throw an exception") {
               val udt        = userDefinedType.newValue().setString("a", "nay")
               val intDecoder = CqlPrimitiveDecoder[Int]
-              Task
-                .effect(CqlPrimitiveDecoder.decodePrimitiveByFieldName(udt, "a")(intDecoder.optional))
+              ZIO
+                .attempt(CqlPrimitiveDecoder.decodePrimitiveByFieldName(udt, "a")(intDecoder.optional))
                 .refineToOrDie[CodecNotFoundException]
-                .run
+                .exit
                 .map(result => assert(result)(failsWithA[CodecNotFoundException]))
             }
         }

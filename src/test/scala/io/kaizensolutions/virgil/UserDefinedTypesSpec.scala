@@ -1,21 +1,17 @@
 package io.kaizensolutions.virgil
 
 import io.kaizensolutions.virgil.UserDefinedTypesSpecDatatypes._
-import zio.Has
-import zio.duration._
-import zio.random.Random
 import zio.test.TestAspect._
+import zio.{test => _, _}
 import zio.test._
-import zio.test.environment.Live
-
 import java.time.{LocalDate, LocalTime}
 
 object UserDefinedTypesSpec {
-  def userDefinedTypesSpec: ZSpec[Live with Has[CQLExecutor] with Random with Sized with TestConfig, Throwable] =
+  def userDefinedTypesSpec: ZSpec[Live with CQLExecutor with Random with Sized with TestConfig, Throwable] =
     suite("User Defined Types specification") {
-      testM("Write and read Person rows containing UDTs which are nested") {
+      test("Write and read Person rows containing UDTs which are nested") {
         import Row_Person._
-        checkM(row_PersonGen) { expected =>
+        check(row_PersonGen) { expected =>
           val insertPerson = insert(expected).execute.runDrain
           val fetchActual  = select(expected.id).execute.runCollect
 
@@ -25,11 +21,11 @@ object UserDefinedTypesSpec {
           } yield assertTrue(actualWithData.head == expected) && assertTrue(actualWithData.length == 1)
         }
       } +
-        testM(
+        test(
           "Write and read rows for a UDT containing nested UDTs within themselves along with nested collections containing UDTs"
         ) {
           import Row_HeavilyNestedUDTTable._
-          checkM(row_HeavilyNestedUDTTableGen) { expected =>
+          check(row_HeavilyNestedUDTTableGen) { expected =>
             val insertPeople = insert(expected).execute.runDrain
             val fetchActual  = select(expected.id).execute.runCollect
 
@@ -51,7 +47,7 @@ object UserDefinedTypesSpec {
 
   def row_HeavilyNestedUDTTableGen: Gen[Random with Sized, Row_HeavilyNestedUDTTable] =
     for {
-      id   <- Gen.anyInt
+      id   <- Gen.int
       data <- uDT_ExampleCollectionNestedUDTTypeGen
     } yield Row_HeavilyNestedUDTTable(id, data)
 
@@ -77,8 +73,8 @@ object UserDefinedTypesSpec {
 
   def uDT_ExampleTypeGen: Gen[Random, UDT_ExampleType] =
     for {
-      x <- Gen.anyLong
-      y <- Gen.anyLong
+      x <- Gen.long
+      y <- Gen.long
       // Interesting note: the Java date and time library can express a range of dates and times far greater than what Cassandra supports
       day    <- Gen.int(1, 28)
       month  <- Gen.int(1, 12)
@@ -96,16 +92,16 @@ object UserDefinedTypesSpec {
 
   def uDT_ExampleNestedTypeGen: Gen[Random with Sized, UDT_ExampleNestedType] =
     for {
-      a <- Gen.anyInt
+      a <- Gen.int
       b <- Gen.alphaNumericStringBounded(4, 10)
       c <- uDT_ExampleTypeGen
     } yield UDT_ExampleNestedType(a, b, c)
 
   def uDT_ExampleCollectionNestedUDTTypeGen: Gen[Random with Sized, UDT_ExampleCollectionNestedUDTType] =
     for {
-      a <- Gen.anyInt
+      a <- Gen.int
       b <- Gen.mapOf(
-             key = Gen.anyInt,
+             key = Gen.int,
              value = Gen.setOf(
                Gen.setOf(
                  Gen.setOf(

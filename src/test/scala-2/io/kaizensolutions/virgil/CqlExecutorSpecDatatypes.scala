@@ -4,7 +4,7 @@ import com.datastax.oss.driver.api.core.uuid.Uuids
 import io.kaizensolutions.virgil.annotations.CqlColumn
 import io.kaizensolutions.virgil.cql._
 import io.kaizensolutions.virgil.dsl._
-import zio.random.Random
+import zio.Random
 import zio.test.{Gen, Sized}
 
 import java.nio.ByteBuffer

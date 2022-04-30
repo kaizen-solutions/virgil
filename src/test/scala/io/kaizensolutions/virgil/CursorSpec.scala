@@ -3,11 +3,10 @@ package io.kaizensolutions.virgil
 import com.datastax.oss.driver.api.core.data.UdtValue
 import com.datastax.oss.driver.shaded.guava.common.net.InetAddresses
 import io.kaizensolutions.virgil.CursorSpecDatatypes._
-import zio.random.Random
 import zio.test.Assertion._
 import zio.test.TestAspect.samples
 import zio.test._
-import zio.{Chunk, ZIO}
+import zio.{test => _, _}
 
 import java.net.InetAddress
 
@@ -15,8 +14,8 @@ object CursorSpec {
   def cursorSpec =
     suite("Cursor Specification") {
       suite("Row Cursor Specification") {
-        testM("Row Cursor should be able to read a complex structure") {
-          checkM(cursorExampleRowGen) { row =>
+        test("Row Cursor should be able to read a complex structure") {
+          check(cursorExampleRowGen) { row =>
             for {
               _             <- CursorExampleRow.truncate.execute.runDrain
               _             <- CursorExampleRow.insert(row).execute.runDrain
@@ -48,8 +47,8 @@ object CursorSpec {
   def cursorExampleRowGen: Gen[Random with Sized, CursorExampleRow] =
     for {
       id      <- Gen.long(1, 10000)
-      name    <- Gen.anyString
-      age     <- Gen.anyShort
+      name    <- Gen.string
+      age     <- Gen.short
       address <- cursorUdtAddressGen
     } yield CursorExampleRow(id, name, age, None, Chunk(address))
 

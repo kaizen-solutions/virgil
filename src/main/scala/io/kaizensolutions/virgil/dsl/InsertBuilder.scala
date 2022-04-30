@@ -5,7 +5,7 @@ import io.kaizensolutions.virgil.MutationResult
 import io.kaizensolutions.virgil.codecs.CqlRowComponentEncoder
 import io.kaizensolutions.virgil.cql.ValueInCql
 import io.kaizensolutions.virgil.internal.BindMarkers
-import zio.duration.Duration
+import zio.Duration
 
 import scala.collection.immutable.ListMap
 

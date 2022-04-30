@@ -8,7 +8,7 @@ trait CassandraContainer {
   def getPort: Task[Int]
 }
 object CassandraContainer {
-  def apply(cassType: CassandraType): UManaged[CassandraContainer] = {
+  def apply(cassType: CassandraType): URIO[Scope, CassandraContainer] = {
     val nativePort         = 9042
     val datastaxEnterprise = "datastax/dse-server:6.8.19"
     val datastaxEnv = Map(
@@ -65,12 +65,12 @@ object CassandraContainer {
         )
     }
 
-    ZManaged
-      .make_(ZIO.effectTotal(container.start()))(ZIO.effectTotal(container.stop()))
+    ZIO
+      .acquireRelease(ZIO.succeed(container.start()))(_ => ZIO.succeed(container.stop()))
       .as(
         new CassandraContainer {
-          override def getHost: Task[String] = Task(container.host)
-          override def getPort: Task[Int]    = Task(container.mappedPort(9042))
+          override def getHost: Task[String] = ZIO.attempt(container.host)
+          override def getPort: Task[Int]    = ZIO.attempt(container.mappedPort(9042))
         }
       )
   }

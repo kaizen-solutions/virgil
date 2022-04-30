@@ -3,13 +3,12 @@ package io.kaizensolutions.virgil
 import io.kaizensolutions.virgil.codecs.CqlRowDecoder
 import io.kaizensolutions.virgil.dsl.{Assignment, DeleteConditions, InsertConditions, Relation, UpdateConditions}
 import io.kaizensolutions.virgil.internal.{BindMarkers, CqlStatementRenderer, PullMode, QueryType}
-import zio.NonEmptyChunk
-import zio.duration.Duration
+import zio._
 
 sealed trait CQLType[+Result] { self =>
   def debug: String = {
     def renderSingle(queryString: String, markers: BindMarkers): String =
-      s"$queryString ${System.lineSeparator()} - $markers"
+      s"$queryString ${java.lang.System.lineSeparator()} - $markers"
 
     self match {
       case mutation: CQLType.Mutation =>
@@ -19,8 +18,8 @@ sealed trait CQLType[+Result] { self =>
       case b: CQLType.Batch =>
         val batchRendered = b.mutations.map(_.debug)
         batchRendered.mkString(
-          start = "BATCH(" + System.lineSeparator(),
-          sep = ", " + System.lineSeparator(),
+          start = "BATCH(" + java.lang.System.lineSeparator(),
+          sep = ", " + java.lang.System.lineSeparator(),
           end = s", batch-type = ${b.batchType})"
         )
 

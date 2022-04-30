@@ -1,16 +1,16 @@
 package io.kaizensolutions.virgil
 
 import io.kaizensolutions.virgil.CollectionsSpecDatatypes._
-import zio.random.Random
+import zio.Random
 import zio.test.TestAspect.samples
 import zio.test._
 
 object CollectionsSpec {
   def collectionsSpec =
     suite("Collections Specification") {
-      testM("Read and write a row containing collections") {
+      test("Read and write a row containing collections") {
         import SimpleCollectionRow._
-        checkM(simpleCollectionRowGen) { expected =>
+        check(simpleCollectionRowGen) { expected =>
           for {
             _         <- insert(expected).execute.runDrain
             result    <- select(expected.id).execute.runCollect
@@ -19,7 +19,7 @@ object CollectionsSpec {
           } yield assertTrue(actual == expected) && assertTrue(result.length == 1) &&
             assertTrue(resultAll.contains(expected))
         }
-      } + testM("Persisting empty data into a collection will allow you to retrieve it") {
+      } + test("Persisting empty data into a collection will allow you to retrieve it") {
         import SimpleCollectionRow._
         val id        = 1000009
         val emptyData = SimpleCollectionRow(id = id, mapTest = Map.empty, setTest = Set.empty, listTest = Vector.empty)
@@ -28,17 +28,17 @@ object CollectionsSpec {
             assertTrue(r.id == id) && assertTrue(r.mapTest.isEmpty) && assertTrue(r.setTest.isEmpty) &&
               assertTrue(r.listTest.isEmpty)
           )
-      } + testM("Read and write a row containing nested collections") {
+      } + test("Read and write a row containing nested collections") {
         import NestedCollectionRow._
-        checkM(nestedCollectionRowGen) { expected =>
+        check(nestedCollectionRowGen) { expected =>
           for {
             _      <- insert(expected).execute.runDrain
             result <- select(expected.a).execute.runCollect
             actual  = result.head
           } yield assertTrue(actual == expected) && assertTrue(result.length == 1)
         }
-      } + testM("Read and write a row that contains an option of collections where the option is None") {
-        checkM(optionCollectionRowGen) { popRow =>
+      } + test("Read and write a row that contains an option of collections where the option is None") {
+        check(optionCollectionRowGen) { popRow =>
           for {
             // Please note that Cassandra does not have the concept of nullable collection data.
             // So if you persist an empty collection wrapped in an Option, you'll get back None
@@ -57,22 +57,22 @@ object CollectionsSpec {
   def simpleCollectionRowGen: Gen[Random with Sized, SimpleCollectionRow] =
     for {
       id   <- Gen.int(1, 10000000)
-      map  <- Gen.mapOf(key = Gen.anyInt, value = Gen.anyString)
-      set  <- Gen.setOf(Gen.anyLong)
-      list <- Gen.vectorOf(Gen.anyString)
+      map  <- Gen.mapOf(key = Gen.int, value = Gen.string)
+      set  <- Gen.setOf(Gen.long)
+      list <- Gen.vectorOf(Gen.string)
     } yield SimpleCollectionRow(id, map, set, list)
 
   def nestedCollectionRowGen: Gen[Random with Sized, NestedCollectionRow] =
     for {
       a <- Gen.int(1, 10000000)
-      b <- Gen.mapOf(key = Gen.anyInt, value = Gen.setOf(Gen.setOf(Gen.setOf(Gen.setOf(Gen.anyInt)))))
+      b <- Gen.mapOf(key = Gen.int, value = Gen.setOf(Gen.setOf(Gen.setOf(Gen.setOf(Gen.int)))))
     } yield NestedCollectionRow(a, b)
 
   def optionCollectionRowGen: Gen[Random with Sized, OptionCollectionRow] =
     for {
       id   <- Gen.int(1, 10000000)
-      map  <- Gen.option(Gen.mapOf(key = Gen.anyInt, value = Gen.anyString))
-      set  <- Gen.option(Gen.setOf(Gen.anyLong))
-      list <- Gen.option(Gen.vectorOf(Gen.anyString))
+      map  <- Gen.option(Gen.mapOf(key = Gen.int, value = Gen.string))
+      set  <- Gen.option(Gen.setOf(Gen.long))
+      list <- Gen.option(Gen.vectorOf(Gen.string))
     } yield OptionCollectionRow(id, map, set, list)
 }
