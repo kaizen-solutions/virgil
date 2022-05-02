@@ -152,59 +152,21 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
     ZIO.fromCompletionStage(underlyingSession.executeAsync(query))
 
   private def select(query: Statement[_]): ZStream[Any, Throwable, Row] = {
-    val initialEffect = ZIO.fromCompletionStage(underlyingSession.executeAsync(query))
+    def go(in: AsyncResultSet): ZChannel[Any, Any, Any, Any, Throwable, Chunk[Row], Unit] = {
+      // calling in.currentPage() will mutate the data structure and change results so use in.remaining to check
+      // before consuming
+      val next =
+        if (in.hasMorePages) ZChannel.fromZIO(ZIO.fromCompletionStage(in.fetchNextPage())).flatMap(go)
+        else ZChannel.unit
 
-    /*
-     * pull describes how to pull one page of data from the underlying driver
-     * and keeping track of how to pull the next page of data via the ref.
-     *
-     * Note that failing with a None indicates that there is no more data to
-     * pull. Failing with Some(throwable) indicates that there was an error
-     *
-     * pull does has to choose __one__ of the following strategies once a page
-     * of data is retrieved:
-     *
-     *   - The retrieved page tells us that there are more paged to be retrieved
-     *     so we update the ref to the next page before emitting the current
-     *     page's results
-     *
-     *   - The retrieved page tells us that there are no more pages to be
-     *     retrieved and the retrieved page has some results so we emit the
-     *     current page's results and then update the ref to signal that the
-     *     next pull should stop
-     *
-     *   - The retrieved page tells us that there are no more pages to be pages
-     *     to retrieved and the current page has no results so we stop
-     *     immediately
-     *
-     * @param ref
-     *   holds the next set of results to be read which involve fetching data
-     *   from the database
-     *
-     * @return
-     */
-    def pull(ref: Ref[IO[Option[Throwable], AsyncResultSet]]): IO[Option[Throwable], Chunk[Row]] =
-      for {
-        io <- ref.get
-        rs <- io
-        _ <- rs match {
-               case _ if rs.hasMorePages =>
-                 ref.set(Task.fromCompletionStage(rs.fetchNextPage()).mapError(Option(_)))
+      if (in.remaining() > 0) ZChannel.write(Chunk.fromIterable(in.currentPage().asScala)) *> next
+      else next
+    }
 
-               case _ if rs.remaining() > 0 =>
-                 ref.set(IO.fail(None))
-
-               case _ =>
-                 IO.fail(None)
-             }
-      } yield Chunk.fromIterable(rs.currentPage().asScala)
-
-    Stream.fromPull(
-      ZIO.scope *>
-        Ref
-          .make(initialEffect.mapError(Option(_)))
-          .map(pull)
-    )
+    ZChannel
+      .fromZIO(ZIO.fromCompletionStage(underlyingSession.executeAsync(query)))
+      .flatMap(go)
+      .toStream
   }
 
   private def selectPage(queryConfiguredWithPageState: Statement[_]): Task[(Chunk[Row], Option[PageState])] =
