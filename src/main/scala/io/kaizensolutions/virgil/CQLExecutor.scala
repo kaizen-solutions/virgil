@@ -7,21 +7,25 @@ import zio._
 import zio.stream._
 
 trait CQLExecutor {
-  def execute[A](in: CQL[A]): Stream[Throwable, A]
+  def execute[A](in: CQL[A])(implicit trace: Trace): Stream[Throwable, A]
 
-  def executeMutation(in: CQL[MutationResult]): Task[MutationResult]
+  def executeMutation(in: CQL[MutationResult])(implicit trace: Trace): Task[MutationResult]
 
-  def executePage[A](in: CQL[A], pageState: Option[PageState])(implicit ev: A =:!= MutationResult): Task[Paged[A]]
+  def executePage[A](in: CQL[A], pageState: Option[PageState])(implicit
+    ev: A =:!= MutationResult,
+    trace: Trace
+  ): Task[Paged[A]]
 }
 object CQLExecutor {
-  def execute[A](in: CQL[A]): ZStream[CQLExecutor, Throwable, A] =
+  def execute[A](in: CQL[A])(implicit trace: Trace): ZStream[CQLExecutor, Throwable, A] =
     ZStream.serviceWithStream(_.execute(in))
 
-  def executeMutation(in: CQL[MutationResult]): RIO[CQLExecutor, MutationResult] =
+  def executeMutation(in: CQL[MutationResult])(implicit trace: Trace): RIO[CQLExecutor, MutationResult] =
     ZIO.serviceWithZIO(_.executeMutation(in))
 
   def executePage[A](in: CQL[A], pageState: Option[PageState] = None)(implicit
-    ev: A =:!= MutationResult
+    ev: A =:!= MutationResult,
+    trace: Trace
   ): RIO[CQLExecutor, Paged[A]] = ZIO.serviceWithZIO[CQLExecutor](_.executePage(in, pageState))
 
   val live: RLayer[CqlSessionBuilder, CQLExecutor] =
