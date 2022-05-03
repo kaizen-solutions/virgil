@@ -141,7 +141,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
   ): Task[BatchableStatement[_]] = {
     val (queryString, bindMarkers) = CqlStatementRenderer.render(in)
 
-    if (bindMarkers.isEmpty) Task.succeed(SimpleStatement.newInstance(queryString))
+    if (bindMarkers.isEmpty) ZIO.succeed(SimpleStatement.newInstance(queryString))
     else buildStatement(queryString, bindMarkers, attr)
   }
 

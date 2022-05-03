@@ -33,7 +33,7 @@ object CQLExecutor {
     )
 
   val sessionLive: URLayer[CqlSession, CQLExecutor] =
-    ZLayer.fromFunction[CqlSession, CQLExecutor](fromCqlSession)
+    ZLayer.fromFunction(fromCqlSession(_))
 
   /**
    * Create a CQL Executor from an existing Datastax Java Driver's CqlSession
