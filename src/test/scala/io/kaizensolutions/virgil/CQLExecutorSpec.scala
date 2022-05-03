@@ -13,16 +13,12 @@ import zio.{test => _, _}
 import java.net.InetSocketAddress
 
 object CQLExecutorSpec {
-  def executorSpec: Spec[
-    Live with CQLExecutor with Clock with Random with Sized with TestConfig with CassandraContainer,
-    TestFailure[Throwable],
-    TestSuccess
-  ] =
+  def executorSpec: Spec[Live with CassandraContainer with Random with Sized with TestConfig with CQLExecutor, Any] =
     suite("Cassandra Session Interpreter Specification") {
       (queries + actions + configuration) @@ timeout(2.minutes) @@ samples(4)
     }
 
-  def queries: Spec[CQLExecutor with Random with Sized with TestConfig, TestFailure[Throwable], TestSuccess] =
+  def queries: Spec[TestConfig with Random with Sized with CQLExecutor, Throwable] =
     suite("Queries") {
       test("selectFirst") {
         cql"SELECT now() FROM system.local"
@@ -84,7 +80,7 @@ object CQLExecutorSpec {
         }
     }
 
-  def actions: Spec[CQLExecutor with Random with Sized with TestConfig, TestFailure[Throwable], TestSuccess] =
+  def actions: Spec[Random with Sized with TestConfig with CQLExecutor, Throwable] =
     suite("Actions") {
       test("executeAction") {
         import ExecuteTestTable._
@@ -132,10 +128,7 @@ object CQLExecutorSpec {
         }
     } @@ sequential
 
-  def configuration
-    : Spec[CQLExecutor with Clock with Random with Sized with TestConfig with CassandraContainer, TestFailure[
-      Throwable
-    ], TestSuccess] =
+  def configuration: Spec[CassandraContainer with Random with Sized with TestConfig with CQLExecutor, Any] =
     suite("Session Configuration")(
       test("Creating a layer from an existing session allows you to access Cassandra") {
         val sessionScoped: URIO[CassandraContainer with Scope, CqlSession] = {

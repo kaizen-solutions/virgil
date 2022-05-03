@@ -19,7 +19,7 @@ import scala.jdk.CollectionConverters._
  *   is the underlying Datastax Java driver session
  */
 private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQLExecutor {
-  override def execute[A](in: CQL[A]): Stream[Throwable, A] =
+  override def execute[A](in: CQL[A])(implicit trace: Trace): Stream[Throwable, A] =
     in.cqlType match {
       case m: CQLType.Mutation =>
         ZStream.fromZIO(executeMutation(m, in.executionAttributes).asInstanceOf[Task[A]])
@@ -40,7 +40,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
         }
     }
 
-  override def executeMutation(in: CQL[MutationResult]): Task[MutationResult] =
+  override def executeMutation(in: CQL[MutationResult])(implicit trace: Trace): Task[MutationResult] =
     in.cqlType match {
       case mutation: CQLType.Mutation =>
         executeMutation(mutation, in.executionAttributes)
@@ -53,7 +53,8 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
     }
 
   override def executePage[A](in: CQL[A], pageState: Option[PageState])(implicit
-    ev: A =:!= MutationResult
+    ev: A =:!= MutationResult,
+    trace: Trace
   ): Task[Paged[A]] = {
     val _ = ev
     in.cqlType match {
@@ -73,7 +74,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
     q: CQLType.Query[A],
     pageState: Option[PageState],
     attr: ExecutionAttributes
-  ): Task[Paged[A]] = {
+  )(implicit trace: Trace): Task[Paged[A]] = {
     val (queryString, bindMarkers) = CqlStatementRenderer.render(q)
     for {
       boundStatement        <- buildStatement(queryString, bindMarkers, attr)
@@ -86,13 +87,15 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
     } yield Paged(chunksToOutput, nextPage)
   }
 
-  private def executeMutation(m: CQLType.Mutation, config: ExecutionAttributes): Task[MutationResult] =
+  private def executeMutation(m: CQLType.Mutation, config: ExecutionAttributes)(implicit
+    trace: Trace
+  ): Task[MutationResult] =
     for {
       statement <- buildMutation(m, config)
       result    <- executeAction(statement)
     } yield MutationResult.make(result.wasApplied())
 
-  private def executeBatch(m: CQLType.Batch, config: ExecutionAttributes): Task[MutationResult] =
+  private def executeBatch(m: CQLType.Batch, config: ExecutionAttributes)(implicit trace: Trace): Task[MutationResult] =
     ZIO
       .foreach(m.mutations)(buildMutation(_))
       .mapAttempt { statementsToBatch =>
@@ -108,7 +111,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
   private def executeGeneralQuery[Output](
     input: CQLType.Query[Output],
     config: ExecutionAttributes
-  ): ZStream[Any, Throwable, Output] = {
+  )(implicit trace: Trace): ZStream[Any, Throwable, Output] = {
     val (queryString, bindMarkers) = CqlStatementRenderer.render(input)
     for {
       boundStatement <- ZStream.from(buildStatement(queryString, bindMarkers, config))
@@ -122,7 +125,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
   private def executeSingleResultQuery[Output](
     input: CQLType.Query[Output],
     config: ExecutionAttributes
-  ): ZIO[Any, Throwable, Option[Output]] = {
+  )(implicit trace: Trace): ZIO[Any, Throwable, Option[Output]] = {
     val (queryString, bindMarkers) = CqlStatementRenderer.render(input)
     for {
       boundStatement <- buildStatement(queryString, bindMarkers, config)
@@ -132,82 +135,46 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
     } yield element
   }
 
-  private def selectFirst(query: Statement[_]): Task[Option[Row]] =
+  private def selectFirst(query: Statement[_])(implicit trace: Trace): Task[Option[Row]] =
     executeAction(query).map(resultSet => Option(resultSet.one()))
 
   private def buildMutation(
     in: CQLType.Mutation,
     attr: ExecutionAttributes = ExecutionAttributes.default
-  ): Task[BatchableStatement[_]] = {
+  )(implicit trace: Trace): Task[BatchableStatement[_]] = {
     val (queryString, bindMarkers) = CqlStatementRenderer.render(in)
 
-    if (bindMarkers.isEmpty) Task.succeed(SimpleStatement.newInstance(queryString))
+    if (bindMarkers.isEmpty) ZIO.succeed(SimpleStatement.newInstance(queryString))
     else buildStatement(queryString, bindMarkers, attr)
   }
 
-  private def prepare(query: String): Task[PreparedStatement] =
+  private def prepare(query: String)(implicit trace: Trace): Task[PreparedStatement] =
     ZIO.fromCompletionStage(underlyingSession.prepareAsync(query))
 
-  private def executeAction(query: Statement[_]): Task[AsyncResultSet] =
+  private def executeAction(query: Statement[_])(implicit trace: Trace): Task[AsyncResultSet] =
     ZIO.fromCompletionStage(underlyingSession.executeAsync(query))
 
-  private def select(query: Statement[_]): ZStream[Any, Throwable, Row] = {
-    val initialEffect = ZIO.fromCompletionStage(underlyingSession.executeAsync(query))
+  private def select(query: Statement[_])(implicit trace: Trace): ZStream[Any, Throwable, Row] = {
+    def go(in: AsyncResultSet): ZChannel[Any, Any, Any, Any, Throwable, Chunk[Row], Unit] = {
+      // calling in.currentPage() will mutate the data structure and change results so use in.remaining to check
+      // before consuming
+      val next =
+        if (in.hasMorePages) ZChannel.fromZIO(ZIO.fromCompletionStage(in.fetchNextPage())).flatMap(go)
+        else ZChannel.unit
 
-    /*
-     * pull describes how to pull one page of data from the underlying driver
-     * and keeping track of how to pull the next page of data via the ref.
-     *
-     * Note that failing with a None indicates that there is no more data to
-     * pull. Failing with Some(throwable) indicates that there was an error
-     *
-     * pull does has to choose __one__ of the following strategies once a page
-     * of data is retrieved:
-     *
-     *   - The retrieved page tells us that there are more paged to be retrieved
-     *     so we update the ref to the next page before emitting the current
-     *     page's results
-     *
-     *   - The retrieved page tells us that there are no more pages to be
-     *     retrieved and the retrieved page has some results so we emit the
-     *     current page's results and then update the ref to signal that the
-     *     next pull should stop
-     *
-     *   - The retrieved page tells us that there are no more pages to be pages
-     *     to retrieved and the current page has no results so we stop
-     *     immediately
-     *
-     * @param ref
-     *   holds the next set of results to be read which involve fetching data
-     *   from the database
-     *
-     * @return
-     */
-    def pull(ref: Ref[IO[Option[Throwable], AsyncResultSet]]): IO[Option[Throwable], Chunk[Row]] =
-      for {
-        io <- ref.get
-        rs <- io
-        _ <- rs match {
-               case _ if rs.hasMorePages =>
-                 ref.set(Task.fromCompletionStage(rs.fetchNextPage()).mapError(Option(_)))
+      if (in.remaining() > 0) ZChannel.write(Chunk.fromIterable(in.currentPage().asScala)) *> next
+      else next
+    }
 
-               case _ if rs.remaining() > 0 =>
-                 ref.set(IO.fail(None))
-
-               case _ =>
-                 IO.fail(None)
-             }
-      } yield Chunk.fromIterable(rs.currentPage().asScala)
-
-    Stream.fromPull(
-      ZIO.scope *>
-        Ref
-          .make(initialEffect.mapError(Option(_)))
-          .map(pull)
-    )
+    ZChannel
+      .fromZIO(ZIO.fromCompletionStage(underlyingSession.executeAsync(query)))
+      .flatMap(go)
+      .toStream
   }
 
-  private def selectPage(queryConfiguredWithPageState: Statement[_]): Task[(Chunk[Row], Option[PageState])] =
+  private def selectPage(
+    queryConfiguredWithPageState: Statement[_]
+  )(implicit trace: Trace): Task[(Chunk[Row], Option[PageState])] =
     executeAction(queryConfiguredWithPageState).map { rs =>
       val currentRows = Chunk.fromIterable(rs.currentPage().asScala)
       if (rs.hasMorePages) {
@@ -220,7 +187,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
     queryString: String,
     columns: BindMarkers,
     config: ExecutionAttributes
-  ): Task[BoundStatement] =
+  )(implicit trace: Trace): Task[BoundStatement] =
     prepare(queryString).mapAttempt { preparedStatement =>
       val result: BoundStatementBuilder = {
         val initial = preparedStatement.boundStatementBuilder()

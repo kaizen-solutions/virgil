@@ -8,7 +8,7 @@ import zio.test._
 import zio.{test => _, _}
 
 object RelationSpec {
-  def relationSpec: ZSpec[TestConfig with Random with CQLExecutor, Any] =
+  def relationSpec =
     suite("Relational Operators Specification") {
       test("isNull") {
         check(relationSpec_PersonGen) { person =>

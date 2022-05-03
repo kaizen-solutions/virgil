@@ -8,7 +8,7 @@ import zio.test._
 import zio.{test => _, _}
 
 object DeleteBuilderSpec {
-  def deleteBuilderSpec: Spec[CQLExecutor with Random with Sized with TestConfig, TestFailure[Any], TestSuccess] =
+  def deleteBuilderSpec =
     suite("Delete Builder Specification") {
       test("Delete the entire row") {
         check(deleteBuilderSpec_PersonGen) { person =>

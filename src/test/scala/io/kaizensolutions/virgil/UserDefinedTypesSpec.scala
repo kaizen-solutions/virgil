@@ -7,7 +7,7 @@ import zio.test._
 import java.time.{LocalDate, LocalTime}
 
 object UserDefinedTypesSpec {
-  def userDefinedTypesSpec: ZSpec[Live with CQLExecutor with Random with Sized with TestConfig, Throwable] =
+  def userDefinedTypesSpec: Spec[Live with Random with Sized with TestConfig with CQLExecutor, Throwable] =
     suite("User Defined Types specification") {
       test("Write and read Person rows containing UDTs which are nested") {
         import Row_Person._

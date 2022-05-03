@@ -4,13 +4,13 @@ import zio.test._
 import zio.test.Assertion._
 
 object TupleCodecSpec {
-  def tupleCodecSpec: Spec[Any, TestFailure[Nothing], TestSuccess] =
+  def tupleCodecSpec: Spec[Any, Nothing] =
     suite("Tuple Codecs specification")(tupleDecodeSpec)
 
   private def tupleDecodeSpec =
     suite("Tuple Decoder specification") {
       test("Row Decoders for tuples compile") {
-        assertM(typeCheck {
+        assertZIO(typeCheck {
           """
           import io.kaizensolutions.virgil.codecs.CqlRowDecoder
 
@@ -40,7 +40,7 @@ object TupleCodecSpec {
         })(isRight(anything))
       } +
         test("UdtValue Decoders for tuples compile") {
-          assertM(typeCheck {
+          assertZIO(typeCheck {
             """
           import io.kaizensolutions.virgil.codecs.CqlUdtValueDecoder
 

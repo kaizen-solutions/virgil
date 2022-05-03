@@ -59,7 +59,7 @@ object AllTests extends ZIOSpecDefault {
     } yield ()
   }
 
-  override def spec: ZSpec[TestEnvironment, Any] =
+  override def spec: Spec[TestEnvironment with Scope, Any] =
     suite("Virgil Test Suite") {
       TupleCodecSpec.tupleCodecSpec +
         CqlInterpolatorSpec.cqlInterpolatorSpec +
