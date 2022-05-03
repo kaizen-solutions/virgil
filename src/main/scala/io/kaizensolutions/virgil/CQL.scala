@@ -65,12 +65,14 @@ final case class CQL[+Result](
   def debug: String =
     s"Query: ${cqlType.debug}" + java.lang.System.lineSeparator() + s" - ${executionAttributes.debug}"
 
-  def execute: ZStream[CQLExecutor, Throwable, Result] = CQLExecutor.execute(self)
+  def execute(implicit trace: Trace): ZStream[CQLExecutor, Throwable, Result] = CQLExecutor.execute(self)
 
-  def executeMutation(implicit ev: Result <:< MutationResult): RIO[CQLExecutor, MutationResult] =
+  def executeMutation(implicit ev: Result <:< MutationResult, trace: Trace): RIO[CQLExecutor, MutationResult] =
     CQLExecutor.executeMutation(self.widen[MutationResult])
 
-  def executePage[Result1 >: Result](state: Option[PageState] = None): RIO[CQLExecutor, Paged[Result1]] =
+  def executePage[Result1 >: Result](state: Option[PageState] = None)(implicit
+    trace: Trace
+  ): RIO[CQLExecutor, Paged[Result1]] =
     CQLExecutor.executePage(self, state)
 
   def pageSize(in: Int): CQL[Result] =

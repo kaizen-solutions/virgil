@@ -51,7 +51,7 @@ object CQLExecutor {
   def fromCqlSession(session: CqlSession): CQLExecutor =
     new CQLExecutorImpl(session)
 
-  def apply(builder: CqlSessionBuilder): RIO[Scope, CQLExecutor] = {
+  def apply(builder: => CqlSessionBuilder): RIO[Scope, CQLExecutor] = {
     val acquire = ZIO.attempt(builder.build())
     val release = (session: CqlSession) => ZIO.attempt(session.close()).ignore
 
