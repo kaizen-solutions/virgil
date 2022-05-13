@@ -49,7 +49,7 @@ private object Cursor {
     current: GettableByName,
     history: Chunk[String]
   ): Either[DecoderException, UdtValueCursor] =
-    try (Right(UdtValueCursor(history :+ fieldName, current.getUdtValue(fieldName))))
+    try Right(UdtValueCursor(history :+ fieldName, current.getUdtValue(fieldName)))
     catch {
       case NonFatal(cause) =>
         Left(

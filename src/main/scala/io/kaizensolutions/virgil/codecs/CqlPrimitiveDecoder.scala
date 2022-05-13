@@ -132,7 +132,7 @@ object CqlPrimitiveDecoder extends LowPriorityCqlPrimitiveDecoderInstances {
           Option(decodePrimitiveByFieldName(structure, fieldName)(element))
 
         case EitherPrimitiveDecoder(original) =>
-          try (Right(decodePrimitiveByFieldName(structure, fieldName)(original)))
+          try Right(decodePrimitiveByFieldName(structure, fieldName)(original))
           catch {
             case NonFatal(d: DecoderException) =>
               Left(d)
@@ -214,7 +214,7 @@ object CqlPrimitiveDecoder extends LowPriorityCqlPrimitiveDecoderInstances {
           else Option(decodePrimitiveByIndex(structure, index)(element))
 
         case EitherPrimitiveDecoder(original) =>
-          try (Right(decodePrimitiveByIndex(structure, index)(original)))
+          try Right(decodePrimitiveByIndex(structure, index)(original))
           catch {
             case NonFatal(d: DecoderException) =>
               Left(d)

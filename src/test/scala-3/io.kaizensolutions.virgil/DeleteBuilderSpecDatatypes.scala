@@ -8,7 +8,7 @@ object DeleteBuilderSpecDatatypes {
   final case class DeleteBuilderSpec_Person(id: Int, name: Option[String], age: Option[Int])
   object DeleteBuilderSpec_Person {
     given cqlRowDecoderForDeleteBuilderSpec_Person: CqlRowDecoder.Object[DeleteBuilderSpec_Person] =
-     CqlRowDecoder.derive[DeleteBuilderSpec_Person]
+      CqlRowDecoder.derive[DeleteBuilderSpec_Person]
 
     val tableName                         = "deletebuilderspec_person"
     val Id                                = "id"
