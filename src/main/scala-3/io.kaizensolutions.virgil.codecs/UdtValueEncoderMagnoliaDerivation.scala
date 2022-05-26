@@ -7,7 +7,7 @@ import magnolia1._
 
 // Note: Fully automatic derivation is not yet present in Scala 3 just yet (because I haven't figured out how to do it yet)
 trait UdtValueEncoderMagnoliaDerivation extends ProductDerivation[CqlUdtValueEncoder]:
-  final def join[T](ctx: CaseClass[Typeclass,T]): CqlUdtValueEncoder.Object[T] =
+  final def join[T](ctx: CaseClass[Typeclass, T]): CqlUdtValueEncoder.Object[T] =
     (structure: UdtValue, value: T) =>
       ctx.params.foldLeft(structure) { case (acc, param) =>
         val fieldName  = CqlColumn.extractFieldName(param.annotations).getOrElse(param.label)

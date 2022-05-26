@@ -130,7 +130,7 @@ object CqlRowDecoder extends RowDecoderMagnoliaDerivation {
 
   implicit def fromCqlPrimitive[A](implicit prim: CqlPrimitiveDecoder[A]): CqlRowDecoder[A] = new CqlRowDecoder[A] {
     override def decodeByFieldName(row: Row, fieldName: String): A =
-      try (CqlPrimitiveDecoder.decodePrimitiveByFieldName(row, fieldName))
+      try CqlPrimitiveDecoder.decodePrimitiveByFieldName(row, fieldName)
       catch {
         case NonFatal(decoderException: DecoderException) =>
           throw decoderException
@@ -145,7 +145,7 @@ object CqlRowDecoder extends RowDecoderMagnoliaDerivation {
       }
 
     override def decodeByIndex(row: Row, index: Int): A =
-      try (CqlPrimitiveDecoder.decodePrimitiveByIndex(row, index))
+      try CqlPrimitiveDecoder.decodePrimitiveByIndex(row, index)
       catch {
         case NonFatal(decoderException: DecoderException) =>
           throw decoderException

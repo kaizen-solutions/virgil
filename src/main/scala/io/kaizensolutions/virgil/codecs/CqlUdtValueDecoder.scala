@@ -132,7 +132,7 @@ object CqlUdtValueDecoder extends UdtValueDecoderMagnoliaDerivation {
   implicit def fromCqlPrimitive[A](implicit prim: CqlPrimitiveDecoder[A]): CqlUdtValueDecoder[A] =
     new CqlUdtValueDecoder[A] {
       override def decodeByFieldName(structure: UdtValue, fieldName: String): A =
-        try (CqlPrimitiveDecoder.decodePrimitiveByFieldName(structure, fieldName))
+        try CqlPrimitiveDecoder.decodePrimitiveByFieldName(structure, fieldName)
         catch {
           case NonFatal(decoderException: DecoderException) =>
             throw decoderException
@@ -147,7 +147,7 @@ object CqlUdtValueDecoder extends UdtValueDecoderMagnoliaDerivation {
         }
 
       override def decodeByIndex(structure: UdtValue, index: Int): A =
-        try (CqlPrimitiveDecoder.decodePrimitiveByIndex(structure, index))
+        try CqlPrimitiveDecoder.decodePrimitiveByIndex(structure, index)
         catch {
           case NonFatal(decoderException: DecoderException) =>
             throw decoderException
