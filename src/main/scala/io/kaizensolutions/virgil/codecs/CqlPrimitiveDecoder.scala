@@ -76,7 +76,7 @@ object CqlPrimitiveDecoder extends LowPriorityCqlPrimitiveDecoderInstances {
     else if (!prim.isOptional && !prim.isEither && !prim.isCollection && structure.isNull(fieldName)) {
       val typeName = structure.getType(fieldName).asCql(true, true)
       val error =
-        s"Field $fieldName (type: $typeName) is not an optional field but the database came back with a null value"
+        s"Field with name: '$fieldName' and type: '$typeName' is not an optional field but the database came back with a null value"
       throw DecoderException.StructureReadFailure(
         message = error,
         field = Some(DecoderException.FieldType.Name(fieldName)),
