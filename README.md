@@ -222,6 +222,11 @@ val dependencies: ULayer[Has[CQLExecutor]] = {
 
 val insertResultReady: Stream[Throwable, MutationResult] = insertResult.provideLayer(dependencies)
 ```
+### Tracing
+
+[trace4cats-zio-extras](https://github.com/kaizen-solutions/trace4cats-zio-extras#virgil-integration) has first-class support for tracing Virgil queries and provides in-depth information on any Cassandra interactions performed by Virgil.
+
+![jaegar-ui-tracing-virgil-queries](https://user-images.githubusercontent.com/14280155/170582448-99598075-aa15-486f-a923-c4157cdc853b.png)
 
 ### Why the name Virgil?
 Virgil was an ancient Roman poet who composed an epic poem about Cassandra and so we thought it would be appropriate.
