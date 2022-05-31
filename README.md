@@ -21,6 +21,7 @@ libraryDependencies += "com.github.kaizen-solutions.virgil" %% "virgil" % "<plea
 ```
 
 Please note that Virgil is built for Scala 2.12.x, 2.13.x and 3.1.x but fully-automatic derivation is not present for 3.1.x.
+Virgil also supports both **ZIO 1.x** and **ZIO 2.x** (select an artifact with the `zio2` suffix).
 
 ## Introduction
 
@@ -221,6 +222,24 @@ val dependencies: ULayer[Has[CQLExecutor]] = {
 }
 
 val insertResultReady: Stream[Throwable, MutationResult] = insertResult.provideLayer(dependencies)
+```
+
+### Adding support for custom data types
+Virgil provides all the default primitive data-types supported by the Datastax Java Driver. However, you can add support 
+for your own primitive data-types. For example, if you want to add support for `java.time.LocalDateTime`, you can do so 
+in the following manner (make sure to be extra careful when managing timezones): 
+
+```scala
+import io.kaizensolutions.virgil.codecs._
+import java.time.{LocalDateTime, ZoneOffset}
+
+implicit val javaTimeInstantEncoder: CqlPrimitiveEncoder[LocalDateTime] =
+  CqlPrimitiveEncoder[java.time.Instant].contramap[java.time.LocalDateTime](_.toInstant(ZoneOffset.UTC))
+
+implicit val javaTimeInstantDecoder: CqlPrimitiveDecoder[LocalDateTime] =
+  CqlPrimitiveDecoder[java.time.Instant].map[LocalDateTime](instant =>
+    LocalDateTime.ofInstant(instant, ZoneOffset.UTC)
+  )
 ```
 
 ### Why the name Virgil?
