@@ -5,7 +5,7 @@ import scala.annotation.implicitNotFound
 /**
  * Credits to Shapeless
  */
-private[virgil] object Proofs {
+object Proofs {
   def unexpected: Nothing = sys.error("Unexpected invocation")
 
   @implicitNotFound("Cannot prove that ${A} is not the same type as ${B}")

@@ -199,11 +199,11 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
              }
       } yield Chunk.fromIterable(rs.currentPage().asScala)
 
-    Stream {
-      for {
-        ref <- Ref.make(initialEffect.mapError(Option(_))).toManaged_
-      } yield pull(ref)
-    }
+    Stream(
+      Ref
+        .makeManaged(initialEffect.mapError(Option(_)))
+        .map(pull)
+    )
   }
 
   private def selectPage(queryConfiguredWithPageState: Statement[_]): Task[(Chunk[Row], Option[PageState])] =
