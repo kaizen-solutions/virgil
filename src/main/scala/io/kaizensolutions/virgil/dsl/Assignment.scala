@@ -73,12 +73,10 @@ trait AssignmentSyntax {
     def :=[A](value: A)(implicit ev: CqlRowComponentEncoder[A]): Assignment.AssignValue[A] =
       Assignment.AssignValue(BindMarkerName.make(rawColumn), value, ev)
 
-    def +[A](value: Long)(implicit ev: CqlRowComponentEncoder[A]): Assignment.UpdateCounter = {
-      val _ = ev
+    def +=(value: Long): Assignment.UpdateCounter =
       Assignment.UpdateCounter(BindMarkerName.make(rawColumn), value)
-    }
 
-    def -[A](value: Long)(implicit ev: CqlRowComponentEncoder[A]): Assignment.UpdateCounter = {
+    def -=[A](value: Long)(implicit ev: CqlRowComponentEncoder[A]): Assignment.UpdateCounter = {
       val _ = ev
       Assignment.UpdateCounter(BindMarkerName.make(rawColumn), -value)
     }

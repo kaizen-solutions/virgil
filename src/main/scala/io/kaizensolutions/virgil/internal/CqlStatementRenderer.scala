@@ -113,7 +113,7 @@ private[virgil] object CqlStatementRenderer {
             val absOffset     = offset.abs
             val rawColumnName = columnName.name
             val parameter     = s":$rawColumnName"
-            val queryString   = s"$rawColumnName $sign $parameter"
+            val queryString   = s"$rawColumnName = $rawColumnName $sign $parameter"
             val column        = BindMarker.make(columnName, absOffset)(CqlRowComponentEncoder[Long])
             (queryString, BindMarkers.empty + column)
 

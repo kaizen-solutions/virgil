@@ -1,6 +1,6 @@
 package io.kaizensolutions.virgil
 
-import io.kaizensolutions.virgil.UpdateBuilderSpecDatatypes.UpdateBuilderSpecPerson
+import io.kaizensolutions.virgil.UpdateBuilderSpecDatatypes._
 import io.kaizensolutions.virgil.dsl._
 import zio.random.Random
 import zio.test.TestAspect._
@@ -36,9 +36,30 @@ object UpdateBuilderSpec {
                 .build
 
             for {
-              wasUpdated <- update.execute.runHead.some
+              _          <- DeleteBuilder(tableName).entireRow.where(Id === person.id).build.executeMutation
+              wasUpdated <- update.executeMutation
               results    <- find(person.id).execute.runHead
             } yield assertTrue(results.isEmpty) && assertTrue(!wasUpdated.result)
+          }
+        } +
+        testM("Updating a counter column will correctly work") {
+          import UpdateBuilderSpecCounter._
+          checkM(updateBuilderSpecCounterGen) { counter =>
+            val update =
+              UpdateBuilder(tableName)
+                .set(Likes += 1L)
+                .where(Id === counter.id)
+                .build
+
+            for {
+              _          <- insert(counter).executeMutation
+              wasUpdated <- update.executeMutation
+              results    <- find(counter.id).execute.runCollect
+            } yield assertTrue(
+              results.length == 1,
+              results.head == counter.copy(likes = counter.likes + 1),
+              wasUpdated.result
+            )
           }
         } +
         testM("Updating a column using if conditions will update if met") {
@@ -68,4 +89,10 @@ object UpdateBuilderSpec {
     name <- Gen.string(Gen.alphaChar)
     age  <- Gen.int(18, 90)
   } yield UpdateBuilderSpecPerson(id, name, age)
+
+  def updateBuilderSpecCounterGen: Gen[Random with Sized, UpdateBuilderSpecCounter] =
+    for {
+      id    <- Gen.int(1, 10000)
+      likes <- Gen.long(1, 100)
+    } yield UpdateBuilderSpecCounter(id, likes)
 }

@@ -134,6 +134,12 @@ CREATE TABLE updatebuilderspec_person
     age  INT
 );
 
+CREATE TABLE updatebuilderspec_counter
+(
+  id INT PRIMARY KEY,
+  likes COUNTER
+);
+
 CREATE TABLE relationspec_person(
     id   INT PRIMARY KEY,
     name TEXT,

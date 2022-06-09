@@ -3,6 +3,26 @@ package io.kaizensolutions.virgil
 import io.kaizensolutions.virgil.dsl._
 
 object UpdateBuilderSpecDatatypes {
+  final case class UpdateBuilderSpecCounter(id: Int, likes: Long)
+  object UpdateBuilderSpecCounter {
+    val tableName: String = "updatebuilderspec_counter"
+    val Id                = "id"
+    val Likes             = "likes"
+
+    def find(id: Int) =
+      SelectBuilder
+        .from(tableName)
+        .columns(Id, Likes)
+        .where(Id === id)
+        .build[UpdateBuilderSpecCounter]
+
+    def insert(in: UpdateBuilderSpecCounter): CQL[MutationResult] =
+      UpdateBuilder(tableName)
+        .set(Likes += in.likes)
+        .where(Id === in.id)
+        .build
+  }
+
   final case class UpdateBuilderSpecPerson(id: Int, name: String, age: Int)
   object UpdateBuilderSpecPerson {
     val tableName: String = "updatebuilderspec_person"
