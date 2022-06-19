@@ -69,14 +69,12 @@ object CqlInterpolatorSpec {
                  |WHERE id = ${1} AND name = ${"cal"}""".stripMargin
           val (queryString, bindMarkers) = query.render
           assertTrue(
-            queryString.stripMargin ==
-              """SELECT id, name, persons
-                |FROM persons
-                |WHERE id = :param0 AND name = :param1""".stripMargin,
-            bindMarkers.size == 2,
-            bindMarkers("param0").value.asInstanceOf[Int] == 1,
-            bindMarkers("param1").value.asInstanceOf[String] == "cal"
-          )
+            queryString.replace(System.lineSeparator(), " ") ==
+              "SELECT id, name, persons FROM persons WHERE id = :param0 AND name = :param1"
+          ) &&
+          assertTrue(bindMarkers.size == 2) &&
+          assertTrue(bindMarkers("param0").value.asInstanceOf[Int] == 1) &&
+          assertTrue(bindMarkers("param1").value.asInstanceOf[String] == "cal")
         }
     }
 }
