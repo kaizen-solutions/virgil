@@ -61,6 +61,22 @@ object CqlInterpolatorSpec {
           assertTrue(queryString == s"SELECT $idColumn, $nameColumn FROM $tableName WHERE $idColumn = :param0") &&
           assertTrue(bindMarkers.contains("param0")) &&
           assertTrue(bindMarkers("param0").value.asInstanceOf[Int] == id)
+        } +
+        test("stripMargin removes | in cql interpolated strings but leaves bind markers as is") {
+          val query =
+            cql"""SELECT id, name, persons
+                 |FROM persons
+                 |WHERE id = ${1} AND name = ${"cal"}""".stripMargin
+          val (queryString, bindMarkers) = query.render
+          assertTrue(
+            queryString.stripMargin ==
+              """SELECT id, name, persons
+                |FROM persons
+                |WHERE id = :param0 AND name = :param1""".stripMargin,
+            bindMarkers.size == 2,
+            bindMarkers("param0").value.asInstanceOf[Int] == 1,
+            bindMarkers("param1").value.asInstanceOf[String] == "cal"
+          )
         }
     }
 }

@@ -62,6 +62,13 @@ final case class CqlInterpolatedString(
 
   def appendString(that: String): CqlInterpolatedString =
     CqlInterpolatedString(rawQueryRepresentation :+ CqlPartRepr.Query(that))
+
+  def stripMargin: CqlInterpolatedString =
+    copy(rawQueryRepresentation = rawQueryRepresentation.map {
+      case CqlPartRepr.Pair(query, marker) => CqlPartRepr.Pair(query.stripMargin, marker)
+      case CqlPartRepr.Query(query)        => CqlPartRepr.Query(query.stripMargin)
+      case m @ CqlPartRepr.Marker(_)       => m
+    })
 }
 trait CqlInterpolatedStringSyntax {
   implicit class CqlInterpolatedStringOpsForString(self: String) {
