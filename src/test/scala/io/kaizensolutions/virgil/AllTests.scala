@@ -10,7 +10,8 @@ import zio.test._
 import java.net.InetSocketAddress
 
 object AllTests extends ZIOSpecDefault {
-  val dependencies: ULayer[CassandraContainer & CQLExecutor] = {
+  val containerLayer: ULayer[CassandraContainer] = ZLayer.scoped(CassandraContainer(CassandraType.Plain))
+  val executorLayer: URLayer[CassandraContainer, CQLExecutor] = {
     val keyspaceAndMigrations =
       for {
         c           <- ZIO.service[CassandraContainer]
@@ -33,10 +34,8 @@ object AllTests extends ZIOSpecDefault {
         _          <- session.execute(useKeyspace).runDrain
         _          <- runMigration(session, "migrations.cql")
       } yield session
-
-    val containerLayer: ULayer[CassandraContainer]             = ZLayer.scoped(CassandraContainer(CassandraType.Plain))
     val sessionLayer: URLayer[CassandraContainer, CQLExecutor] = ZLayer.scoped(keyspaceAndMigrations).orDie
-    containerLayer >+> sessionLayer
+    sessionLayer
   }
 
   def runMigration(cql: CQLExecutor, fileName: String): Task[Unit] = {
@@ -59,20 +58,18 @@ object AllTests extends ZIOSpecDefault {
     } yield ()
   }
 
-  override def spec: Spec[TestEnvironment with Scope, Any] =
+  override def spec =
     suite("Virgil Test Suite") {
       TupleCodecSpec.tupleCodecSpec +
         CqlInterpolatorSpec.cqlInterpolatorSpec +
         CodecSpec.codecSpec +
-        (
-          CQLExecutorSpec.executorSpec +
-            UserDefinedTypesSpec.userDefinedTypesSpec +
-            CollectionsSpec.collectionsSpec +
-            CursorSpec.cursorSpec +
-            UpdateBuilderSpec.updateBuilderSpec +
-            RelationSpec.relationSpec +
-            DeleteBuilderSpec.deleteBuilderSpec +
-            InsertBuilderSpec.insertBuilderSpec
-        ).provideCustomLayerShared(Clock.live ++ Random.live ++ dependencies)
-    } @@ parallel @@ timed
+        CQLExecutorSpec.executorSpec +
+        UserDefinedTypesSpec.userDefinedTypesSpec +
+        CollectionsSpec.collectionsSpec +
+        CursorSpec.cursorSpec +
+        UpdateBuilderSpec.updateBuilderSpec +
+        RelationSpec.relationSpec +
+        DeleteBuilderSpec.deleteBuilderSpec +
+        InsertBuilderSpec.insertBuilderSpec
+    }.provideCustomShared(containerLayer, executorLayer) @@ parallel @@ timed
 }

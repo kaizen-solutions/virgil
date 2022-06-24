@@ -13,12 +13,12 @@ import zio.{test => _, _}
 import java.net.InetSocketAddress
 
 object CQLExecutorSpec {
-  def executorSpec: Spec[Live with CassandraContainer with Random with Sized with TestConfig with CQLExecutor, Any] =
+  def executorSpec: Spec[Live with TestConfig with Sized with CassandraContainer with CQLExecutor, Any] =
     suite("Cassandra Session Interpreter Specification") {
       (queries + actions + configuration) @@ timeout(2.minutes) @@ samples(4)
     }
 
-  def queries: Spec[TestConfig with Random with Sized with CQLExecutor, Throwable] =
+  def queries: Spec[TestConfig with Sized with CQLExecutor, Throwable] =
     suite("Queries") {
       test("selectFirst") {
         cql"SELECT now() FROM system.local"
@@ -80,7 +80,7 @@ object CQLExecutorSpec {
         }
     }
 
-  def actions: Spec[Random with Sized with TestConfig with CQLExecutor, Throwable] =
+  def actions: Spec[Sized with TestConfig with CQLExecutor, Throwable] =
     suite("Actions") {
       test("executeAction") {
         import ExecuteTestTable._
@@ -128,7 +128,7 @@ object CQLExecutorSpec {
         }
     } @@ sequential
 
-  def configuration: Spec[CassandraContainer with Random with Sized with TestConfig with CQLExecutor, Any] =
+  def configuration: Spec[CassandraContainer with Sized with TestConfig with CQLExecutor, Any] =
     suite("Session Configuration")(
       test("Creating a layer from an existing session allows you to access Cassandra") {
         val sessionScoped: URIO[CassandraContainer with Scope, CqlSession] = {
@@ -215,20 +215,20 @@ object CQLExecutorSpec {
           ZStream.fromChunk(chunk)
       }
 
-  val selectPageRowGen: Gen[Random with Sized, SelectPageRow] =
+  val selectPageRowGen: Gen[Sized, SelectPageRow] =
     for {
       id     <- Gen.int(1, 1000)
       bucket <- Gen.int(1, 50)
       info   <- Gen.alphaNumericStringBounded(10, 15)
     } yield SelectPageRow(id, bucket, info)
 
-  val timeoutCheckRowGen: Gen[Random with Sized, TimeoutCheckRow] = for {
+  val timeoutCheckRowGen: Gen[Sized, TimeoutCheckRow] = for {
     id          <- Gen.int(1, 1000)
     info        <- Gen.alphaNumericStringBounded(100, 150)
     anotherInfo <- Gen.alphaNumericStringBounded(200, 400)
   } yield TimeoutCheckRow(id, info, anotherInfo)
 
-  val pageSizeCheckRowGen: Gen[Random with Sized, PageSizeCheckRow] = for {
+  val pageSizeCheckRowGen: Gen[Sized, PageSizeCheckRow] = for {
     id   <- Gen.int(1, 1000)
     info <- Gen.alphaNumericStringBounded(100, 150)
   } yield PageSizeCheckRow(id, info)

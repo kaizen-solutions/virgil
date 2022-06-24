@@ -49,7 +49,7 @@ object InsertBuilderSpec {
       }
     } @@ sequential @@ samples(2)
 
-  def insertBuilderSpecPersonGen: Gen[Random, InsertBuilderSpecPerson] =
+  val insertBuilderSpecPersonGen: Gen[Any, InsertBuilderSpecPerson] =
     for {
       id   <- Gen.int(1, 10000)
       name <- Gen.stringN(5)(Gen.alphaChar)

@@ -5,7 +5,6 @@ import io.kaizensolutions.virgil.DeleteBuilderSpecDatatypes.DeleteBuilderSpec_Pe
 import io.kaizensolutions.virgil.dsl._
 import zio.test.TestAspect.{samples, sequential}
 import zio.test._
-import zio.{test => _, _}
 
 object DeleteBuilderSpec {
   def deleteBuilderSpec =
@@ -57,7 +56,7 @@ object DeleteBuilderSpec {
       }
     } @@ sequential @@ samples(4)
 
-  def deleteBuilderSpec_PersonGen: Gen[Random with Sized, DeleteBuilderSpec_Person] = for {
+  val deleteBuilderSpec_PersonGen: Gen[Sized, DeleteBuilderSpec_Person] = for {
     id   <- Gen.int
     name <- Gen.string
     age  <- Gen.int

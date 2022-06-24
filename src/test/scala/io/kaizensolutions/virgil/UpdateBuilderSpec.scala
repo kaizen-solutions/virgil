@@ -4,7 +4,6 @@ import io.kaizensolutions.virgil.UpdateBuilderSpecDatatypes._
 import io.kaizensolutions.virgil.dsl._
 import zio.test.TestAspect._
 import zio.test._
-import zio.{test => _, _}
 
 object UpdateBuilderSpec {
   def updateBuilderSpec =
@@ -84,13 +83,13 @@ object UpdateBuilderSpec {
         }
     } @@ samples(4) @@ sequential @@ nondeterministic
 
-  def updateBuilderSpecPersonGen: Gen[Random with Sized, UpdateBuilderSpecPerson] = for {
+  val updateBuilderSpecPersonGen: Gen[Sized, UpdateBuilderSpecPerson] = for {
     id   <- Gen.int(1, 10000)
     name <- Gen.string(Gen.alphaChar)
     age  <- Gen.int(18, 90)
   } yield UpdateBuilderSpecPerson(id, name, age)
 
-  def updateBuilderSpecCounterGen: Gen[Random with Sized, UpdateBuilderSpecCounter] =
+  val updateBuilderSpecCounterGen: Gen[Any, UpdateBuilderSpecCounter] =
     for {
       id    <- Gen.int(1, 10000)
       likes <- Gen.long(1, 100)

@@ -5,7 +5,6 @@ import io.kaizensolutions.virgil.RelationSpecDatatypes._
 import io.kaizensolutions.virgil.dsl._
 import zio.test.TestAspect.{samples, sequential}
 import zio.test._
-import zio.{test => _, _}
 
 object RelationSpec {
   def relationSpec =
@@ -51,7 +50,7 @@ object RelationSpec {
       }
     } @@ sequential @@ samples(4)
 
-  def relationSpec_PersonGen: Gen[Random, RelationSpec_Person] =
+  val relationSpec_PersonGen: Gen[Any, RelationSpec_Person] =
     for {
       id   <- Gen.int(1, 1000)
       name <- Gen.stringBounded(2, 4)(Gen.alphaChar)

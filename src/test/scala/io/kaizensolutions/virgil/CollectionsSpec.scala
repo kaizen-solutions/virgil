@@ -1,12 +1,11 @@
 package io.kaizensolutions.virgil
 
 import io.kaizensolutions.virgil.CollectionsSpecDatatypes._
-import zio.Random
 import zio.test.TestAspect.samples
 import zio.test._
 
 object CollectionsSpec {
-  def collectionsSpec =
+  def collectionsSpec: Spec[Sized with TestConfig with CQLExecutor, Any] =
     suite("Collections Specification") {
       test("Read and write a row containing collections") {
         import SimpleCollectionRow._
@@ -54,7 +53,7 @@ object CollectionsSpec {
       }
     } @@ samples(10)
 
-  def simpleCollectionRowGen: Gen[Random with Sized, SimpleCollectionRow] =
+  val simpleCollectionRowGen: Gen[Sized, SimpleCollectionRow] =
     for {
       id   <- Gen.int(1, 10000000)
       map  <- Gen.mapOf(key = Gen.int, value = Gen.string)
@@ -62,13 +61,13 @@ object CollectionsSpec {
       list <- Gen.vectorOf(Gen.string)
     } yield SimpleCollectionRow(id, map, set, list)
 
-  def nestedCollectionRowGen: Gen[Random with Sized, NestedCollectionRow] =
+  val nestedCollectionRowGen: Gen[Sized, NestedCollectionRow] =
     for {
       a <- Gen.int(1, 10000000)
       b <- Gen.mapOf(key = Gen.int, value = Gen.setOf(Gen.setOf(Gen.setOf(Gen.setOf(Gen.int)))))
     } yield NestedCollectionRow(a, b)
 
-  def optionCollectionRowGen: Gen[Random with Sized, OptionCollectionRow] =
+  val optionCollectionRowGen: Gen[Sized, OptionCollectionRow] =
     for {
       id   <- Gen.int(1, 10000000)
       map  <- Gen.option(Gen.mapOf(key = Gen.int, value = Gen.string))

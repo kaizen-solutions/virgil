@@ -9,7 +9,7 @@ import zio.test.Assertion._
 import zio.test._
 
 object CodecSpec {
-  def codecSpec: Spec[Any, Any] = suite("Codec Specification") {
+  def codecSpec: Spec[Any, Nothing] = suite("Codec Specification") {
     suite("Primitive Codecs") {
       val userDefinedType: UserDefinedType =
         new UserDefinedTypeBuilder("internal_keyspace", "either_test")

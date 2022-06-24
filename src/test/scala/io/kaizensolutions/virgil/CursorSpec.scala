@@ -11,7 +11,7 @@ import zio.{test => _, _}
 import java.net.InetAddress
 
 object CursorSpec {
-  def cursorSpec =
+  def cursorSpec: Spec[Sized with TestConfig with CQLExecutor, Any] =
     suite("Cursor Specification") {
       suite("Row Cursor Specification") {
         test("Row Cursor should be able to read a complex structure") {
@@ -44,15 +44,14 @@ object CursorSpec {
       }
     } @@ samples(10)
 
-  def cursorExampleRowGen: Gen[Random with Sized, CursorExampleRow] =
+  val cursorUdtNoteGen: Gen[Any, CursorUdtNote] =
     for {
-      id      <- Gen.long(1, 10000)
-      name    <- Gen.string
-      age     <- Gen.short
-      address <- cursorUdtAddressGen
-    } yield CursorExampleRow(id, name, age, None, Chunk(address))
+      data    <- Gen.stringBounded(2, 4)(Gen.alphaNumericChar)
+      ipChunk <- Gen.int(0, 255)
+      ip       = InetAddresses.forString(s"${ipChunk}.${ipChunk}.${ipChunk}.${ipChunk}")
+    } yield CursorUdtNote(data, ip)
 
-  def cursorUdtAddressGen: Gen[Random, CursorUdtAddress] =
+  val cursorUdtAddressGen: Gen[Any, CursorUdtAddress] =
     for {
       street <- Gen.stringBounded(4, 8)(Gen.alphaChar)
       city   <- Gen.stringBounded(4, 8)(Gen.alphaChar)
@@ -61,10 +60,11 @@ object CursorSpec {
       note   <- cursorUdtNoteGen
     } yield CursorUdtAddress(street = street, city = city, state = state, zip = zip, note = note)
 
-  def cursorUdtNoteGen: Gen[Random, CursorUdtNote] =
+  val cursorExampleRowGen: Gen[Sized, CursorExampleRow] =
     for {
-      data    <- Gen.stringBounded(2, 4)(Gen.alphaNumericChar)
-      ipChunk <- Gen.int(0, 255)
-      ip       = InetAddresses.forString(s"${ipChunk}.${ipChunk}.${ipChunk}.${ipChunk}")
-    } yield CursorUdtNote(data, ip)
+      id      <- Gen.long(1, 10000)
+      name    <- Gen.string
+      age     <- Gen.short
+      address <- cursorUdtAddressGen
+    } yield CursorExampleRow(id, name, age, None, Chunk(address))
 }

@@ -7,7 +7,7 @@ import zio.test._
 import java.time.{LocalDate, LocalTime}
 
 object UserDefinedTypesSpec {
-  def userDefinedTypesSpec: Spec[Live with Random with Sized with TestConfig with CQLExecutor, Throwable] =
+  def userDefinedTypesSpec: Spec[Live with TestConfig with Sized with CQLExecutor, Throwable] =
     suite("User Defined Types specification") {
       test("Write and read Person rows containing UDTs which are nested") {
         import Row_Person._
@@ -37,7 +37,27 @@ object UserDefinedTypesSpec {
         }
     } @@ timeout(1.minute) @@ samples(10)
 
-  def row_PersonGen: Gen[Random, Row_Person] =
+  val uDT_AddressGen: Gen[Any, UDT_Address] =
+    for {
+      number <- Gen.int(1, 10000)
+      street <- Gen.stringBounded(4, 10)(Gen.alphaNumericChar)
+      city   <- Gen.stringBounded(4, 10)(Gen.alphaNumericChar)
+    } yield UDT_Address(number, street, city)
+
+  val uDT_EmailGen: Gen[Any, UDT_Email] =
+    for {
+      username   <- Gen.stringBounded(3, 10)(Gen.alphaNumericChar)
+      domainName <- Gen.stringBounded(4, 32)(Gen.alphaNumericChar)
+      domain     <- Gen.oneOf(Gen.const("com"), Gen.const("org"), Gen.const("net"))
+    } yield UDT_Email(username, domainName, domain)
+
+  val uDT_DataGen: Gen[Any, UDT_Data] =
+    for {
+      addresses <- Gen.listOfBounded(10, 20)(uDT_AddressGen)
+      email     <- Gen.option(uDT_EmailGen)
+    } yield UDT_Data(addresses, email)
+
+  val row_PersonGen: Gen[Any, Row_Person] =
     for {
       id   <- Gen.int(1, 100000)
       name <- Gen.stringBounded(4, 10)(Gen.alphaNumericChar)
@@ -45,33 +65,7 @@ object UserDefinedTypesSpec {
       data <- uDT_DataGen
     } yield Row_Person(id, name, age, data)
 
-  def row_HeavilyNestedUDTTableGen: Gen[Random with Sized, Row_HeavilyNestedUDTTable] =
-    for {
-      id   <- Gen.int
-      data <- uDT_ExampleCollectionNestedUDTTypeGen
-    } yield Row_HeavilyNestedUDTTable(id, data)
-
-  def uDT_DataGen: Gen[Random, UDT_Data] =
-    for {
-      addresses <- Gen.listOfBounded(10, 20)(uDT_AddressGen)
-      email     <- Gen.option(uDT_EmailGen)
-    } yield UDT_Data(addresses, email)
-
-  def uDT_AddressGen: Gen[Random, UDT_Address] =
-    for {
-      number <- Gen.int(1, 10000)
-      street <- Gen.stringBounded(4, 10)(Gen.alphaNumericChar)
-      city   <- Gen.stringBounded(4, 10)(Gen.alphaNumericChar)
-    } yield UDT_Address(number, street, city)
-
-  def uDT_EmailGen: Gen[Random, UDT_Email] =
-    for {
-      username   <- Gen.stringBounded(3, 10)(Gen.alphaNumericChar)
-      domainName <- Gen.stringBounded(4, 32)(Gen.alphaNumericChar)
-      domain     <- Gen.oneOf(Gen.const("com"), Gen.const("org"), Gen.const("net"))
-    } yield UDT_Email(username, domainName, domain)
-
-  def uDT_ExampleTypeGen: Gen[Random, UDT_ExampleType] =
+  val uDT_ExampleTypeGen: Gen[Any, UDT_ExampleType] =
     for {
       x <- Gen.long
       y <- Gen.long
@@ -90,14 +84,14 @@ object UserDefinedTypesSpec {
       time = time
     )
 
-  def uDT_ExampleNestedTypeGen: Gen[Random with Sized, UDT_ExampleNestedType] =
+  val uDT_ExampleNestedTypeGen: Gen[Sized, UDT_ExampleNestedType] =
     for {
       a <- Gen.int
       b <- Gen.alphaNumericStringBounded(4, 10)
       c <- uDT_ExampleTypeGen
     } yield UDT_ExampleNestedType(a, b, c)
 
-  def uDT_ExampleCollectionNestedUDTTypeGen: Gen[Random with Sized, UDT_ExampleCollectionNestedUDTType] =
+  val uDT_ExampleCollectionNestedUDTTypeGen: Gen[Sized, UDT_ExampleCollectionNestedUDTType] =
     for {
       a <- Gen.int
       b <- Gen.mapOf(
@@ -112,4 +106,10 @@ object UserDefinedTypesSpec {
            )
       c <- uDT_ExampleNestedTypeGen
     } yield UDT_ExampleCollectionNestedUDTType(a, b, c)
+
+  val row_HeavilyNestedUDTTableGen: Gen[Sized, Row_HeavilyNestedUDTTable] =
+    for {
+      id   <- Gen.int
+      data <- uDT_ExampleCollectionNestedUDTTypeGen
+    } yield Row_HeavilyNestedUDTTable(id, data)
 }

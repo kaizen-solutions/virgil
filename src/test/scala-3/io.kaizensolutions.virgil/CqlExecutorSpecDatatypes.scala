@@ -42,7 +42,7 @@ object CqlExecutorSpecDatatypes {
 
     def truncate(tbl: String): CQL[MutationResult] = CQL.truncate(tbl)
 
-    val gen: Gen[Random with Sized, ExecuteTestTable] = for {
+    val gen: Gen[Sized, ExecuteTestTable] = for {
       id   <- Gen.int(1, 1000)
       info <- Gen.alphaNumericStringBounded(10, 15)
     } yield ExecuteTestTable(id, info)

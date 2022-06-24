@@ -3,7 +3,7 @@ import ReleaseTransformations._
 inThisBuild {
   val scala212 = "2.12.15"
   val scala213 = "2.13.8"
-  val scala3   = "3.1.2"
+  val scala3   = "3.1.3"
 
   List(
     scalaVersion                        := scala3,
@@ -34,7 +34,7 @@ lazy val root =
         val datastaxV = "4.14.1"
 
         val zio                   = "dev.zio"
-        val zioV                  = "2.0.0-RC6"
+        val zioV                  = "2.0.0"
         val magnoliaForScala2     = "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.2"
         val scalaReflectForScala2 = "org.scala-lang"                % "scala-reflect" % scalaVersion.value
         val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.1.2"
