@@ -1,4 +1,5 @@
 package io.kaizensolutions.virgil
+import com.datastax.oss.driver.api.core.metrics.Metrics
 import com.datastax.oss.driver.api.core.{CqlSession, CqlSessionBuilder}
 import io.kaizensolutions.virgil.configuration.PageState
 import io.kaizensolutions.virgil.internal.CQLExecutorImpl
@@ -15,6 +16,8 @@ trait CQLExecutor {
     ev: A =:!= MutationResult,
     trace: Trace
   ): Task[Paged[A]]
+
+  def metrics: UIO[Option[Metrics]]
 }
 object CQLExecutor {
   def execute[A](in: CQL[A])(implicit trace: Trace): ZStream[CQLExecutor, Throwable, A] =
@@ -27,6 +30,8 @@ object CQLExecutor {
     ev: A =:!= MutationResult,
     trace: Trace
   ): RIO[CQLExecutor, Paged[A]] = ZIO.serviceWithZIO[CQLExecutor](_.executePage(in, pageState))
+
+  def metrics: URIO[CQLExecutor, Option[Metrics]] = ZIO.serviceWithZIO(_.metrics)
 
   val live: RLayer[CqlSessionBuilder, CQLExecutor] =
     ZLayer.scoped(
