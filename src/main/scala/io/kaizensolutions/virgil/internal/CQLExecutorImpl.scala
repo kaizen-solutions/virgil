@@ -2,6 +2,7 @@ package io.kaizensolutions.virgil.internal
 
 import com.datastax.oss.driver.api.core.CqlSession
 import com.datastax.oss.driver.api.core.cql.{BatchType => _, _}
+import com.datastax.oss.driver.api.core.metrics.Metrics
 import io.kaizensolutions.virgil.configuration.{ExecutionAttributes, PageState}
 import io.kaizensolutions.virgil.internal.Proofs._
 import io.kaizensolutions.virgil._
@@ -204,4 +205,9 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
       }
       result.build()
     }
+
+  override def metrics: UIO[Option[Metrics]] = ZIO.succeed {
+    val underlyingMetrics = underlyingSession.getMetrics
+    if (underlyingMetrics.isPresent) Some(underlyingMetrics.get) else None
+  }
 }
