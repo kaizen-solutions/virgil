@@ -1,10 +1,11 @@
 package io.kaizensolutions.virgil
+import com.datastax.oss.driver.api.core.metrics.Metrics
 import com.datastax.oss.driver.api.core.{CqlSession, CqlSessionBuilder}
 import io.kaizensolutions.virgil.configuration.PageState
 import io.kaizensolutions.virgil.internal.CQLExecutorImpl
 import io.kaizensolutions.virgil.internal.Proofs.=:!=
 import zio.stream._
-import zio.{Has, RIO, RLayer, Task, TaskManaged, URLayer, ZIO, ZLayer, ZManaged}
+import zio.{Has, RIO, RLayer, Task, TaskManaged, UIO, URIO, URLayer, ZIO, ZLayer, ZManaged}
 
 trait CQLExecutor {
   def execute[A](in: CQL[A]): Stream[Throwable, A]
@@ -12,7 +13,10 @@ trait CQLExecutor {
   def executeMutation(in: CQL[MutationResult]): Task[MutationResult]
 
   def executePage[A](in: CQL[A], pageState: Option[PageState])(implicit ev: A =:!= MutationResult): Task[Paged[A]]
+
+  def metrics: UIO[Option[Metrics]]
 }
+
 object CQLExecutor {
   def execute[A](in: CQL[A]): ZStream[Has[CQLExecutor], Throwable, A] =
     ZStream.serviceWithStream(_.execute(in))
@@ -23,6 +27,9 @@ object CQLExecutor {
   def executePage[A](in: CQL[A], pageState: Option[PageState] = None)(implicit
     ev: A =:!= MutationResult
   ): RIO[Has[CQLExecutor], Paged[A]] = ZIO.serviceWith[CQLExecutor](_.executePage(in, pageState))
+
+  def metrics: URIO[Has[CQLExecutor], Option[Metrics]] =
+    ZIO.serviceWith(_.metrics)
 
   val live: RLayer[Has[CqlSessionBuilder], Has[CQLExecutor]] =
     ZLayer.fromServiceManaged[CqlSessionBuilder, Any, Throwable, CQLExecutor](apply)
