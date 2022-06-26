@@ -100,7 +100,7 @@ Scala representation. This can also be used inside User Defined Types as well.
 If you are using Scala 3.1.x, you will need to use semi-automatic derivation as I have not yet figured out how to enable 
 fully automatic derivation like Scala 2.x has.
 
-```scala3
+```scala
 final case class Info(favorite: Boolean, comment: String)
 object Info:
     given cqlUdtValueEncoderForInfo: CqlUdtValueEncoder.Object[Info] = CqlUdtValueEncoder.derive[Info]
