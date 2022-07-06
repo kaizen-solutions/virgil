@@ -10,11 +10,12 @@ object UpdateBuilderSpecDatatypes {
       CqlRowDecoder.derive[UpdateBuilderSpecCounter]
 
     val tableName: String = "updatebuilderspec_counter"
-    val Id    = "id"
-    val Likes = "likes"
+    val Id                = "id"
+    val Likes             = "likes"
 
     def find(id: Int) =
-      SelectBuilder.from(tableName)
+      SelectBuilder
+        .from(tableName)
         .columns(Id, Likes)
         .where(Id === id)
         .build[UpdateBuilderSpecCounter]
