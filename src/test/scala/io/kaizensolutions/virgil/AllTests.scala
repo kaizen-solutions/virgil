@@ -15,7 +15,7 @@ object AllTests extends ZIOSpecDefault {
     val keyspaceAndMigrations =
       for {
         c           <- ZIO.service[CassandraContainer]
-        details     <- (c.getHost).zip(c.getPort)
+        details     <- c.getHost.zip(c.getPort)
         (host, port) = details
         session <- CQLExecutor(
                      CqlSession

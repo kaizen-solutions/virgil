@@ -1,7 +1,7 @@
 import ReleaseTransformations._
 
 inThisBuild {
-  val scala212 = "2.12.15"
+  val scala212 = "2.12.16"
   val scala213 = "2.13.8"
   val scala3   = "3.1.2"
 
@@ -37,18 +37,18 @@ lazy val root =
         val zioV                  = "2.0.0"
         val magnoliaForScala2     = "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.2"
         val scalaReflectForScala2 = "org.scala-lang"                % "scala-reflect" % scalaVersion.value
-        val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.1.2"
+        val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.1.4"
 
         val coreDependencies =
           Seq(
             datastax                  % "java-driver-core"        % datastaxV,
-            "org.scala-lang.modules" %% "scala-collection-compat" % "2.7.0",
+            "org.scala-lang.modules" %% "scala-collection-compat" % "2.8.0",
             zio                      %% "zio"                     % zioV,
             zio                      %% "zio-streams"             % zioV,
             zio                      %% "zio-test"                % zioV     % Test,
             zio                      %% "zio-test-sbt"            % zioV     % Test,
             "com.dimafeng"           %% "testcontainers-scala"    % "0.40.8" % Test,
-            "com.outr"               %% "scribe-slf4j"            % "3.8.3"  % Test
+            "com.outr"               %% "scribe-slf4j"            % "3.10.1" % Test
           )
 
         val magnolia =

@@ -134,7 +134,7 @@ object CQLExecutorSpec {
         val sessionScoped: URIO[CassandraContainer with Scope, CqlSession] = {
           val createSession = for {
             c            <- ZIO.service[CassandraContainer]
-            contactPoint <- (c.getHost).zipWith(c.getPort)(InetSocketAddress.createUnresolved)
+            contactPoint <- c.getHost.zipWith(c.getPort)(InetSocketAddress.createUnresolved)
             session <- ZIO.succeed(
                          CqlSession.builder
                            .addContactPoint(contactPoint)
