@@ -45,10 +45,10 @@ lazy val root =
             "org.scala-lang.modules" %% "scala-collection-compat" % "2.8.0",
             zio                      %% "zio"                     % zioV,
             zio                      %% "zio-streams"             % zioV,
-            zio                      %% "zio-test"                % zioV     % Test,
-            zio                      %% "zio-test-sbt"            % zioV     % Test,
-            "com.dimafeng"           %% "testcontainers-scala"    % "0.40.9" % Test,
-            "com.outr"               %% "scribe-slf4j"            % "3.10.1" % Test
+            zio                      %% "zio-test"                % zioV      % Test,
+            zio                      %% "zio-test-sbt"            % zioV      % Test,
+            "com.dimafeng"           %% "testcontainers-scala"    % "0.40.10" % Test,
+            "com.outr"               %% "scribe-slf4j"            % "3.10.1"  % Test
           )
 
         val magnolia =
