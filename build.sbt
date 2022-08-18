@@ -34,21 +34,21 @@ lazy val root =
         val datastaxV = "4.14.1"
 
         val zio                   = "dev.zio"
-        val zioV                  = "2.0.0"
+        val zioV                  = "2.0.1"
         val magnoliaForScala2     = "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.2"
         val scalaReflectForScala2 = "org.scala-lang"                % "scala-reflect" % scalaVersion.value
-        val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.1.4"
+        val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.1.5"
 
         val coreDependencies =
           Seq(
             datastax                  % "java-driver-core"        % datastaxV,
-            "org.scala-lang.modules" %% "scala-collection-compat" % "2.8.0",
+            "org.scala-lang.modules" %% "scala-collection-compat" % "2.8.1",
             zio                      %% "zio"                     % zioV,
             zio                      %% "zio-streams"             % zioV,
-            zio                      %% "zio-test"                % zioV     % Test,
-            zio                      %% "zio-test-sbt"            % zioV     % Test,
-            "com.dimafeng"           %% "testcontainers-scala"    % "0.40.9" % Test,
-            "com.outr"               %% "scribe-slf4j"            % "3.10.1" % Test
+            zio                      %% "zio-test"                % zioV      % Test,
+            zio                      %% "zio-test-sbt"            % zioV      % Test,
+            "com.dimafeng"           %% "testcontainers-scala"    % "0.40.10" % Test,
+            "com.outr"               %% "scribe-slf4j"            % "3.10.2"  % Test
           )
 
         val magnolia =
