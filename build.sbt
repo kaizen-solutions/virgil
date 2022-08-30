@@ -34,7 +34,7 @@ lazy val root =
         val datastaxV = "4.14.1"
 
         val zio                   = "dev.zio"
-        val zioV                  = "2.0.1"
+        val zioV                  = "2.0.2"
         val magnoliaForScala2     = "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.2"
         val scalaReflectForScala2 = "org.scala-lang"                % "scala-reflect" % scalaVersion.value
         val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.1.5"
