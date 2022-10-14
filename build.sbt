@@ -31,7 +31,7 @@ lazy val root =
       name             := "virgil",
       libraryDependencies ++= {
         val datastax  = "com.datastax.oss"
-        val datastaxV = "4.14.1"
+        val datastaxV = "4.15.0"
 
         val zio                   = "dev.zio"
         val zioV                  = "2.0.1"
