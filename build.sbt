@@ -1,7 +1,7 @@
 import ReleaseTransformations._
 
 inThisBuild {
-  val scala212 = "2.12.16"
+  val scala212 = "2.12.17"
   val scala213 = "2.13.8"
   val scala3   = "3.2.0"
 
@@ -31,10 +31,10 @@ lazy val root =
       name             := "virgil",
       libraryDependencies ++= {
         val datastax  = "com.datastax.oss"
-        val datastaxV = "4.14.1"
+        val datastaxV = "4.15.0"
 
         val zio                   = "dev.zio"
-        val zioV                  = "2.0.1"
+        val zioV                  = "2.0.3"
         val magnoliaForScala2     = "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.2"
         val scalaReflectForScala2 = "org.scala-lang"                % "scala-reflect" % scalaVersion.value
         val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.2.0"
@@ -47,7 +47,7 @@ lazy val root =
             zio                      %% "zio-streams"             % zioV,
             zio                      %% "zio-test"                % zioV      % Test,
             zio                      %% "zio-test-sbt"            % zioV      % Test,
-            "com.dimafeng"           %% "testcontainers-scala"    % "0.40.10" % Test,
+            "com.dimafeng"           %% "testcontainers-scala"    % "0.40.11" % Test,
             "com.outr"               %% "scribe-slf4j"            % "3.10.3"  % Test
           )
 
