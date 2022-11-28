@@ -3,7 +3,7 @@ import ReleaseTransformations._
 inThisBuild {
   val scala212 = "2.12.17"
   val scala213 = "2.13.8"
-  val scala3   = "3.2.0"
+  val scala3   = "3.2.1"
 
   List(
     scalaVersion                        := scala3,
@@ -12,7 +12,7 @@ inThisBuild {
     githubWorkflowBuild += WorkflowStep.Sbt(
       name = Option("Coverage Coveralls"),
       commands = List("clean", "coverage", "test", "coverageReport", "coverageAggregate", "coveralls"),
-      cond = Some("${{ matrix.scala != '3.1.2' }}"), // Disable coverage for Scala 3.1.2
+      cond = Some("${{ matrix.scala != '3.2.1' }}"), // Disable coverage for Scala 3.2.1
       env = Map(
         "COVERALLS_REPO_TOKEN" -> "${{ secrets.GITHUB_TOKEN }}",
         "COVERALLS_FLAG_NAME"  -> "Scala ${{ matrix.scala }}"
@@ -34,7 +34,7 @@ lazy val root =
         val datastaxV = "4.15.0"
 
         val zio                   = "dev.zio"
-        val zioV                  = "2.0.3"
+        val zioV                  = "2.0.4"
         val magnoliaForScala2     = "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.2"
         val scalaReflectForScala2 = "org.scala-lang"                % "scala-reflect" % scalaVersion.value
         val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.2.0"
@@ -48,7 +48,7 @@ lazy val root =
             zio                      %% "zio-test"                % zioV      % Test,
             zio                      %% "zio-test-sbt"            % zioV      % Test,
             "com.dimafeng"           %% "testcontainers-scala"    % "0.40.11" % Test,
-            "com.outr"               %% "scribe-slf4j"            % "3.10.3"  % Test
+            "com.outr"               %% "scribe-slf4j"            % "3.10.5"  % Test
           )
 
         val magnolia =
