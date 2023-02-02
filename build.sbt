@@ -2,8 +2,8 @@ import ReleaseTransformations._
 
 inThisBuild {
   val scala212 = "2.12.17"
-  val scala213 = "2.13.8"
-  val scala3   = "3.2.1"
+  val scala213 = "2.13.10"
+  val scala3   = "3.2.2"
 
   List(
     scalaVersion                        := scala3,
@@ -34,21 +34,21 @@ lazy val root =
         val datastaxV = "4.15.0"
 
         val zio                   = "dev.zio"
-        val zioV                  = "2.0.4"
-        val magnoliaForScala2     = "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.2"
+        val zioV                  = "2.0.6"
+        val magnoliaForScala2     = "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.3"
         val scalaReflectForScala2 = "org.scala-lang"                % "scala-reflect" % scalaVersion.value
-        val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.2.0"
+        val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.2.6"
 
         val coreDependencies =
           Seq(
             datastax                  % "java-driver-core"        % datastaxV,
-            "org.scala-lang.modules" %% "scala-collection-compat" % "2.8.1",
+            "org.scala-lang.modules" %% "scala-collection-compat" % "2.9.0",
             zio                      %% "zio"                     % zioV,
             zio                      %% "zio-streams"             % zioV,
             zio                      %% "zio-test"                % zioV      % Test,
             zio                      %% "zio-test-sbt"            % zioV      % Test,
             "com.dimafeng"           %% "testcontainers-scala"    % "0.40.11" % Test,
-            "com.outr"               %% "scribe-slf4j"            % "3.10.5"  % Test
+            "com.outr"               %% "scribe-slf4j"            % "3.10.7"  % Test
           )
 
         val magnolia =
