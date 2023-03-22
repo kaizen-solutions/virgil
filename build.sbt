@@ -47,7 +47,7 @@ lazy val root =
             zio                      %% "zio-streams"             % zioV,
             zio                      %% "zio-test"                % zioV      % Test,
             zio                      %% "zio-test-sbt"            % zioV      % Test,
-            "com.dimafeng"           %% "testcontainers-scala"    % "0.40.11" % Test,
+            "com.dimafeng"           %% "testcontainers-scala"    % "0.40.14" % Test,
             "com.outr"               %% "scribe-slf4j"            % "3.11.0"  % Test
           )
 
