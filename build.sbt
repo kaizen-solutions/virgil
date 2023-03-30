@@ -1,9 +1,9 @@
 import ReleaseTransformations._
 
 inThisBuild {
-  val scala212 = "2.12.16"
-  val scala213 = "2.13.8"
-  val scala3   = "3.2.0"
+  val scala212 = "2.12.17"
+  val scala213 = "2.13.10"
+  val scala3   = "3.2.2"
 
   List(
     scalaVersion                        := scala3,
@@ -12,7 +12,7 @@ inThisBuild {
     githubWorkflowBuild += WorkflowStep.Sbt(
       name = Option("Coverage Coveralls"),
       commands = List("clean", "coverage", "test", "coverageReport", "coverageAggregate", "coveralls"),
-      cond = Some("${{ matrix.scala != '3.1.2' }}"), // Disable coverage for Scala 3.1.2
+      cond = Some("${{ matrix.scala != '3.2.2' }}"),
       env = Map(
         "COVERALLS_REPO_TOKEN" -> "${{ secrets.GITHUB_TOKEN }}",
         "COVERALLS_FLAG_NAME"  -> "Scala ${{ matrix.scala }}"
@@ -31,24 +31,24 @@ lazy val root =
       name             := "virgil",
       libraryDependencies ++= {
         val datastax  = "com.datastax.oss"
-        val datastaxV = "4.14.1"
+        val datastaxV = "4.15.0"
 
         val zio                   = "dev.zio"
-        val zioV                  = "2.0.1"
-        val magnoliaForScala2     = "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.2"
+        val zioV                  = "2.0.10"
+        val magnoliaForScala2     = "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.3"
         val scalaReflectForScala2 = "org.scala-lang"                % "scala-reflect" % scalaVersion.value
-        val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.2.0"
+        val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.3.0"
 
         val coreDependencies =
           Seq(
             datastax                  % "java-driver-core"        % datastaxV,
-            "org.scala-lang.modules" %% "scala-collection-compat" % "2.8.1",
+            "org.scala-lang.modules" %% "scala-collection-compat" % "2.9.0",
             zio                      %% "zio"                     % zioV,
             zio                      %% "zio-streams"             % zioV,
             zio                      %% "zio-test"                % zioV      % Test,
             zio                      %% "zio-test-sbt"            % zioV      % Test,
-            "com.dimafeng"           %% "testcontainers-scala"    % "0.40.10" % Test,
-            "com.outr"               %% "scribe-slf4j"            % "3.10.3"  % Test
+            "com.dimafeng"           %% "testcontainers-scala"    % "0.40.12" % Test,
+            "com.outr"               %% "scribe-slf4j"            % "3.11.0"  % Test
           )
 
         val magnolia =
