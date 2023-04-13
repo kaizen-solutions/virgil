@@ -53,12 +53,11 @@ jobs:
       - name: Check that workflows are up to date
         run: sbt ++${{ matrix.scala }} githubWorkflowCheck
 
-      - name: Build, Test, and Coverage
-        run: sbt ++${{ matrix.scala }} clean coverage test coverageReport coverageAggregate
+      - name: Build & Test
+        run: sbt ++${{ matrix.scala }} clean coverage test
 
-      - name: Coveralls
-        if: ${{ matrix.scala != '3.2.2' }}
+      - name: Coverage
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_FLAG_NAME: Scala ${{ matrix.scala }}
-        run: sbt ++${{ matrix.scala }} coveralls
+        run: sbt ++${{ matrix.scala }} coverageReport coveralls

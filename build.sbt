@@ -11,15 +11,15 @@ inThisBuild {
     githubWorkflowPublishTargetBranches := Seq.empty,
     githubWorkflowBuild := Seq(
       WorkflowStep.Sbt(
-        name = Option("Build, Test, and Coverage"),
-        commands = List("clean", "coverage", "test", "coverageReport", "coverageAggregate"),
+        name = Option("Build & Test"),
+        commands = List("clean", "coverage", "test"),
         cond = None,
         env = Map.empty
       ),
       WorkflowStep.Sbt(
-        name = Option("Coveralls"),
-        commands = List("coveralls"),
-        cond = Some("${{ matrix.scala != '3.2.2' }}"),
+        name = Option("Coverage"),
+        commands = List("coverageReport", "coveralls"),
+        cond = None,
         env = Map(
           "COVERALLS_REPO_TOKEN" -> "${{ secrets.GITHUB_TOKEN }}",
           "COVERALLS_FLAG_NAME"  -> "Scala ${{ matrix.scala }}"
