@@ -12,7 +12,7 @@ inThisBuild {
     githubWorkflowBuild += WorkflowStep.Sbt(
       name = Option("Coverage Coveralls"),
       commands = List("clean", "coverage", "test", "coverageReport", "coverageAggregate", "coveralls"),
-      cond = Some("${{ matrix.scala != '3.2.2' }}"),
+      cond = None,
       env = Map(
         "COVERALLS_REPO_TOKEN" -> "${{ secrets.GITHUB_TOKEN }}",
         "COVERALLS_FLAG_NAME"  -> "Scala ${{ matrix.scala }}"
@@ -34,7 +34,7 @@ lazy val root =
         val datastaxV = "4.15.0"
 
         val zio                   = "dev.zio"
-        val zioV                  = "2.0.10"
+        val zioV                  = "2.0.12"
         val magnoliaForScala2     = "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.3"
         val scalaReflectForScala2 = "org.scala-lang"                % "scala-reflect" % scalaVersion.value
         val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.3.0"
@@ -47,8 +47,8 @@ lazy val root =
             zio                      %% "zio-streams"             % zioV,
             zio                      %% "zio-test"                % zioV      % Test,
             zio                      %% "zio-test-sbt"            % zioV      % Test,
-            "com.dimafeng"           %% "testcontainers-scala"    % "0.40.12" % Test,
-            "com.outr"               %% "scribe-slf4j"            % "3.11.0"  % Test
+            "com.dimafeng"           %% "testcontainers-scala"    % "0.40.14" % Test,
+            "com.outr"               %% "scribe-slf4j"            % "3.11.1"  % Test
           )
 
         val magnolia =
