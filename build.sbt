@@ -9,13 +9,21 @@ inThisBuild {
     scalaVersion                        := scala3,
     crossScalaVersions                  := Seq(scala212, scala213, scala3),
     githubWorkflowPublishTargetBranches := Seq.empty,
-    githubWorkflowBuild += WorkflowStep.Sbt(
-      name = Option("Coverage Coveralls"),
-      commands = List("clean", "coverage", "test", "coverageReport", "coverageAggregate", "coveralls"),
-      cond = None,
-      env = Map(
-        "COVERALLS_REPO_TOKEN" -> "${{ secrets.GITHUB_TOKEN }}",
-        "COVERALLS_FLAG_NAME"  -> "Scala ${{ matrix.scala }}"
+    githubWorkflowBuild := Seq(
+      WorkflowStep.Sbt(
+        name = Option("Build, Test, and Coverage"),
+        commands = List("clean", "coverage", "test", "coverageReport", "coverageAggregate"),
+        cond = None,
+        env = Map.empty
+      ),
+      WorkflowStep.Sbt(
+        name = Option("Coveralls"),
+        commands = List("coveralls"),
+        cond = Some("${{ matrix.scala != '3.2.2' }}"),
+        env = Map(
+          "COVERALLS_REPO_TOKEN" -> "${{ secrets.GITHUB_TOKEN }}",
+          "COVERALLS_FLAG_NAME"  -> "Scala ${{ matrix.scala }}"
+        )
       )
     )
   )
