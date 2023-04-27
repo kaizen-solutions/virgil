@@ -50,7 +50,7 @@ lazy val root =
         val coreDependencies =
           Seq(
             datastax                  % "java-driver-core"        % datastaxV,
-            "org.scala-lang.modules" %% "scala-collection-compat" % "2.9.0",
+            "org.scala-lang.modules" %% "scala-collection-compat" % "2.10.0",
             zio                      %% "zio"                     % zioV,
             zio                      %% "zio-streams"             % zioV,
             zio                      %% "zio-test"                % zioV      % Test,
