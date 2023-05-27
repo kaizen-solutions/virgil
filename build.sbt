@@ -56,7 +56,7 @@ lazy val root =
             zio                      %% "zio-test"                % zioV      % Test,
             zio                      %% "zio-test-sbt"            % zioV      % Test,
             "com.dimafeng"           %% "testcontainers-scala"    % "0.40.15" % Test,
-            "com.outr"               %% "scribe-slf4j"            % "3.11.1"  % Test
+            "com.outr"               %% "scribe-slf4j"            % "3.11.5"  % Test
           )
 
         val magnolia =
