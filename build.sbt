@@ -6,7 +6,7 @@ inThisBuild {
   val scala3   = "3.2.2"
 
   List(
-    scalaVersion                        := scala3,
+    scalaVersion                        := scala213,
     crossScalaVersions                  := Seq(scala212, scala213, scala3),
     githubWorkflowPublishTargetBranches := Seq.empty,
     githubWorkflowBuild := Seq(
@@ -25,18 +25,23 @@ inThisBuild {
           "COVERALLS_FLAG_NAME"  -> "Scala ${{ matrix.scala }}"
         )
       )
-    )
+    ),
+    testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
   )
 }
 addCommandAlias("coverme", "; clean; coverage; test; coverageReport; coverageAggregate")
 
 lazy val root =
-  (project in file("."))
+  project
+    .in(file("."))
+    .settings(publishTo := None)
+    .aggregate(core, zio, catsEffect)
+
+lazy val core =
+  (project in file("core"))
+    .settings(organizationSettings *)
     .settings(
-      licenses         := List("MPL-2.0" -> url("https://www.mozilla.org/en-US/MPL/2.0/")),
-      organization     := "io.kaizensolutions",
-      organizationName := "kaizen-solutions",
-      name             := "virgil",
+      name := "virgil-core",
       libraryDependencies ++= {
         val datastax  = "com.datastax.oss"
         val datastaxV = "4.15.0"
@@ -51,12 +56,10 @@ lazy val root =
           Seq(
             datastax                  % "java-driver-core"        % datastaxV,
             "org.scala-lang.modules" %% "scala-collection-compat" % "2.10.0",
-            zio                      %% "zio"                     % zioV,
-            zio                      %% "zio-streams"             % zioV,
             zio                      %% "zio-test"                % zioV      % Test,
             zio                      %% "zio-test-sbt"            % zioV      % Test,
-            "com.dimafeng"           %% "testcontainers-scala"    % "0.40.15" % Test,
-            "com.outr"               %% "scribe-slf4j"            % "3.11.1"  % Test
+            "com.dimafeng"           %% "testcontainers-scala"    % "0.40.16" % Test,
+            "com.outr"               %% "scribe-slf4j"            % "3.11.5"  % Test
           )
 
         val magnolia =
@@ -65,20 +68,64 @@ lazy val root =
 
         coreDependencies ++ magnolia
       },
-      testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
-      Test / fork                 := true,
-      releaseIgnoreUntrackedFiles := true,
-      releaseTagName              := s"${version.value}",
-      releaseProcess := Seq[ReleaseStep](
-        checkSnapshotDependencies,
-        inquireVersions,
-        runClean,
-        runTest,
-        setReleaseVersion,
-        commitReleaseVersion,
-        tagRelease,
-        setNextVersion,
-        commitNextVersion,
-        pushChanges
-      )
+      Test / fork := true
     )
+    .settings(releaseSettings *)
+
+lazy val zio =
+  project
+    .in(file("zio"))
+    .settings(organizationSettings *)
+    .settings(
+      name := "virgil-zio",
+      libraryDependencies ++= {
+        val zio  = "dev.zio"
+        val zioV = "2.0.13"
+
+        Seq(
+          zio %% "zio"         % zioV,
+          zio %% "zio-streams" % zioV
+        )
+      }
+    )
+    .settings(releaseSettings *)
+    .dependsOn(core % "compile->compile;test->test")
+
+lazy val catsEffect =
+  project
+    .in(file("cats-effect"))
+    .settings(organizationSettings *)
+    .settings(
+      name := "virgil-cats-effect",
+      libraryDependencies ++=
+        Seq(
+          "org.typelevel" %% "cats-effect" % "3.5.0",
+          "co.fs2"        %% "fs2-core"    % "3.7.0"
+        )
+    )
+    .settings(releaseSettings)
+    .dependsOn(core)
+
+def organizationSettings =
+  Seq(
+    licenses         := List("MPL-2.0" -> url("https://www.mozilla.org/en-US/MPL/2.0/")),
+    organization     := "io.kaizensolutions",
+    organizationName := "kaizen-solutions"
+  )
+
+def releaseSettings = Seq(
+  releaseIgnoreUntrackedFiles := true,
+  releaseTagName              := s"${version.value}",
+  releaseProcess := Seq[ReleaseStep](
+    checkSnapshotDependencies,
+    inquireVersions,
+    runClean,
+    runTest,
+    setReleaseVersion,
+    commitReleaseVersion,
+    tagRelease,
+    setNextVersion,
+    commitNextVersion,
+    pushChanges
+  )
+)

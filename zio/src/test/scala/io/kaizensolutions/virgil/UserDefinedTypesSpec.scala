@@ -1,0 +1,114 @@
+package io.kaizensolutions.virgil
+
+import io.kaizensolutions.virgil.models.UserDefinedTypesSpecDatatypes._
+import zio.{test => _, _}
+import zio.test._
+import java.time.{LocalDate, LocalTime}
+
+object UserDefinedTypesSpec {
+  def userDefinedTypesSpec: Spec[Live with TestConfig with Sized with CQLExecutor, Throwable] =
+    suite("User Defined Types specification") {
+      test("Write and read Person rows containing UDTs which are nested") {
+        import Row_Person._
+        check(row_PersonGen) { expected =>
+          val insertPerson = insert(expected).execute.runDrain
+          val fetchActual  = select(expected.id).execute.runCollect
+
+          for {
+            _              <- insertPerson
+            actualWithData <- fetchActual
+          } yield assertTrue(actualWithData.head == expected) && assertTrue(actualWithData.length == 1)
+        }
+      } +
+        test(
+          "Write and read rows for a UDT containing nested UDTs within themselves along with nested collections containing UDTs"
+        ) {
+          import Row_HeavilyNestedUDTTable._
+          check(row_HeavilyNestedUDTTableGen) { expected =>
+            val insertPeople = insert(expected).execute.runDrain
+            val fetchActual  = select(expected.id).execute.runCollect
+
+            for {
+              _      <- insertPeople
+              actual <- fetchActual
+            } yield assertTrue(actual.head == expected) && assertTrue(actual.length == 1)
+          }
+        }
+    } @@ TestAspect.timeout(1.minute) @@ TestAspect.samples(10)
+
+  val uDT_AddressGen: Gen[Any, UDT_Address] =
+    for {
+      number <- Gen.int(1, 10000)
+      street <- Gen.stringBounded(4, 10)(Gen.alphaNumericChar)
+      city   <- Gen.stringBounded(4, 10)(Gen.alphaNumericChar)
+    } yield UDT_Address(number, street, city)
+
+  val uDT_EmailGen: Gen[Any, UDT_Email] =
+    for {
+      username   <- Gen.stringBounded(3, 10)(Gen.alphaNumericChar)
+      domainName <- Gen.stringBounded(4, 32)(Gen.alphaNumericChar)
+      domain     <- Gen.oneOf(Gen.const("com"), Gen.const("org"), Gen.const("net"))
+    } yield UDT_Email(username, domainName, domain)
+
+  val uDT_DataGen: Gen[Any, UDT_Data] =
+    for {
+      addresses <- Gen.listOfBounded(10, 20)(uDT_AddressGen)
+      email     <- Gen.option(uDT_EmailGen)
+    } yield UDT_Data(addresses, email)
+
+  val row_PersonGen: Gen[Any, Row_Person] =
+    for {
+      id   <- Gen.int(1, 100000)
+      name <- Gen.stringBounded(4, 10)(Gen.alphaNumericChar)
+      age  <- Gen.int(18, 100)
+      data <- uDT_DataGen
+    } yield Row_Person(id, name, age, data)
+
+  val uDT_ExampleTypeGen: Gen[Any, UDT_ExampleType] =
+    for {
+      x <- Gen.long
+      y <- Gen.long
+      // Interesting note: the Java date and time library can express a range of dates and times far greater than what Cassandra supports
+      day    <- Gen.int(1, 28)
+      month  <- Gen.int(1, 12)
+      year   <- Gen.int(1999, 2050)
+      hour   <- Gen.int(0, 23)
+      minute <- Gen.int(0, 59)
+      date   <- Gen.const(LocalDate.of(year, month, day))
+      time   <- Gen.oneOf(Gen.const(LocalTime.of(hour, minute)))
+    } yield UDT_ExampleType(
+      x = x,
+      y = y,
+      date = date,
+      time = time
+    )
+
+  val uDT_ExampleNestedTypeGen: Gen[Sized, UDT_ExampleNestedType] =
+    for {
+      a <- Gen.int
+      b <- Gen.alphaNumericStringBounded(4, 10)
+      c <- uDT_ExampleTypeGen
+    } yield UDT_ExampleNestedType(a, b, c)
+
+  val uDT_ExampleCollectionNestedUDTTypeGen: Gen[Sized, UDT_ExampleCollectionNestedUDTType] =
+    for {
+      a <- Gen.int
+      b <- Gen.mapOf(
+             key = Gen.int,
+             value = Gen.setOf(
+               Gen.setOf(
+                 Gen.setOf(
+                   Gen.setOf(uDT_ExampleNestedTypeGen)
+                 )
+               )
+             )
+           )
+      c <- uDT_ExampleNestedTypeGen
+    } yield UDT_ExampleCollectionNestedUDTType(a, b, c)
+
+  val row_HeavilyNestedUDTTableGen: Gen[Sized, Row_HeavilyNestedUDTTable] =
+    for {
+      id   <- Gen.int
+      data <- uDT_ExampleCollectionNestedUDTTypeGen
+    } yield Row_HeavilyNestedUDTTable(id, data)
+}
