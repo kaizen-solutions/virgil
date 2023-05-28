@@ -3,7 +3,6 @@ package io.kaizensolutions.virgil
 import io.kaizensolutions.virgil.configuration.PageState
 import zio._
 import zio.stream.ZStream
-import io.kaizensolutions.virgil.Paged
 
 trait CQLZIOInstances {
   implicit class CQLZioOperations[+Result](self: CQL[Result]) {

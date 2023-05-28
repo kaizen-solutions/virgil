@@ -7,7 +7,7 @@ import io.kaizensolutions.virgil.internal.Proofs.=:!=
 import cats.effect._
 import fs2._
 import io.kaizensolutions.virgil.internal.CQLExecutorImpl
-import io.kaizensolutions.virgil.Paged
+
 trait CQLExecutor[F[_]] {
   def execute[A](in: CQL[A]): Stream[F, A]
 

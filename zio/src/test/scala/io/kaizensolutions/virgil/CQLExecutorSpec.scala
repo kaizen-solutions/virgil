@@ -11,7 +11,6 @@ import zio.test.Assertion._
 import zio.test.TestAspect._
 
 import java.net.InetSocketAddress
-import io.kaizensolutions.virgil.Paged
 
 object CQLExecutorSpec {
   def executorSpec: Spec[Live with TestConfig with Sized with CassandraContainer with CQLExecutor, Any] =

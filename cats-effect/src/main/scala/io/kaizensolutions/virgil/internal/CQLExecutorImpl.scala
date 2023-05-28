@@ -18,7 +18,6 @@ import cats.syntax.all._
 import scala.jdk.CollectionConverters._
 import com.datastax.oss.driver.api.core.cql.PreparedStatement
 import com.datastax.oss.driver.api.core.cql.BoundStatementBuilder
-import io.kaizensolutions.virgil.Paged
 import com.datastax.oss.driver.api.core.cql.BatchableStatement
 import com.datastax.oss.driver.api.core.cql.SimpleStatement
 import com.datastax.oss.driver.api.core.cql.BatchStatement
@@ -34,9 +33,9 @@ import com.datastax.oss.driver.api.core.cql.BatchStatement
 private[virgil] class CQLExecutorImpl[F[_]](underlyingSession: CqlSession)(implicit F: Async[F])
     extends CQLExecutor[F] {
   override def execute[A](in: CQL[A]): Stream[F, A] = in.cqlType match {
-    case m: CQLType.Mutation => Stream.eval(executeMutation(m, in.executionAttributes))
+    case m: CQLType.Mutation => Stream.eval(executeMutation(m, in.executionAttributes).asInstanceOf[F[A]])
 
-    case b: CQLType.Batch => Stream.eval(executeBatch(b, in.executionAttributes))
+    case b: CQLType.Batch => Stream.eval(executeBatch(b, in.executionAttributes).asInstanceOf[F[A]])
 
     case q @ CQLType.Query(_, _, pullMode) =>
       pullMode match {
@@ -85,7 +84,7 @@ private[virgil] class CQLExecutorImpl[F[_]](underlyingSession: CqlSession)(impli
         F.delay {
           val batch = BatchStatement
             .builder(m.batchType.toDriver)
-            .addStatements(statements.toArraySeq.asJava)
+            .addStatements(statements.to(Seq).asJava)
 
           config.configureBatch(batch).build()
         }
