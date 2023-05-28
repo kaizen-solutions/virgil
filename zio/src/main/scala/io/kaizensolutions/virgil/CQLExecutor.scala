@@ -7,6 +7,7 @@ import io.kaizensolutions.virgil.internal.CQLExecutorImpl
 import io.kaizensolutions.virgil.internal.Proofs.=:!=
 import zio._
 import zio.stream._
+import io.kaizensolutions.virgil.Paged
 
 trait CQLExecutor {
   def execute[A](in: CQL[A])(implicit trace: Trace): Stream[Throwable, A]

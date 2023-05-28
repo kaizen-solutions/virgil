@@ -4,3 +4,4 @@
 .metals/
 target/
 .vscode/
+metals.sbt

@@ -10,6 +10,7 @@ import zio._
 import zio.stream._
 
 import scala.jdk.CollectionConverters._
+import io.kaizensolutions.virgil.Paged
 
 /**
  * CQLExecutorImpl is a ZIO based client for the Apache Cassandra Java Driver
