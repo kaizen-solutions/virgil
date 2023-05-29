@@ -1,7 +1,13 @@
 package io.kaizensolutions.virgil.codecs
 
-import com.datastax.oss.driver.api.core.`type`.{DataType, ListType, MapType, SetType}
-import com.datastax.oss.driver.api.core.data.{CqlDuration, GettableByIndex, GettableByName, UdtValue}
+import com.datastax.oss.driver.api.core.`type`.DataType
+import com.datastax.oss.driver.api.core.`type`.ListType
+import com.datastax.oss.driver.api.core.`type`.MapType
+import com.datastax.oss.driver.api.core.`type`.SetType
+import com.datastax.oss.driver.api.core.data.CqlDuration
+import com.datastax.oss.driver.api.core.data.GettableByIndex
+import com.datastax.oss.driver.api.core.data.GettableByName
+import com.datastax.oss.driver.api.core.data.UdtValue
 import io.kaizensolutions.virgil.codecs.CqlPrimitiveDecoder.UdtValueDecoderPrimitiveDecoder
 
 import scala.jdk.CollectionConverters._

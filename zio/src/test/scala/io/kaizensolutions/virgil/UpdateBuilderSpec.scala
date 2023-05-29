@@ -1,7 +1,7 @@
 package io.kaizensolutions.virgil
 
-import io.kaizensolutions.virgil.models.UpdateBuilderSpecDatatypes._
 import io.kaizensolutions.virgil.dsl._
+import io.kaizensolutions.virgil.models.UpdateBuilderSpecDatatypes._
 import zio.test.TestAspect._
 import zio.test._
 

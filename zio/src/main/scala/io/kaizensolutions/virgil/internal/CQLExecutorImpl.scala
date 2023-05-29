@@ -3,14 +3,15 @@ package io.kaizensolutions.virgil.internal
 import com.datastax.oss.driver.api.core.CqlSession
 import com.datastax.oss.driver.api.core.cql.{BatchType => _, _}
 import com.datastax.oss.driver.api.core.metrics.Metrics
+import io.kaizensolutions.virgil.Paged
 import io.kaizensolutions.virgil._
-import io.kaizensolutions.virgil.configuration.{ExecutionAttributes, PageState}
+import io.kaizensolutions.virgil.configuration.ExecutionAttributes
+import io.kaizensolutions.virgil.configuration.PageState
 import io.kaizensolutions.virgil.internal.Proofs._
 import zio._
 import zio.stream._
 
 import scala.jdk.CollectionConverters._
-import io.kaizensolutions.virgil.Paged
 
 /**
  * CQLExecutorImpl is a ZIO based client for the Apache Cassandra Java Driver

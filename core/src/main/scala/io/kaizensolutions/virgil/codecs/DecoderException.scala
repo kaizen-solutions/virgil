@@ -1,7 +1,8 @@
 package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.cql.Row
-import com.datastax.oss.driver.api.core.data.{GettableByName, UdtValue}
+import com.datastax.oss.driver.api.core.data.GettableByName
+import com.datastax.oss.driver.api.core.data.UdtValue
 
 import scala.util.control.NoStackTrace
 

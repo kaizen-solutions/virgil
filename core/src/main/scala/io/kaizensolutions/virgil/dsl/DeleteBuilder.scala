@@ -1,7 +1,9 @@
 package io.kaizensolutions.virgil.dsl
 
+import io.kaizensolutions.virgil.CQL
 import io.kaizensolutions.virgil.CQLType.Mutation.Delete
-import io.kaizensolutions.virgil.{dsl, CQL, MutationResult}
+import io.kaizensolutions.virgil.MutationResult
+import io.kaizensolutions.virgil.dsl
 
 final case class DeleteBuilder[State <: DeleteState](
   private val tableName: String,

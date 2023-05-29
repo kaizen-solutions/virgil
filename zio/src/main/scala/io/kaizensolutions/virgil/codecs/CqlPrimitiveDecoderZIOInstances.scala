@@ -2,6 +2,7 @@ package io.kaizensolutions.virgil.codecs
 
 import io.kaizensolutions.virgil.codecs.CqlPrimitiveDecoder.ListPrimitiveDecoder
 import zio.Chunk
+
 import scala.jdk.CollectionConverters._
 
 trait CqlPrimitiveDecoderZIOInstances {

@@ -2,7 +2,8 @@ package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.data.UdtValue
 import io.kaizensolutions.virgil.annotations.CqlColumn
-import magnolia1.{CaseClass, Magnolia}
+import magnolia1.CaseClass
+import magnolia1.Magnolia
 
 trait UdtValueDecoderMagnoliaDerivation {
   type Typeclass[T] = CqlUdtValueDecoder[T]

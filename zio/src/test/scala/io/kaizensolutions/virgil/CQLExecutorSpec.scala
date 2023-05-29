@@ -1,14 +1,15 @@
 package io.kaizensolutions.virgil
 
 import com.datastax.oss.driver.api.core.CqlSession
-import io.kaizensolutions.virgil.models.CqlExecutorSpecDatatypes._
-import io.kaizensolutions.virgil.configuration.{ConsistencyLevel, ExecutionAttributes}
+import io.kaizensolutions.virgil.configuration.ConsistencyLevel
+import io.kaizensolutions.virgil.configuration.ExecutionAttributes
 import io.kaizensolutions.virgil.cql._
+import io.kaizensolutions.virgil.models.CqlExecutorSpecDatatypes._
 import zio.stream.ZStream
-import zio.{test => _, _}
-import zio.test._
 import zio.test.Assertion._
 import zio.test.TestAspect._
+import zio.test._
+import zio.{test => _, _}
 
 import java.net.InetSocketAddress
 

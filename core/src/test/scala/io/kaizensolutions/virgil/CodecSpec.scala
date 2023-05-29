@@ -1,7 +1,8 @@
 package io.kaizensolutions.virgil
 
+import com.datastax.oss.driver.api.core.`type`.DataTypes
+import com.datastax.oss.driver.api.core.`type`.UserDefinedType
 import com.datastax.oss.driver.api.core.`type`.codec.CodecNotFoundException
-import com.datastax.oss.driver.api.core.`type`.{DataTypes, UserDefinedType}
 import com.datastax.oss.driver.internal.core.`type`.UserDefinedTypeBuilder
 import io.kaizensolutions.virgil.codecs.CqlPrimitiveDecoder
 import zio.ZIO

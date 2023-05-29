@@ -1,6 +1,7 @@
 package io.kaizensolutions.virgil
 
-import io.kaizensolutions.virgil.codecs.{CqlPrimitiveDecoder, CqlPrimitiveEncoder}
+import io.kaizensolutions.virgil.codecs.CqlPrimitiveDecoder
+import io.kaizensolutions.virgil.codecs.CqlPrimitiveEncoder
 
 final case class MutationResult private (result: Boolean) extends AnyVal
 object MutationResult {

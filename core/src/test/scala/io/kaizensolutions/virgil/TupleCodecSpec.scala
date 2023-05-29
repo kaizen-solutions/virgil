@@ -1,7 +1,7 @@
 package io.kaizensolutions.virgil
 
-import zio.test._
 import zio.test.Assertion._
+import zio.test._
 
 object TupleCodecSpec extends ZIOSpecDefault {
   def spec: Spec[Any, Nothing] =

@@ -1,10 +1,11 @@
 package io.kaizensolutions.virgil
 
-import io.kaizensolutions.virgil.models.InsertBuilderSpecDatatypes._
 import io.kaizensolutions.virgil.cql._
-import zio.{test => _, _}
-import zio.test.TestAspect.{samples, sequential}
+import io.kaizensolutions.virgil.models.InsertBuilderSpecDatatypes._
+import zio.test.TestAspect.samples
+import zio.test.TestAspect.sequential
 import zio.test._
+import zio.{test => _, _}
 
 object InsertBuilderSpec {
   def insertBuilderSpec =

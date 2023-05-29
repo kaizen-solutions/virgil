@@ -1,7 +1,8 @@
 package io.kaizensolutions.virgil.codecs
 
-import io.kaizensolutions.virgil.codecs.CqlPrimitiveDecoder.ListPrimitiveDecoder
 import fs2.Chunk
+import io.kaizensolutions.virgil.codecs.CqlPrimitiveDecoder.ListPrimitiveDecoder
+
 import scala.jdk.CollectionConverters._
 
 trait CqlPrimitiveDecoderFS2Instances {

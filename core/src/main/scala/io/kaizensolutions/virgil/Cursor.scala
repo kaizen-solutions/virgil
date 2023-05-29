@@ -1,7 +1,8 @@
 package io.kaizensolutions.virgil
 
 import com.datastax.oss.driver.api.core.cql.Row
-import com.datastax.oss.driver.api.core.data.{GettableByName, UdtValue}
+import com.datastax.oss.driver.api.core.data.GettableByName
+import com.datastax.oss.driver.api.core.data.UdtValue
 import io.kaizensolutions.virgil.codecs._
 
 import scala.util.control.NonFatal

@@ -1,10 +1,11 @@
 package io.kaizensolutions.virgil.models
 
 import com.datastax.oss.driver.api.core.cql.Row
+import io.kaizensolutions.virgil.CQL
+import io.kaizensolutions.virgil.MutationResult
 import io.kaizensolutions.virgil.annotations.CqlColumn
 import io.kaizensolutions.virgil.cql._
 import io.kaizensolutions.virgil.dsl._
-import io.kaizensolutions.virgil.{CQL, MutationResult}
 
 import java.net.InetAddress
 

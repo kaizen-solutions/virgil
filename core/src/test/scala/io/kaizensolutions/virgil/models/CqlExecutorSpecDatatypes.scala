@@ -1,11 +1,13 @@
 package io.kaizensolutions.virgil.models
 
 import com.datastax.oss.driver.api.core.uuid.Uuids
+import io.kaizensolutions.virgil.CQL
+import io.kaizensolutions.virgil.MutationResult
 import io.kaizensolutions.virgil.annotations.CqlColumn
 import io.kaizensolutions.virgil.cql._
 import io.kaizensolutions.virgil.dsl._
-import io.kaizensolutions.virgil.{CQL, MutationResult}
-import zio.test.{Gen, Sized}
+import zio.test.Gen
+import zio.test.Sized
 
 import java.nio.ByteBuffer
 import java.util.UUID

@@ -1,11 +1,13 @@
 package io.kaizensolutions.virgil.models
 
+import io.kaizensolutions.virgil.CQL
+import io.kaizensolutions.virgil.MutationResult
 import io.kaizensolutions.virgil.annotations.CqlColumn
 import io.kaizensolutions.virgil.cql._
 import io.kaizensolutions.virgil.dsl._
-import io.kaizensolutions.virgil.{CQL, MutationResult}
 
-import java.time.{LocalDate, LocalTime}
+import java.time.LocalDate
+import java.time.LocalTime
 
 object UserDefinedTypesSpecDatatypes {
   final case class Row_Person(

@@ -1,9 +1,11 @@
 package io.kaizensolutions.virgil
 
 import io.kaizensolutions.virgil.models.UserDefinedTypesSpecDatatypes._
-import zio.{test => _, _}
 import zio.test._
-import java.time.{LocalDate, LocalTime}
+import zio.{test => _, _}
+
+import java.time.LocalDate
+import java.time.LocalTime
 
 object UserDefinedTypesSpec {
   def userDefinedTypesSpec: Spec[Live with TestConfig with Sized with CQLExecutor, Throwable] =

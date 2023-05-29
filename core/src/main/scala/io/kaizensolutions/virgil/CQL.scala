@@ -3,9 +3,15 @@ package io.kaizensolutions.virgil
 import io.kaizensolutions.virgil.CQLType.Mutation.Delete
 import io.kaizensolutions.virgil.codecs.CqlRowDecoder
 import io.kaizensolutions.virgil.configuration.ExecutionAttributes
-import io.kaizensolutions.virgil.dsl.{Assignment, DeleteConditions, InsertConditions, Relation, UpdateConditions}
+import io.kaizensolutions.virgil.dsl.Assignment
+import io.kaizensolutions.virgil.dsl.DeleteConditions
+import io.kaizensolutions.virgil.dsl.InsertConditions
+import io.kaizensolutions.virgil.dsl.Relation
+import io.kaizensolutions.virgil.dsl.UpdateConditions
+import io.kaizensolutions.virgil.internal.BindMarkers
 import io.kaizensolutions.virgil.internal.Proofs._
-import io.kaizensolutions.virgil.internal.{BindMarkers, PullMode, QueryType}
+import io.kaizensolutions.virgil.internal.PullMode
+import io.kaizensolutions.virgil.internal.QueryType
 
 import java.time.Duration
 

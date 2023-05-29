@@ -1,5 +1,3 @@
 package io.kaizensolutions.virgil
 
-trait CursorExampleRowChunkVariantInstances {
-
-}
+trait CursorExampleRowChunkVariantInstances {}

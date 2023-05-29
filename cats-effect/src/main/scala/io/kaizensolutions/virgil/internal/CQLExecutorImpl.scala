@@ -1,26 +1,26 @@
 package io.kaizensolutions.virgil.internal
 
 import cats.effect._
+import cats.syntax.all._
 import com.datastax.oss.driver.api.core.CqlSession
+import com.datastax.oss.driver.api.core.cql.AsyncResultSet
+import com.datastax.oss.driver.api.core.cql.BatchStatement
+import com.datastax.oss.driver.api.core.cql.BatchableStatement
+import com.datastax.oss.driver.api.core.cql.BoundStatement
+import com.datastax.oss.driver.api.core.cql.BoundStatementBuilder
+import com.datastax.oss.driver.api.core.cql.PreparedStatement
+import com.datastax.oss.driver.api.core.cql.Row
+import com.datastax.oss.driver.api.core.cql.SimpleStatement
+import com.datastax.oss.driver.api.core.cql.Statement
 import com.datastax.oss.driver.api.core.cql.{BatchType => _}
 import com.datastax.oss.driver.api.core.metrics.Metrics
 import fs2._
 import io.kaizensolutions.virgil._
+import io.kaizensolutions.virgil.configuration.ExecutionAttributes
 import io.kaizensolutions.virgil.configuration.PageState
 import io.kaizensolutions.virgil.internal.Proofs._
-import io.kaizensolutions.virgil.configuration.ExecutionAttributes
-import com.datastax.oss.driver.api.core.cql.BoundStatement
-import com.datastax.oss.driver.api.core.cql.Statement
-import com.datastax.oss.driver.api.core.cql.Row
-import com.datastax.oss.driver.api.core.cql.AsyncResultSet
-import cats.syntax.all._
 
 import scala.jdk.CollectionConverters._
-import com.datastax.oss.driver.api.core.cql.PreparedStatement
-import com.datastax.oss.driver.api.core.cql.BoundStatementBuilder
-import com.datastax.oss.driver.api.core.cql.BatchableStatement
-import com.datastax.oss.driver.api.core.cql.SimpleStatement
-import com.datastax.oss.driver.api.core.cql.BatchStatement
 
 /**
  * CQLExecutorImpl is a ZIO based client for the Apache Cassandra Java Driver

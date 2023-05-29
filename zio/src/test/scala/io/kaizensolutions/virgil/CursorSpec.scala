@@ -4,10 +4,10 @@ import com.datastax.oss.driver.api.core.data.UdtValue
 import com.datastax.oss.driver.shaded.guava.common.net.InetAddresses
 import io.kaizensolutions.virgil.annotations.CqlColumn
 import io.kaizensolutions.virgil.models.CursorSpecDatatypes._
-import zio.{test => _, _}
 import zio.test.Assertion._
 import zio.test.TestAspect.samples
 import zio.test._
+import zio.{test => _, _}
 
 import java.net.InetAddress
 

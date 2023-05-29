@@ -1,5 +1,3 @@
 package io.kaizensolutions.virgil.models
 
-trait UDT_ExampleTypeInstances {
-
-}
+trait UDT_ExampleTypeInstances {}

@@ -1,5 +1,3 @@
 package io.kaizensolutions.virgil.models
 
-trait RelationSpec_PersonInstances {
-
-}
+trait RelationSpec_PersonInstances {}

@@ -1,6 +1,7 @@
 package io.kaizensolutions.virgil.dsl
 
-import io.kaizensolutions.virgil.{CQL, MutationResult}
+import io.kaizensolutions.virgil.CQL
+import io.kaizensolutions.virgil.MutationResult
 
 final case class UpdateBuilder[State <: UpdateState](
   private val table: String,

@@ -1,9 +1,10 @@
 package io.kaizensolutions.virgil
 
+import io.kaizensolutions.virgil.dsl._
 import io.kaizensolutions.virgil.models.RelationSpecDatatypes.RelationSpec_Person._
 import io.kaizensolutions.virgil.models.RelationSpecDatatypes._
-import io.kaizensolutions.virgil.dsl._
-import zio.test.TestAspect.{samples, sequential}
+import zio.test.TestAspect.samples
+import zio.test.TestAspect.sequential
 import zio.test._
 
 object RelationSpec {

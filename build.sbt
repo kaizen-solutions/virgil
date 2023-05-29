@@ -29,10 +29,11 @@ inThisBuild {
     testFrameworks ++= Seq(
       new TestFramework("zio.test.sbt.ZTestFramework"),
       new TestFramework("weaver.framework.CatsEffect")
-    )
+    ),
+    semanticdbEnabled                              := true,
+    scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.6.0"
   )
 }
-addCommandAlias("coverme", "; clean; coverage; test; coverageReport; coverageAggregate")
 
 lazy val root =
   project
@@ -65,11 +66,17 @@ lazy val core =
             "com.outr"               %% "scribe-slf4j"            % "3.11.5"  % Test
           )
 
+        val isScala2x = scalaVersion.value.startsWith("2")
+
         val magnolia =
-          if (scalaVersion.value.startsWith("2")) Seq(magnoliaForScala2, scalaReflectForScala2)
+          if (isScala2x) Seq(magnoliaForScala2, scalaReflectForScala2)
           else Seq(magnoliaForScala3)
 
-        coreDependencies ++ magnolia
+        val betterMonadicFor =
+          if (isScala2x) Seq(compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"))
+          else Seq.empty
+
+        coreDependencies ++ magnolia ++ betterMonadicFor
       },
       Test / fork := true
     )
@@ -112,7 +119,7 @@ lazy val catsEffect =
       }
     )
     .settings(releaseSettings)
-    .dependsOn(core)
+    .dependsOn(core % "compile->compile;test->test")
 
 def organizationSettings =
   Seq(
