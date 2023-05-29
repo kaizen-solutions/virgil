@@ -26,7 +26,10 @@ inThisBuild {
         )
       )
     ),
-    testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
+    testFrameworks ++= Seq(
+      new TestFramework("zio.test.sbt.ZTestFramework"),
+      new TestFramework("weaver.framework.CatsEffect")
+    )
   )
 }
 addCommandAlias("coverme", "; clean; coverage; test; coverageReport; coverageAggregate")
@@ -97,11 +100,16 @@ lazy val catsEffect =
     .settings(organizationSettings *)
     .settings(
       name := "virgil-cats-effect",
-      libraryDependencies ++=
+      libraryDependencies ++= {
+        val disney  = "com.disneystreaming"
+        val weaverV = "0.8.3"
         Seq(
-          "org.typelevel" %% "cats-effect" % "3.5.0",
-          "co.fs2"        %% "fs2-core"    % "3.7.0"
+          "org.typelevel" %% "cats-effect"       % "3.5.0",
+          "co.fs2"        %% "fs2-core"          % "3.7.0",
+          disney          %% "weaver-cats"       % weaverV % Test,
+          disney          %% "weaver-scalacheck" % weaverV % Test
         )
+      }
     )
     .settings(releaseSettings)
     .dependsOn(core)
