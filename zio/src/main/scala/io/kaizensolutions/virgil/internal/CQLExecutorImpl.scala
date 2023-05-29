@@ -31,9 +31,6 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
 
       case q @ CQLType.Query(_, _, pullMode) =>
         pullMode match {
-          case PullMode.TakeUpto(n) if n <= 1 =>
-            ZStream.fromZIOOption(executeSingleResultQuery(q, in.executionAttributes).some)
-
           case PullMode.TakeUpto(n) =>
             executeGeneralQuery(q, in.executionAttributes).take(n)
 
@@ -85,7 +82,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
       boundStatementWithPage = boundStatement.setPagingState(driverPageState)
       rp                    <- selectPage(boundStatementWithPage)
       (results, nextPage)    = rp
-      chunksToOutput        <- results.mapZIO(row => ZIO.attempt(reader.decode(row)))
+      chunksToOutput         = results.map(reader.decode)
     } yield Paged(chunksToOutput, nextPage)
   }
 
@@ -118,27 +115,9 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
     for {
       boundStatement <- ZStream.from(buildStatement(queryString, bindMarkers, config))
       reader          = input.reader
-      element <- select(boundStatement).mapChunksZIO { chunk =>
-                   chunk.mapZIO(row => ZIO.attempt(reader.decode(row)))
-                 }
+      element        <- select(boundStatement).mapChunks(_.map(reader.decode))
     } yield element
   }
-
-  private def executeSingleResultQuery[Output](
-    input: CQLType.Query[Output],
-    config: ExecutionAttributes
-  )(implicit trace: Trace): ZIO[Any, Throwable, Option[Output]] = {
-    val (queryString, bindMarkers) = CqlStatementRenderer.render(input)
-    for {
-      boundStatement <- buildStatement(queryString, bindMarkers, config)
-      reader          = input.reader
-      optRow         <- selectFirst(boundStatement)
-      element        <- ZIO.attempt(optRow.map(reader.decode))
-    } yield element
-  }
-
-  private def selectFirst(query: Statement[_])(implicit trace: Trace): Task[Option[Row]] =
-    executeAction(query).map(resultSet => Option(resultSet.one()))
 
   private def buildMutation(
     in: CQLType.Mutation,
