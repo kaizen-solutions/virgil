@@ -61,6 +61,7 @@ lazy val core =
             datastax                  % "java-driver-core"        % datastaxV,
             "org.scala-lang.modules" %% "scala-collection-compat" % "2.10.0",
             zio                      %% "zio-test"                % zioV      % Test,
+            zio                      %% "zio-test-scalacheck"     % zioV      % Test,
             zio                      %% "zio-test-sbt"            % zioV      % Test,
             "com.dimafeng"           %% "testcontainers-scala"    % "0.40.16" % Test,
             "com.outr"               %% "scribe-slf4j"            % "3.11.5"  % Test

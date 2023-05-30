@@ -5,6 +5,8 @@ import io.kaizensolutions.virgil.MutationResult
 import io.kaizensolutions.virgil.annotations.CqlColumn
 import io.kaizensolutions.virgil.cql._
 import io.kaizensolutions.virgil.dsl._
+import org.scalacheck.Gen
+import zio.test.{Gen => ZGen}
 
 object CollectionsSpecDatatypes {
   final case class SimpleCollectionRow(
@@ -14,6 +16,13 @@ object CollectionsSpecDatatypes {
     @CqlColumn("list_test") listTest: Vector[String]
   )
   object SimpleCollectionRow extends SimpleCollectionRowInstances {
+    val gen: Gen[SimpleCollectionRow] =
+      for {
+        id   <- Gen.int
+        map  <- Gen.map(key = Gen.posNum[Int], value = Gen.stringOf(Gen.alphaNumChar))
+        set  <- Gen.nonEmptySetOf(Gen.long)
+        list <- Gen.nonEmptyVectorOf(Gen.stringOf(Gen.alphaNumChar))
+      } yield SimpleCollectionRow(id, map, set, list)
 
     def insert(in: SimpleCollectionRow): CQL[MutationResult] =
       InsertBuilder("collectionspec_simplecollectiontable")
@@ -45,6 +54,23 @@ object CollectionsSpecDatatypes {
     b: Map[Int, Set[Set[Set[Set[Int]]]]]
   )
   object NestedCollectionRow extends NestedCollectionRowInstances {
+    val zioGen: ZGen[Any, NestedCollectionRow] =
+      for {
+        a <- ZGen.int(1, 10000000)
+        b <- ZGen.mapOf(key = ZGen.int, value = ZGen.setOf(ZGen.setOf(ZGen.setOf(ZGen.setOf(ZGen.int)))))
+      } yield NestedCollectionRow(a, b)
+
+    val gen: Gen[NestedCollectionRow] =
+      for {
+        a <- Gen.int
+        b <-
+          Gen.lzy(
+            Gen.map(
+              key = Gen.int,
+              value = Gen.lzy(Gen.setOf(Gen.lzy(Gen.setOf(Gen.lzy(Gen.setOf(Gen.lzy(Gen.setOf(Gen.lzy(Gen.int)))))))))
+            )
+          )
+      } yield NestedCollectionRow(a, b)
 
     def select(a: Int): CQL[NestedCollectionRow] =
       SelectBuilder
@@ -68,6 +94,14 @@ object CollectionsSpecDatatypes {
     @CqlColumn("opt_list_test") l: Option[Vector[String]]
   )
   object OptionCollectionRow extends OptionCollectionRowInstances {
+    val gen: Gen[OptionCollectionRow] =
+      for {
+        id   <- Gen.posNum[Int]
+        map  <- Gen.option(Gen.map(key = Gen.int, value = Gen.stringOf(Gen.alphaNumChar)))
+        set  <- Gen.option(Gen.setOf(Gen.long))
+        list <- Gen.option(Gen.vectorOf(Gen.stringOf(Gen.alphaNumChar)))
+      } yield OptionCollectionRow(id, map, set, list)
+
     private val tableName = "collectionspec_optioncollectiontable"
     def truncate: CQL[MutationResult] =
       (cql"TRUNCATE " ++ tableName.asCql).mutation

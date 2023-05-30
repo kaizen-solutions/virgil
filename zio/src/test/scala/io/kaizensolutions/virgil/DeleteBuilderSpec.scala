@@ -6,12 +6,13 @@ import io.kaizensolutions.virgil.models.DeleteBuilderSpecDatatypes.DeleteBuilder
 import zio.test.TestAspect.samples
 import zio.test.TestAspect.sequential
 import zio.test._
+import zio.test.scalacheck._
 
 object DeleteBuilderSpec {
   def deleteBuilderSpec =
     suite("Delete Builder Specification") {
       test("Delete the entire row") {
-        check(deleteBuilderSpec_PersonGen) { person =>
+        check(DeleteBuilderSpec_Person.gen.toGenZIO) { person =>
           for {
             _            <- truncate.execute.runDrain
             _            <- insert(person).execute.runDrain
@@ -23,7 +24,7 @@ object DeleteBuilderSpec {
             assertTrue(afterDelete.isEmpty)
         }
       } + test("Delete columns in a row without deleting the entire row") {
-        check(deleteBuilderSpec_PersonGen) { person =>
+        check(DeleteBuilderSpec_Person.gen.toGenZIO) { person =>
           for {
             _           <- truncate.execute.runDrain
             _           <- insert(person).execute.runDrain
@@ -41,7 +42,7 @@ object DeleteBuilderSpec {
             assertTrue(afterDelete == DeleteBuilderSpec_Person(id = person.id, name = None, age = None))
         }
       } + test("Conditionally delete preventing a row from being deleted") {
-        check(deleteBuilderSpec_PersonGen) { person =>
+        check(DeleteBuilderSpec_Person.gen.toGenZIO) { person =>
           for {
             _ <- truncate.execute.runDrain
             _ <- insert(person).execute.runDrain
@@ -52,14 +53,8 @@ object DeleteBuilderSpec {
                    .execute
                    .runDrain
             after <- find(person.id).execute.runHead
-          } yield assertTrue(after.nonEmpty) && assertTrue(after.head == person)
+          } yield assertTrue(after.nonEmpty, after.head == person)
         }
       }
     } @@ sequential @@ samples(4)
-
-  val deleteBuilderSpec_PersonGen: Gen[Sized, DeleteBuilderSpec_Person] = for {
-    id   <- Gen.int
-    name <- Gen.string
-    age  <- Gen.int
-  } yield DeleteBuilderSpec_Person(id, Option(name), Option(age))
 }

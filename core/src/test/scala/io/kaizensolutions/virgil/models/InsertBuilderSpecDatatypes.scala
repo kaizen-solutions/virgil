@@ -4,10 +4,18 @@ import io.kaizensolutions.virgil.CQL
 import io.kaizensolutions.virgil.MutationResult
 import io.kaizensolutions.virgil.annotations.CqlColumn
 import io.kaizensolutions.virgil.dsl._
+import org.scalacheck.Gen
 
 object InsertBuilderSpecDatatypes {
   final case class InsertBuilderSpecPerson(id: Int, name: String, age: Int)
   object InsertBuilderSpecPerson extends InsertBuilderSpecPersonInstances {
+    val gen: Gen[InsertBuilderSpecPerson] =
+      for {
+        id   <- Gen.chooseNum(1, 10000)
+        name <- Gen.stringOfN(5, Gen.alphaChar)
+        age  <- Gen.chooseNum(18, 80)
+      } yield InsertBuilderSpecPerson(id, name, age)
+
     val tableName = "insertbuilderspec_person"
     val Id        = "id"
     val Name      = "name"

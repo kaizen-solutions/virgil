@@ -4,6 +4,7 @@ import io.kaizensolutions.virgil.CQL
 import io.kaizensolutions.virgil.MutationResult
 import io.kaizensolutions.virgil.cql._
 import io.kaizensolutions.virgil.dsl._
+import org.scalacheck.Gen
 
 object RelationSpecDatatypes {
   final case class RelationSpec_Person(
@@ -12,6 +13,14 @@ object RelationSpecDatatypes {
     age: Int
   )
   object RelationSpec_Person extends RelationSpec_PersonInstances {
+
+    val gen: Gen[RelationSpec_Person] =
+      for {
+        id   <- Gen.chooseNum(1, 1000)
+        name <- Gen.stringBounded(2, 4)(Gen.alphaChar)
+        age  <- Gen.chooseNum(1, 100)
+      } yield RelationSpec_Person(id, name, age)
+
     val Id   = "id"
     val Name = "name"
     val Age  = "age"

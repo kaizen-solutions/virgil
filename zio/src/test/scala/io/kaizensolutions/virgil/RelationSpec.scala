@@ -6,12 +6,13 @@ import io.kaizensolutions.virgil.models.RelationSpecDatatypes._
 import zio.test.TestAspect.samples
 import zio.test.TestAspect.sequential
 import zio.test._
+import zio.test.scalacheck._
 
 object RelationSpec {
   def relationSpec =
     suite("Relational Operators Specification") {
       test("isNull") {
-        check(relationSpec_PersonGen) { person =>
+        check(RelationSpec_Person.gen.toGenZIO) { person =>
           val update =
             UpdateBuilder(table)
               .set(Name := person.name)
@@ -29,7 +30,7 @@ object RelationSpec {
             find.map(actual => assertTrue(actual == person))
         }
       } + test("isNotNull") {
-        check(relationSpec_PersonGen) { person =>
+        check(RelationSpec_Person.gen.toGenZIO) { person =>
           val insert  = RelationSpec_Person.insert(person).execute.runDrain
           val newName = person.name + " " + person.name
           val update =
@@ -50,11 +51,4 @@ object RelationSpec {
         }
       }
     } @@ sequential @@ samples(4)
-
-  val relationSpec_PersonGen: Gen[Any, RelationSpec_Person] =
-    for {
-      id   <- Gen.int(1, 1000)
-      name <- Gen.stringBounded(2, 4)(Gen.alphaChar)
-      age  <- Gen.int(1, 100)
-    } yield RelationSpec_Person(id, name, age)
 }

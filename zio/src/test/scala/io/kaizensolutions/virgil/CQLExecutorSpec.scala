@@ -9,17 +9,18 @@ import zio.stream.ZStream
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
+import zio.test.scalacheck._
 import zio.{test => _, _}
 
 import java.net.InetSocketAddress
 
 object CQLExecutorSpec {
-  def executorSpec: Spec[Live with TestConfig with Sized with CassandraContainer with CQLExecutor, Any] =
+  def executorSpec: Spec[Live & TestConfig & Sized & CassandraContainer & CQLExecutor, Any] =
     suite("Cassandra Session Interpreter Specification") {
       (queries + actions + configuration) @@ timeout(2.minutes) @@ samples(4)
     }
 
-  def queries: Spec[TestConfig with Sized with CQLExecutor, Throwable] =
+  def queries: Spec[Sized & CQLExecutor, Throwable] =
     suite("Queries") {
       test("selectFirst") {
         cql"SELECT now() FROM system.local"
@@ -50,11 +51,13 @@ object CQLExecutorSpec {
         } +
         test("selectPage") {
           import SelectPageRow._
-          check(Gen.chunkOfN(50)(selectPageRowGen)) { actual =>
+          // id is the primary key
+          val testGen = Gen.chunkOfN(50)(gen.toGenZIO).map(distinctBy(_.id))
+          check(testGen) { actual =>
             for {
               _                             <- truncate.execute.runDrain
               _                             <- ZIO.foreachParDiscard(actual.map(insert))(_.execute.runDrain)
-              attr                           = ExecutionAttributes.default.withPageSize(actual.length / 2)
+              attr                           = ExecutionAttributes.default.withPageSize(actual.size / 2)
               all                            = selectAll.withAttributes(attr).execute.runCollect
               paged                          = selectPageStream(selectAll.withAttributes(attr)).runCollect
               result                        <- all.zipPar(paged)
@@ -81,46 +84,52 @@ object CQLExecutorSpec {
         }
     }
 
-  def actions: Spec[Sized with TestConfig with CQLExecutor, Throwable] =
+  def actions: Spec[CQLExecutor, Throwable] =
     suite("Actions") {
       test("executeAction") {
         import ExecuteTestTable._
-        check(Gen.listOfN(10)(gen)) { actual =>
+        // primary key is id
+        val testGen = Gen.listOfN(10)(gen.toGenZIO).map(distinctBy(_.id))
+        check(testGen) { elements =>
           val truncateData = truncate(table).execute.runDrain
-          val toInsert     = actual.map(insert(table))
-          val expected     = selectAllIn(table)(actual.map(_.id)).execute.runCollect
+          val toInsert     = elements.map(insert(table))
+          val actual       = selectAllIn(table)(elements.map(_.id)).execute.runCollect.map(_.toList.sortBy(_.id))
 
           for {
-            _        <- truncateData
-            _        <- ZIO.foreachParDiscard(toInsert)(_.execute.runDrain)
-            expected <- expected
+            _       <- truncateData
+            _       <- ZIO.foreachParDiscard(toInsert)(_.execute.runDrain)
+            actual  <- actual
+            expected = elements
           } yield assert(actual)(hasSameElements(expected))
         }
       } +
         test("executeBatchAction") {
           import ExecuteTestTable._
-          check(Gen.listOfN(10)(gen)) { actual =>
+          // primary key is id
+          val testGen = Gen.chunkOfN(10)(gen.toGenZIO).map(distinctBy(_.id))
+          check(testGen) { elements =>
             val truncateData = truncate(batchTable).execute
             val batchedInsert: ZStream[CQLExecutor, Throwable, MutationResult] =
-              actual
+              elements
                 .map(ExecuteTestTable.insert(batchTable))
                 .reduce(_ + _)
                 .batchType(BatchType.Unlogged)
                 .execute
 
-            val expected: ZStream[CQLExecutor, Throwable, ExecuteTestTable] =
-              selectAllIn(batchTable)(actual.map(_.id)).execute
+            val actual: ZStream[CQLExecutor, Throwable, ExecuteTestTable] =
+              selectAllIn(batchTable)(elements.map(_.id)).execute
 
             for {
-              _        <- truncateData.runDrain
-              _        <- batchedInsert.runDrain
-              expected <- expected.runCollect
-            } yield assert(actual)(hasSameElements(expected))
+              _       <- truncateData.runDrain
+              _       <- batchedInsert.runDrain
+              actual  <- actual.runCollect.map(_.sortBy(_.id))
+              expected = elements
+            } yield assert(expected)(hasSameElements(actual))
           }
         } +
         test("executeMutation") {
           import ExecuteTestTable._
-          check(gen) { data =>
+          check(gen.toGenZIO) { data =>
             val truncateData = truncate(table).executeMutation
             val toInsert     = insert(table)(data).executeMutation
             val search       = selectAllIn(table)(data.id :: Nil).execute.runCollect
@@ -129,10 +138,10 @@ object CQLExecutorSpec {
         }
     } @@ sequential
 
-  def configuration: Spec[CassandraContainer with Sized with TestConfig with CQLExecutor, Any] =
+  def configuration: Spec[CassandraContainer & Sized & TestConfig & CQLExecutor, Any] =
     suite("Session Configuration")(
       test("Creating a layer from an existing session allows you to access Cassandra") {
-        val sessionScoped: URIO[CassandraContainer with Scope, CqlSession] = {
+        val sessionScoped: URIO[CassandraContainer & Scope, CqlSession] = {
           val createSession = for {
             c            <- ZIO.service[CassandraContainer]
             contactPoint <- c.getHost.zipWith(c.getPort)(InetSocketAddress.createUnresolved)
@@ -156,7 +165,7 @@ object CQLExecutorSpec {
           .provideLayer(cqlExecutorLayer)
       },
       test("Timeouts are respected") {
-        check(Gen.chunkOfN(4)(timeoutCheckRowGen)) { rows =>
+        check(Gen.chunkOfN(4)(TimeoutCheckRow.gen.toGenZIO).map(distinctBy(_.id))) { rows =>
           val insert =
             ZStream
               .fromIterable(rows)
@@ -171,11 +180,11 @@ object CQLExecutorSpec {
               .runCount
 
           (insert.runDrain *> select)
-            .map(c => assertTrue(c == rows.length.toLong))
+            .map(c => assertTrue(c == rows.size.toLong))
         }
       } @@ samples(1),
       test("PageSize are respected and matches with chunk size") {
-        check(Gen.chunkOfN(4)(pageSizeCheckRowGen)) { rows =>
+        check(Gen.chunkOfN(4)(PageSizeCheckRow.gen.toGenZIO).map(distinctBy(_.id))) { rows =>
           val insert =
             ZStream
               .fromIterable(rows)
@@ -216,21 +225,7 @@ object CQLExecutorSpec {
           ZStream.from(chunk)
       }
 
-  val selectPageRowGen: Gen[Sized, SelectPageRow] =
-    for {
-      id     <- Gen.int(1, 1000)
-      bucket <- Gen.int(1, 50)
-      info   <- Gen.alphaNumericStringBounded(10, 15)
-    } yield SelectPageRow(id, bucket, info)
-
-  val timeoutCheckRowGen: Gen[Sized, TimeoutCheckRow] = for {
-    id          <- Gen.int(1, 1000)
-    info        <- Gen.alphaNumericStringBounded(100, 150)
-    anotherInfo <- Gen.alphaNumericStringBounded(200, 400)
-  } yield TimeoutCheckRow(id, info, anotherInfo)
-
-  val pageSizeCheckRowGen: Gen[Sized, PageSizeCheckRow] = for {
-    id   <- Gen.int(1, 1000)
-    info <- Gen.alphaNumericStringBounded(100, 150)
-  } yield PageSizeCheckRow(id, info)
+  // shim for Scala 2.12.x
+  private def distinctBy[A, B](key: A => B)(in: Iterable[A]): Iterable[A] =
+    in.groupBy(key).map { case (_, vs) => vs.head }
 }

@@ -5,13 +5,14 @@ import io.kaizensolutions.virgil.models.InsertBuilderSpecDatatypes._
 import zio.test.TestAspect.samples
 import zio.test.TestAspect.sequential
 import zio.test._
+import zio.test.scalacheck._
 import zio.{test => _, _}
 
 object InsertBuilderSpec {
   def insertBuilderSpec =
     suite("Insert Builder Specification") {
       test("Using TTL and exceeding it will cause the result to not be found") {
-        check(insertBuilderSpecPersonGen) { person =>
+        check(InsertBuilderSpecPerson.gen.toGenZIO) { person =>
           val insert = InsertBuilderSpecPerson
             .insert(person)
             .usingTTL(1.second)
@@ -27,7 +28,7 @@ object InsertBuilderSpec {
           insert *> Live.live(ZIO.sleep(1001.milliseconds)) *> find.map(res => assertTrue(res.isEmpty))
         }
       } + test("Using a timestamp is enforced") {
-        check(insertBuilderSpecPersonGen, Gen.long(13370000, 13371337)) { (person, timestamp) =>
+        check(InsertBuilderSpecPerson.gen.toGenZIO, Gen.long(13370000, 13371337)) { (person, timestamp) =>
           val insert = InsertBuilderSpecPerson
             .insert(person)
             .usingTimestamp(timestamp)
@@ -49,11 +50,4 @@ object InsertBuilderSpec {
         }
       }
     } @@ sequential @@ samples(2)
-
-  val insertBuilderSpecPersonGen: Gen[Any, InsertBuilderSpecPerson] =
-    for {
-      id   <- Gen.int(1, 10000)
-      name <- Gen.stringN(5)(Gen.alphaChar)
-      age  <- Gen.int(18, 80)
-    } yield InsertBuilderSpecPerson(id, name, age)
 }

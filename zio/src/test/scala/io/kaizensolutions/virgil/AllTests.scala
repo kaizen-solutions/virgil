@@ -60,7 +60,7 @@ object AllTests extends ZIOSpecDefault {
 
   override def spec =
     suite("Virgil Test Suite") {
-      CQLExecutorSpec.executorSpec +
+        CQLExecutorSpec.executorSpec +
         UserDefinedTypesSpec.userDefinedTypesSpec +
         CollectionsSpec.collectionsSpec +
         CursorSpec.cursorSpec +

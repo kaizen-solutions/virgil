@@ -1,12 +1,12 @@
 package io.kaizensolutions.virgil
 
 import com.datastax.oss.driver.api.core.data.UdtValue
-import com.datastax.oss.driver.shaded.guava.common.net.InetAddresses
 import io.kaizensolutions.virgil.annotations.CqlColumn
 import io.kaizensolutions.virgil.models.CursorSpecDatatypes._
 import zio.test.Assertion._
 import zio.test.TestAspect.samples
 import zio.test._
+import zio.test.scalacheck._
 import zio.{test => _, _}
 
 import java.net.InetAddress
@@ -16,7 +16,7 @@ object CursorSpec {
     suite("Cursor Specification") {
       suite("Row Cursor Specification") {
         test("Row Cursor should be able to read a complex structure") {
-          check(cursorExampleRowGen) { row =>
+          check(CursorExampleRow.gen.toGenZIO) { row =>
             for {
               _              <- CursorExampleRow.truncate.execute.runDrain
               _              <- CursorExampleRow.insert(row).execute.runDrain
@@ -46,30 +46,6 @@ object CursorSpec {
         }
       }
     } @@ samples(10)
-
-  val cursorUdtNoteGen: Gen[Any, CursorUdtNote] =
-    for {
-      data    <- Gen.stringBounded(2, 4)(Gen.alphaNumericChar)
-      ipChunk <- Gen.int(0, 255)
-      ip       = InetAddresses.forString(s"${ipChunk}.${ipChunk}.${ipChunk}.${ipChunk}")
-    } yield CursorUdtNote(data, ip)
-
-  val cursorUdtAddressGen: Gen[Any, CursorUdtAddress] =
-    for {
-      street <- Gen.stringBounded(4, 8)(Gen.alphaChar)
-      city   <- Gen.stringBounded(4, 8)(Gen.alphaChar)
-      state  <- Gen.stringBounded(2, 2)(Gen.alphaChar)
-      zip    <- Gen.stringBounded(5, 5)(Gen.alphaChar)
-      note   <- cursorUdtNoteGen
-    } yield CursorUdtAddress(street = street, city = city, state = state, zip = zip, note = note)
-
-  val cursorExampleRowGen: Gen[Sized, CursorExampleRow] =
-    for {
-      id      <- Gen.long(1, 10000)
-      name    <- Gen.string
-      age     <- Gen.short
-      address <- cursorUdtAddressGen
-    } yield CursorExampleRow(id, name, age, None, List(address))
 }
 
 final case class CursorExampleRowChunkVariant(

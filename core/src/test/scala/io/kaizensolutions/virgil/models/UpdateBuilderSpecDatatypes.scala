@@ -3,10 +3,17 @@ package io.kaizensolutions.virgil.models
 import io.kaizensolutions.virgil.CQL
 import io.kaizensolutions.virgil.MutationResult
 import io.kaizensolutions.virgil.dsl._
+import org.scalacheck.Gen
 
 object UpdateBuilderSpecDatatypes {
   final case class UpdateBuilderSpecCounter(id: Int, likes: Long)
   object UpdateBuilderSpecCounter extends UpdateBuilderSpecCounterInstances {
+    val gen: Gen[UpdateBuilderSpecCounter] =
+      for {
+        id    <- Gen.chooseNum(1, 10000)
+        likes <- Gen.chooseNum(1L, 100L)
+      } yield UpdateBuilderSpecCounter(id, likes)
+
     val tableName: String = "updatebuilderspec_counter"
     val Id                = "id"
     val Likes             = "likes"
@@ -23,10 +30,19 @@ object UpdateBuilderSpecDatatypes {
         .set(Likes += in.likes)
         .where(Id === in.id)
         .build
+
+    def truncate: CQL[MutationResult] = CQL.truncate(tableName)
   }
 
   final case class UpdateBuilderSpecPerson(id: Int, name: String, age: Int)
   object UpdateBuilderSpecPerson extends UpdateBuilderSpecPersonInstances {
+    val gen: Gen[UpdateBuilderSpecPerson] =
+      for {
+        id   <- Gen.chooseNum(1, 10000)
+        name <- Gen.stringOf(Gen.alphaChar)
+        age  <- Gen.chooseNum(18, 90)
+      } yield UpdateBuilderSpecPerson(id, name, age)
+
     val tableName: String = "updatebuilderspec_person"
     val Id                = "id"
     val Name              = "name"
