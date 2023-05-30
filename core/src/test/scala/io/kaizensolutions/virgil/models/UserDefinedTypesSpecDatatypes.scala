@@ -6,7 +6,8 @@ import io.kaizensolutions.virgil.annotations.CqlColumn
 import io.kaizensolutions.virgil.cql._
 import io.kaizensolutions.virgil.dsl._
 import org.scalacheck.Gen
-import zio.test.{Gen => ZGen, Sized}
+import zio.test.Sized
+import zio.test.{Gen => ZGen}
 
 import java.time.LocalDate
 import java.time.LocalTime

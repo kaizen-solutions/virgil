@@ -4,7 +4,8 @@ import com.datastax.oss.driver.api.core.uuid.Uuids
 import io.kaizensolutions.virgil.CQL
 import io.kaizensolutions.virgil.MutationResult
 import io.kaizensolutions.virgil.annotations.CqlColumn
-import io.kaizensolutions.virgil.configuration.{ConsistencyLevel, ExecutionAttributes}
+import io.kaizensolutions.virgil.configuration.ConsistencyLevel
+import io.kaizensolutions.virgil.configuration.ExecutionAttributes
 import io.kaizensolutions.virgil.cql._
 import io.kaizensolutions.virgil.dsl._
 import org.scalacheck.Gen
