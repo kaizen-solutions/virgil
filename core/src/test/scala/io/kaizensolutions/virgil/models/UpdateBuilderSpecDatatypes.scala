@@ -10,7 +10,7 @@ object UpdateBuilderSpecDatatypes {
   object UpdateBuilderSpecCounter extends UpdateBuilderSpecCounterInstances {
     val gen: Gen[UpdateBuilderSpecCounter] =
       for {
-        id    <- Gen.chooseNum(1, 10000)
+        id    <- Gen.uuid.map(_.hashCode().abs.toInt)
         likes <- Gen.chooseNum(1L, 100L)
       } yield UpdateBuilderSpecCounter(id, likes)
 
@@ -38,7 +38,7 @@ object UpdateBuilderSpecDatatypes {
   object UpdateBuilderSpecPerson extends UpdateBuilderSpecPersonInstances {
     val gen: Gen[UpdateBuilderSpecPerson] =
       for {
-        id   <- Gen.chooseNum(1, 10000)
+        id   <- Gen.uuid.map(_.hashCode.abs.toInt)
         name <- Gen.stringOf(Gen.alphaChar)
         age  <- Gen.chooseNum(18, 90)
       } yield UpdateBuilderSpecPerson(id, name, age)

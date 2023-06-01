@@ -16,7 +16,7 @@ object RelationSpecDatatypes {
 
     val gen: Gen[RelationSpec_Person] =
       for {
-        id   <- Gen.chooseNum(1, 1000)
+        id   <- Gen.uuid.map(_.hashCode.abs.toInt)
         name <- Gen.stringBounded(2, 4)(Gen.alphaChar)
         age  <- Gen.chooseNum(1, 100)
       } yield RelationSpec_Person(id, name, age)

@@ -18,7 +18,7 @@ object CollectionsSpecDatatypes {
   object SimpleCollectionRow extends SimpleCollectionRowInstances {
     val gen: Gen[SimpleCollectionRow] =
       for {
-        id   <- Gen.int
+        id   <- Gen.uuid.map(_.hashCode().abs.toInt)
         map  <- Gen.map(key = Gen.posNum[Int], value = Gen.stringOf(Gen.alphaNumChar))
         set  <- Gen.nonEmptySetOf(Gen.long)
         list <- Gen.nonEmptyVectorOf(Gen.stringOf(Gen.alphaNumChar))

@@ -14,7 +14,9 @@ import com.datastax.oss.driver.api.core.cql.SimpleStatement
 import com.datastax.oss.driver.api.core.cql.Statement
 import com.datastax.oss.driver.api.core.cql.{BatchType => _}
 import com.datastax.oss.driver.api.core.metrics.Metrics
-import fs2._
+import fs2.Chunk
+import fs2.Pull
+import fs2.Stream
 import io.kaizensolutions.virgil._
 import io.kaizensolutions.virgil.configuration.ExecutionAttributes
 import io.kaizensolutions.virgil.configuration.PageState
@@ -60,9 +62,12 @@ private[virgil] class CQLExecutorImpl[F[_]](underlyingSession: CqlSession)(impli
   ): F[Paged[A]] = in.cqlType match {
     case _: CQLType.Mutation =>
       sys.error("Mutations cannot be used with page queries")
+
     case CQLType.Batch(_, _) =>
       sys.error("Batch Mutations cannot be used with page queries")
-    case q @ CQLType.Query(_, _, _) => fetchSinglePage(q, pageState, in.executionAttributes).asInstanceOf[F[Paged[A]]]
+
+    case q @ CQLType.Query(_, _, _) =>
+      fetchSinglePage(q, pageState, in.executionAttributes).asInstanceOf[F[Paged[A]]]
   }
 
   override def metrics: F[Option[Metrics]] = F.delay {

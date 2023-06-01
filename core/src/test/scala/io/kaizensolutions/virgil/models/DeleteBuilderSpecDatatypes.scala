@@ -11,7 +11,7 @@ object DeleteBuilderSpecDatatypes {
   object DeleteBuilderSpec_Person extends DeleteBuilderSpec_PersonInstances {
     val gen: Gen[DeleteBuilderSpec_Person] =
       for {
-        id   <- Gen.int
+        id   <- Gen.uuid.map(_.hashCode.abs.toInt)
         name <- Gen.stringOf(Gen.alphaNumChar)
         age  <- Gen.int
       } yield DeleteBuilderSpec_Person(id, Option(name), Option(age))

@@ -23,7 +23,7 @@ object CursorSpecDatatypes {
   object CursorExampleRow extends CursorExampleRowInstances {
     val gen: Gen[CursorExampleRow] =
       for {
-        id      <- Gen.chooseNum(1L, 10000L)
+        id      <- Gen.uuid.map(_.hashCode().abs.toLong)
         name    <- Gen.stringOf(Gen.asciiPrintableChar)
         age     <- Gen.chooseNum(1: Short, 1000: Short)
         address <- CursorUdtAddress.gen

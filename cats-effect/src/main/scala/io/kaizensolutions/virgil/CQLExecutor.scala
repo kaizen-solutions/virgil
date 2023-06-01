@@ -4,7 +4,7 @@ import cats.effect._
 import com.datastax.oss.driver.api.core.CqlSession
 import com.datastax.oss.driver.api.core.CqlSessionBuilder
 import com.datastax.oss.driver.api.core.metrics.Metrics
-import fs2._
+import fs2.Stream
 import io.kaizensolutions.virgil.configuration.PageState
 import io.kaizensolutions.virgil.internal.CQLExecutorImpl
 import io.kaizensolutions.virgil.internal.Proofs.=:!=

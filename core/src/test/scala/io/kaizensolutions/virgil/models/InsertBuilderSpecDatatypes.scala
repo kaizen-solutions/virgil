@@ -11,7 +11,7 @@ object InsertBuilderSpecDatatypes {
   object InsertBuilderSpecPerson extends InsertBuilderSpecPersonInstances {
     val gen: Gen[InsertBuilderSpecPerson] =
       for {
-        id   <- Gen.chooseNum(1, 10000)
+        id   <- Gen.uuid.map(_.hashCode.abs.toInt)
         name <- Gen.stringOfN(5, Gen.alphaChar)
         age  <- Gen.chooseNum(18, 80)
       } yield InsertBuilderSpecPerson(id, name, age)

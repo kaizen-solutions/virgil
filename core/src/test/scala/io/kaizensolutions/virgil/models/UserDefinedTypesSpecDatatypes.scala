@@ -11,6 +11,7 @@ import zio.test.{Gen => ZGen}
 
 import java.time.LocalDate
 import java.time.LocalTime
+import java.util.UUID
 
 object UserDefinedTypesSpecDatatypes {
   final case class Row_Person(
@@ -31,7 +32,7 @@ object UserDefinedTypesSpecDatatypes {
 
     val gen: Gen[Row_Person] =
       for {
-        id   <- Gen.chooseNum(1, 100000)
+        id   <- Gen.uuid.map(_.hashCode().abs.toInt)
         name <- Gen.stringBounded(4, 10)(Gen.alphaNumChar)
         age  <- Gen.chooseNum(18, 100)
         data <- UDT_Data.gen
@@ -42,6 +43,9 @@ object UserDefinedTypesSpecDatatypes {
 
     def select(id: Int): CQL[Row_Person] =
       cql"SELECT id, name, age, data FROM userdefinedtypesspec_person WHERE id = $id".query[Row_Person]
+
+    def truncate: CQL[MutationResult] =
+      cql"TRUNCATE userdefinedtypesspec_person".mutation
   }
 
   final case class UDT_Data(
@@ -115,11 +119,8 @@ object UserDefinedTypesSpecDatatypes {
         data <- UDT_ExampleCollectionNestedUDTType.zioGen
       } yield Row_HeavilyNestedUDTTable(id, data)
 
-    val gen: Gen[Row_HeavilyNestedUDTTable] =
-      for {
-        id   <- Gen.int
-        data <- UDT_ExampleCollectionNestedUDTType.gen
-      } yield Row_HeavilyNestedUDTTable(id, data)
+    val sample: Row_HeavilyNestedUDTTable =
+      Row_HeavilyNestedUDTTable(UUID.randomUUID().hashCode().abs.toInt, UDT_ExampleCollectionNestedUDTType.sample)
 
     def insert(in: Row_HeavilyNestedUDTTable): CQL[MutationResult] =
       InsertBuilder("userdefinedtypesspec_heavilynestedudttable")
@@ -226,20 +227,40 @@ object UserDefinedTypesSpecDatatypes {
         c <- UDT_ExampleNestedType.zioGen
       } yield UDT_ExampleCollectionNestedUDTType(a, b, c)
 
-    val gen: Gen[UDT_ExampleCollectionNestedUDTType] =
-      for {
-        a <- Gen.int
-        b <- Gen.map(
-               key = Gen.int,
-               value = Gen.setOf(
-                 Gen.setOf(
-                   Gen.setOf(
-                     Gen.setOf(UDT_ExampleNestedType.gen)
-                   )
-                 )
-               )
-             )
-        c <- UDT_ExampleNestedType.gen
-      } yield UDT_ExampleCollectionNestedUDTType(a, b, c)
+    val sample: UDT_ExampleCollectionNestedUDTType =
+      UDT_ExampleCollectionNestedUDTType(
+        a = 1,
+        b = Map(
+          1 -> Set(
+            Set(
+              Set(
+                Set(
+                  UDT_ExampleNestedType(
+                    a = 1,
+                    b = "a",
+                    c = UDT_ExampleType(
+                      x = 1,
+                      y = 1,
+                      date = LocalDate.of(2020, 1, 1),
+                      time = LocalTime.of(1, 1)
+                    )
+                  )
+                )
+              )
+            )
+          )
+        ),
+        c = UDT_ExampleNestedType(
+          a = 1,
+          b = "a",
+          c = UDT_ExampleType(
+            x = 1,
+            y = 1,
+            date = LocalDate.of(2020, 1, 1),
+            time = LocalTime.of(1, 1)
+          )
+        )
+      )
+
   }
 }

@@ -114,10 +114,12 @@ lazy val catsEffect =
         Seq(
           "org.typelevel" %% "cats-effect"       % "3.5.0",
           "co.fs2"        %% "fs2-core"          % "3.7.0",
+          "co.fs2"        %% "fs2-io"            % "3.7.0",
           disney          %% "weaver-cats"       % weaverV % Test,
           disney          %% "weaver-scalacheck" % weaverV % Test
         )
-      }
+      },
+      Test / fork := true
     )
     .settings(releaseSettings)
     .dependsOn(core % "compile->compile;test->test")
