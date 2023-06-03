@@ -38,7 +38,10 @@ inThisBuild {
 lazy val root =
   project
     .in(file("."))
-    .settings(publishTo := None)
+    .settings(
+      publishTo       := Some("Jitpack".at("https://jitpack.io")), // Not actually used but to keep SBT happy
+      publishArtifact := false
+    )
     .aggregate(core, zio, catsEffect)
 
 lazy val core =
