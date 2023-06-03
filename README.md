@@ -257,6 +257,11 @@ implicit val javaTimeInstantDecoder: CqlPrimitiveDecoder[LocalDateTime] =
   )
 ```
 
+### Underlying driver configuration
+This library is built on the Datastax Java Driver, please see the 
+[Datastax Java Driver documentation](https://docs.datastax.com/en/developer/java-driver/4.15) if you would like to 
+configure the driver.
+
 ### Why the name Virgil?
 Virgil was an ancient Roman poet who composed an epic poem about Cassandra and so we thought it would be appropriate.
 
@@ -271,3 +276,11 @@ Special thanks to [John De Goes](https://degoes.net), [Francis Toth](https://con
 
 We stand on the shoulders of giants, this work would not be possible without the effect systems and libraries that were
 used to build Virgil.
+
+
+### Users
+Virgil is used in production at the following companies:
+- [Caesars Digital](https://www.caesars.com)
+- [Kaizen Solutions](https://www.kaizen-solutions.io)
+
+Please let us know if you are using Virgil in production and would like to be added to this list.
