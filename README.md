@@ -19,7 +19,7 @@ Add the JitPack resolver:
 resolvers += "jitpack" at "https://jitpack.io"
 ```
 
-### ZIO 2.x
+## ZIO 2.x
 ```sbt
 libraryDependencies += "com.github.kaizen-solutions.virgil" %% "virgil-zio" % "<please-see-jitpack-badge-for-latest-version>"
 ```
