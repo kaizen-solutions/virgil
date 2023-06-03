@@ -1,5 +1,5 @@
 # Virgil
-_Virgil is a functional Cassandra client built using ZIO, Magnolia and the Datastax 4.x Java drivers_
+_Virgil is a functional Cassandra client built using ZIO 2.x, Cats Effect 3.x, Magnolia and the Datastax 4.x Java drivers_
 
 ![Build Status](https://github.com/kaizen-solutions/virgil/actions/workflows/ci.yml/badge.svg)
 
@@ -14,14 +14,29 @@ _Virgil is a functional Cassandra client built using ZIO, Magnolia and the Datas
 
 ## Quick Start
 
-Add the JitPack resolver and import Virgil (this will transitively import the Datastax Java Driver, Magnolia and ZIO 1.x):
+Add the JitPack resolver:
 ```sbt
-resolvers           += "jitpack" at "https://jitpack.io"
-libraryDependencies += "com.github.kaizen-solutions.virgil" %% "virgil" % "<please-see-jitpack-badge-for-latest-version>"
+resolvers += "jitpack" at "https://jitpack.io"
 ```
 
-Please note that Virgil is built for Scala 2.12.x, 2.13.x and 3.1.x but fully-automatic derivation is not present for 3.1.x.
-Virgil also supports both **ZIO 1.x** and **ZIO 2.x** (select an artifact with the `zio2` suffix).
+### ZIO 2.x
+```sbt
+libraryDependencies += "com.github.kaizen-solutions.virgil" %% "virgil-zio" % "<please-see-jitpack-badge-for-latest-version>"
+```
+
+## Cats Effect 3.x
+```sbt
+libraryDependencies += "com.github.kaizen-solutions.virgil" %% "virgil-cats-effect" % "<please-see-jitpack-badge-for-latest-version>"
+```
+
+If you want to integrate another effect system (or runtime), depend on the `core` module and reference the implementations 
+for ZIO & Cats Effect for inspiration:
+
+```sbt
+libraryDependencies += "com.github.kaizen-solutions.virgil" %% "virgil-core" % "<please-see-jitpack-badge-for-latest-version>"
+```
+
+Please note that Virgil is built for Scala 2.12.x, 2.13.x and 3.3.x but fully-automatic derivation is not present for 3.3.x.
 
 ## Introduction
 
@@ -98,7 +113,7 @@ Scala representation. This can also be used inside User Defined Types as well.
 
 ### Scala 3 caveats
 
-If you are using Scala 3.1.x, you will need to use semi-automatic derivation as I have not yet figured out how to enable 
+If you are using Scala 3.3.x, you will need to use semi-automatic derivation as I have not yet figured out how to enable 
 fully automatic derivation like Scala 2.x has.
 
 ```scala
@@ -247,5 +262,12 @@ Virgil was an ancient Roman poet who composed an epic poem about Cassandra and s
 
 ### Inspiration
 We were heavily inspired by Doobie, Cassandra4IO and Quill and wanted a more native ZIO solution for Cassandra focused
-on ergonomics, ease of use and performance (compile-time and runtime). Special thanks to John De Goes, Francis Toth and
-Nigel Benns for their help, mentorship, and guidance.
+on ergonomics, ease of use and performance (compile-time and runtime). 
+
+### Acknowledgements
+Special thanks to [John De Goes](https://degoes.net), [Francis Toth](https://contramap.dev) and 
+[Nigel Benns](https://github.com/nbenns) for their help, mentorship, and guidance. Shout out to 
+[Samuel Gómez](https://samuelgomez.co) for his significant contribution to the Cats Effect 3.x module.
+
+We stand on the shoulders of giants, this work would not be possible without the effect systems and libraries that were
+used to build Virgil.
