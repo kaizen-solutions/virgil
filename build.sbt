@@ -3,10 +3,10 @@ import ReleaseTransformations._
 inThisBuild {
   val scala212 = "2.12.17"
   val scala213 = "2.13.10"
-  val scala3   = "3.2.2"
+  val scala3   = "3.3.0"
 
   List(
-    scalaVersion                        := scala3,
+    scalaVersion                        := scala213,
     crossScalaVersions                  := Seq(scala212, scala213, scala3),
     githubWorkflowPublishTargetBranches := Seq.empty,
     githubWorkflowBuild := Seq(
@@ -25,24 +25,33 @@ inThisBuild {
           "COVERALLS_FLAG_NAME"  -> "Scala ${{ matrix.scala }}"
         )
       )
-    )
+    ),
+    testFrameworks ++= Seq(
+      new TestFramework("zio.test.sbt.ZTestFramework"),
+      new TestFramework("weaver.framework.CatsEffect")
+    ),
+    semanticdbEnabled                              := true,
+    scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.6.0"
   )
 }
-addCommandAlias("coverme", "; clean; coverage; test; coverageReport; coverageAggregate")
 
 lazy val root =
-  (project in file("."))
+  project
+    .in(file("."))
+    .settings(publishTo := None)
+    .aggregate(core, zio, catsEffect)
+
+lazy val core =
+  (project in file("core"))
+    .settings(organizationSettings *)
     .settings(
-      licenses         := List("MPL-2.0" -> url("https://www.mozilla.org/en-US/MPL/2.0/")),
-      organization     := "io.kaizensolutions",
-      organizationName := "kaizen-solutions",
-      name             := "virgil",
+      name := "virgil-core",
       libraryDependencies ++= {
         val datastax  = "com.datastax.oss"
         val datastaxV = "4.15.0"
 
         val zio                   = "dev.zio"
-        val zioV                  = "2.0.13"
+        val zioV                  = "2.0.14"
         val magnoliaForScala2     = "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.3"
         val scalaReflectForScala2 = "org.scala-lang"                % "scala-reflect" % scalaVersion.value
         val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.3.0"
@@ -51,34 +60,90 @@ lazy val root =
           Seq(
             datastax                  % "java-driver-core"        % datastaxV,
             "org.scala-lang.modules" %% "scala-collection-compat" % "2.10.0",
-            zio                      %% "zio"                     % zioV,
-            zio                      %% "zio-streams"             % zioV,
             zio                      %% "zio-test"                % zioV      % Test,
+            zio                      %% "zio-test-scalacheck"     % zioV      % Test,
             zio                      %% "zio-test-sbt"            % zioV      % Test,
-            "com.dimafeng"           %% "testcontainers-scala"    % "0.40.15" % Test,
-            "com.outr"               %% "scribe-slf4j"            % "3.11.1"  % Test
+            "com.dimafeng"           %% "testcontainers-scala"    % "0.40.16" % Test,
+            "com.outr"               %% "scribe-slf4j"            % "3.11.5"  % Test
           )
 
+        val isScala2x = scalaVersion.value.startsWith("2")
+
         val magnolia =
-          if (scalaVersion.value.startsWith("2")) Seq(magnoliaForScala2, scalaReflectForScala2)
+          if (isScala2x) Seq(magnoliaForScala2, scalaReflectForScala2)
           else Seq(magnoliaForScala3)
 
-        coreDependencies ++ magnolia
+        val betterMonadicFor =
+          if (isScala2x) Seq(compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"))
+          else Seq.empty
+
+        coreDependencies ++ magnolia ++ betterMonadicFor
       },
-      testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
-      Test / fork                 := true,
-      releaseIgnoreUntrackedFiles := true,
-      releaseTagName              := s"${version.value}",
-      releaseProcess := Seq[ReleaseStep](
-        checkSnapshotDependencies,
-        inquireVersions,
-        runClean,
-        runTest,
-        setReleaseVersion,
-        commitReleaseVersion,
-        tagRelease,
-        setNextVersion,
-        commitNextVersion,
-        pushChanges
-      )
+      Test / fork := true
     )
+    .settings(releaseSettings *)
+
+lazy val zio =
+  project
+    .in(file("zio"))
+    .settings(organizationSettings *)
+    .settings(
+      name := "virgil-zio",
+      libraryDependencies ++= {
+        val zio  = "dev.zio"
+        val zioV = "2.0.14"
+
+        Seq(
+          zio %% "zio"         % zioV,
+          zio %% "zio-streams" % zioV
+        )
+      }
+    )
+    .settings(releaseSettings *)
+    .dependsOn(core % "compile->compile;test->test")
+
+lazy val catsEffect =
+  project
+    .in(file("cats-effect"))
+    .settings(organizationSettings *)
+    .settings(
+      name := "virgil-cats-effect",
+      libraryDependencies ++= {
+        val disney  = "com.disneystreaming"
+        val weaverV = "0.8.3"
+        Seq(
+          "org.typelevel" %% "cats-effect"       % "3.5.0",
+          "co.fs2"        %% "fs2-core"          % "3.7.0",
+          "co.fs2"        %% "fs2-io"            % "3.7.0",
+          disney          %% "weaver-cats"       % weaverV % Test,
+          disney          %% "weaver-scalacheck" % weaverV % Test
+        )
+      },
+      Test / fork := true
+    )
+    .settings(releaseSettings)
+    .dependsOn(core % "compile->compile;test->test")
+
+def organizationSettings =
+  Seq(
+    licenses         := List("MPL-2.0" -> url("https://www.mozilla.org/en-US/MPL/2.0/")),
+    organization     := "io.kaizensolutions",
+    organizationName := "kaizen-solutions"
+  )
+
+def releaseSettings = Seq(
+  releaseIgnoreUntrackedFiles := true,
+  releaseTagName              := s"${version.value}",
+  releaseProcess := Seq[ReleaseStep](
+    checkSnapshotDependencies,
+    inquireVersions,
+    runClean,
+    runTest,
+    setReleaseVersion,
+    commitReleaseVersion,
+    tagRelease,
+    setNextVersion,
+    commitNextVersion,
+    pushChanges
+  )
+)
