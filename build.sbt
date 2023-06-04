@@ -1,5 +1,3 @@
-import ReleaseTransformations._
-
 inThisBuild {
   val scala212 = "2.12.17"
   val scala213 = "2.13.10"
@@ -30,23 +28,30 @@ inThisBuild {
       new TestFramework("zio.test.sbt.ZTestFramework"),
       new TestFramework("weaver.framework.CatsEffect")
     ),
-    semanticdbEnabled                              := true,
-    scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.6.0"
+    semanticdbEnabled      := true,
+    versionScheme          := Some("early-semver"),
+    sonatypeCredentialHost := "s01.oss.sonatype.org",
+    sonatypeProfileName    := "io.kaizen-solutions",
+    sonatypeRepository     := "https://s01.oss.sonatype.org/service/local",
+    licenses               := List("MPL-2.0" -> url("https://www.mozilla.org/en-US/MPL/2.0/")),
+    organization           := "io.kaizen-solutions",
+    organizationName       := "kaizen-solutions",
+    homepage               := Some(url("https://www.kaizen-solutions.io/")),
+    developers := List(
+      Developer("calvinlfer", "Calvin Fernandes", "cal@kaizen-solutions.io", url("https://www.kaizen-solutions.io"))
+    ),
+    sonatypeCredentialHost := "s01.oss.sonatype.org"
   )
 }
 
 lazy val root =
   project
     .in(file("."))
-    .settings(
-      publishTo       := Some("Jitpack".at("https://jitpack.io")), // Not actually used but to keep SBT happy
-      publishArtifact := false
-    )
+    .settings(publish / skip := true)
     .aggregate(core, zio, catsEffect)
 
 lazy val core =
   (project in file("core"))
-    .settings(organizationSettings *)
     .settings(
       name := "virgil-core",
       libraryDependencies ++= {
@@ -84,12 +89,10 @@ lazy val core =
       },
       Test / fork := true
     )
-    .settings(releaseSettings *)
 
 lazy val zio =
   project
     .in(file("zio"))
-    .settings(organizationSettings *)
     .settings(
       name := "virgil-zio",
       libraryDependencies ++= {
@@ -102,13 +105,11 @@ lazy val zio =
         )
       }
     )
-    .settings(releaseSettings *)
     .dependsOn(core % "compile->compile;test->test")
 
 lazy val catsEffect =
   project
     .in(file("cats-effect"))
-    .settings(organizationSettings *)
     .settings(
       name := "virgil-cats-effect",
       libraryDependencies ++= {
@@ -124,29 +125,4 @@ lazy val catsEffect =
       },
       Test / fork := true
     )
-    .settings(releaseSettings)
     .dependsOn(core % "compile->compile;test->test")
-
-def organizationSettings =
-  Seq(
-    licenses         := List("MPL-2.0" -> url("https://www.mozilla.org/en-US/MPL/2.0/")),
-    organization     := "io.kaizensolutions",
-    organizationName := "kaizen-solutions"
-  )
-
-def releaseSettings = Seq(
-  releaseIgnoreUntrackedFiles := true,
-  releaseTagName              := s"${version.value}",
-  releaseProcess := Seq[ReleaseStep](
-    checkSnapshotDependencies,
-    inquireVersions,
-    runClean,
-    runTest,
-    setReleaseVersion,
-    commitReleaseVersion,
-    tagRelease,
-    setNextVersion,
-    commitNextVersion,
-    pushChanges
-  )
-)

@@ -2,13 +2,17 @@ package io.kaizensolutions.virgil
 
 import cats.effect._
 import cats.syntax.all._
-import fs2.{Chunk, Stream}
-import io.kaizensolutions.virgil.configuration.{ConsistencyLevel, ExecutionAttributes}
+import fs2.Chunk
+import fs2.Stream
+import io.kaizensolutions.virgil.configuration.ConsistencyLevel
+import io.kaizensolutions.virgil.configuration.ExecutionAttributes
 import io.kaizensolutions.virgil.cql._
 import io.kaizensolutions.virgil.models.CqlExecutorSpecDatatypes._
 import org.scalacheck.Gen
-import weaver.scalacheck.{CheckConfig, Checkers}
-import weaver.{GlobalRead, IOSuite}
+import weaver.GlobalRead
+import weaver.IOSuite
+import weaver.scalacheck.CheckConfig
+import weaver.scalacheck.Checkers
 
 import scala.concurrent.duration._
 
