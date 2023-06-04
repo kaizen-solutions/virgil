@@ -277,6 +277,12 @@ Special thanks to [John De Goes](https://degoes.net), [Francis Toth](https://con
 We stand on the shoulders of giants, this work would not be possible without the effect systems and libraries that were
 used to build Virgil.
 
+### Release
+
+Virgil uses the excellent [sbt-ci-release](https://github.com/sbt/sbt-ci-release) plugin to automate releases and leverages
+this plugin to publish artifacts to Sonatype & Maven Central.
+
+As a fallback, you can also download Virgil from JitPack.
 
 ### Users
 Virgil is used in production at the following companies:
