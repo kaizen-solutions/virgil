@@ -15,7 +15,13 @@ inThisBuild {
       ),
       WorkflowStep.Sbt(
         name = Option("Coverage"),
-        commands = List("coverageAggregate", "coveralls"),
+        commands = List("coverageAggregate"),
+        cond = None,
+        env = Map.empty
+      ),
+      WorkflowStep.Sbt(
+        name = Option("Coveralls"),
+        commands = List("coveralls"),
         cond = None,
         env = Map(
           "COVERALLS_REPO_TOKEN" -> "${{ secrets.GITHUB_TOKEN }}",
