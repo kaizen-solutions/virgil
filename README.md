@@ -3,7 +3,7 @@ _Virgil is a functional Cassandra client built using ZIO 2.x, Cats Effect 3.x, M
 
 ![Build Status](https://github.com/kaizen-solutions/virgil/actions/workflows/ci.yml/badge.svg)
 
-[![Latest Version](https://jitpack.io/v/kaizen-solutions/virgil.svg)](https://jitpack.io/#kaizen-solutions/virgil)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kaizen-solutions/virgil-core_3/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kaizen-solutions/virgil-core_3)
 
 [![Coverage Status](https://coveralls.io/repos/github/kaizen-solutions/virgil/badge.svg)](https://coveralls.io/github/kaizen-solutions/virgil)
 
@@ -14,26 +14,21 @@ _Virgil is a functional Cassandra client built using ZIO 2.x, Cats Effect 3.x, M
 
 ## Quick Start
 
-Add the JitPack resolver:
-```sbt
-resolvers += "jitpack" at "https://jitpack.io"
-```
-
 ## ZIO 2.x
 ```sbt
-libraryDependencies += "com.github.kaizen-solutions.virgil" %% "virgil-zio" % "<please-see-jitpack-badge-for-latest-version>"
+libraryDependencies += "io.kaizen-solutions" %% "virgil-zio" % "<see badge for latest version>"
 ```
 
 ## Cats Effect 3.x
 ```sbt
-libraryDependencies += "com.github.kaizen-solutions.virgil" %% "virgil-cats-effect" % "<please-see-jitpack-badge-for-latest-version>"
+libraryDependencies += "io.kaizen-solutions" %% "virgil-cats-effect" % "<see badge for latest version>"
 ```
 
 If you want to integrate another effect system (or runtime), depend on the `core` module and reference the implementations 
 for ZIO & Cats Effect for inspiration:
 
 ```sbt
-libraryDependencies += "com.github.kaizen-solutions.virgil" %% "virgil-core" % "<please-see-jitpack-badge-for-latest-version>"
+libraryDependencies += "io.kaizen-solutions" %% "virgil-core" % "<see badge for latest version>"
 ```
 
 Please note that Virgil is built for Scala 2.12.x, 2.13.x and 3.3.x but fully-automatic derivation is not present for 3.3.x.
@@ -283,6 +278,19 @@ Virgil uses the excellent [sbt-ci-release](https://github.com/sbt/sbt-ci-release
 this plugin to publish artifacts to Sonatype & Maven Central.
 
 As a fallback, you can also download Virgil from JitPack.
+
+[![Latest Version](https://jitpack.io/v/kaizen-solutions/virgil.svg)](https://jitpack.io/#kaizen-solutions/virgil)
+
+Add the JitPack resolver:
+```sbt
+resolvers += "jitpack" at "https://jitpack.io"
+```
+
+Add the dependency:
+```sbt
+libraryDependencies += "com.github.kaizen-solutions.virgil" %% "virgil-zio" % "<see JitPack for release>"
+libraryDependencies += "com.github.kaizen-solutions.virgil" %% "virgil-cats-effect" % "<see JitPack for release>"
+```
 
 ### Users
 Virgil is used in production at the following companies:
