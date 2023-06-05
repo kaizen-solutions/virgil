@@ -60,12 +60,6 @@ jobs:
       - name: Coverage
         run: sbt ++${{ matrix.scala }} coverageAggregate
 
-      - name: Coveralls
-        env:
-          COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COVERALLS_FLAG_NAME: Scala ${{ matrix.scala }}
-        run: sbt ++${{ matrix.scala }} coveralls
-
       - name: Compress target directories
         run: tar cf targets.tar target core/target zio/target cats-effect/target project/target
 
