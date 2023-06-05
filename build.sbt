@@ -15,7 +15,7 @@ inThisBuild {
       ),
       WorkflowStep.Sbt(
         name = Option("Coverage"),
-        commands = List("coverageReport"), // coveralls is temporarily disabled
+        commands = List("coverageAggregate", "coveralls"),
         cond = None,
         env = Map(
           "COVERALLS_REPO_TOKEN" -> "${{ secrets.GITHUB_TOKEN }}",
