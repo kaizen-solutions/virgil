@@ -4,9 +4,8 @@ inThisBuild {
   val scala3   = "3.3.0"
 
   List(
-    scalaVersion                        := scala213,
-    crossScalaVersions                  := Seq(scala212, scala213, scala3),
-    githubWorkflowPublishTargetBranches := Seq.empty,
+    scalaVersion       := scala213,
+    crossScalaVersions := Seq(scala212, scala213, scala3),
     githubWorkflowBuild := Seq(
       WorkflowStep.Sbt(
         name = Option("Build & Test"),
@@ -16,11 +15,25 @@ inThisBuild {
       ),
       WorkflowStep.Sbt(
         name = Option("Coverage"),
-        commands = List("coverageReport"), // coveralls is temporarily disabled
+        commands = List("coverageAggregate"),
         cond = None,
+        env = Map.empty
+      )
+    ),
+    githubWorkflowTargetTags ++= Seq("v*"),
+    githubWorkflowPublishTargetBranches := Seq(
+      RefPredicate.StartsWith(Ref.Tag("v")),
+      RefPredicate.Equals(Ref.Branch("main"))
+    ),
+    githubWorkflowPublish := Seq(
+      WorkflowStep.Sbt(
+        commands = List("ci-release"),
+        name = Some("Publish project"),
         env = Map(
-          "COVERALLS_REPO_TOKEN" -> "${{ secrets.GITHUB_TOKEN }}",
-          "COVERALLS_FLAG_NAME"  -> "Scala ${{ matrix.scala }}"
+          "PGP_PASSPHRASE"    -> "${{ secrets.PGP_PASSPHRASE }}",
+          "PGP_SECRET"        -> "${{ secrets.PGP_SECRET }}",
+          "SONATYPE_PASSWORD" -> "${{ secrets.SONATYPE_PASSWORD }}",
+          "SONATYPE_USERNAME" -> "${{ secrets.SONATYPE_USERNAME }}"
         )
       )
     ),
