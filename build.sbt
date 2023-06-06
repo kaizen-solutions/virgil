@@ -69,7 +69,7 @@ lazy val core =
       name := "virgil-core",
       libraryDependencies ++= {
         val datastax  = "com.datastax.oss"
-        val datastaxV = "4.15.0"
+        val datastaxV = "4.16.0"
 
         val zio                   = "dev.zio"
         val zioV                  = "2.0.14"
