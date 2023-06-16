@@ -80,7 +80,7 @@ lazy val core =
         val coreDependencies =
           Seq(
             datastax                  % "java-driver-core"        % datastaxV,
-            "org.scala-lang.modules" %% "scala-collection-compat" % "2.10.0",
+            "org.scala-lang.modules" %% "scala-collection-compat" % "2.11.0",
             zio                      %% "zio-test"                % zioV      % Test,
             zio                      %% "zio-test-scalacheck"     % zioV      % Test,
             zio                      %% "zio-test-sbt"            % zioV      % Test,
