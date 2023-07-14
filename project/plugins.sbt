@@ -1,5 +1,5 @@
 addSbtPlugin("com.codecommit"            % "sbt-github-actions" % "0.14.2")
-addSbtPlugin("io.github.davidgregory084" % "sbt-tpolecat"       % "0.4.2")
+addSbtPlugin("io.github.davidgregory084" % "sbt-tpolecat"       % "0.4.4")
 addSbtPlugin("org.scoverage"             % "sbt-scoverage"      % "2.0.8")
 addSbtPlugin("org.scoverage"             % "sbt-coveralls"      % "1.3.9")
 addSbtPlugin("com.timushev.sbt"          % "sbt-updates"        % "0.6.4")
