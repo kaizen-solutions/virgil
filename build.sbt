@@ -1,11 +1,12 @@
 inThisBuild {
   val scala212 = "2.12.18"
-  val scala213 = "2.13.10"
+  val scala213 = "2.13.11"
   val scala3   = "3.3.0"
 
   List(
-    scalaVersion       := scala213,
-    crossScalaVersions := Seq(scala212, scala213, scala3),
+    scalaVersion               := scala213,
+    crossScalaVersions         := Seq(scala212, scala213, scala3),
+    githubWorkflowJavaVersions := List(JavaSpec.temurin("11")),
     githubWorkflowBuild := Seq(
       WorkflowStep.Sbt(
         name = Option("Build & Test"),

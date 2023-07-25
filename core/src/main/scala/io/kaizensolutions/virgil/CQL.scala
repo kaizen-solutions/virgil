@@ -185,6 +185,9 @@ object CQL {
     )
 
   implicit class CQLQueryOps[A](in: CQL[A])(implicit ev: A <:!< MutationResult) {
+    locally {
+      val _ = ev
+    }
     def readAs[B](implicit reader: CqlRowDecoder.Object[B]): CQL[B] =
       in.cqlType match {
         case CQLType.Query(queryType, _, pullMode) =>
