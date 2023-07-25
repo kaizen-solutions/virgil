@@ -129,7 +129,7 @@ lazy val catsEffect =
         val disney  = "com.disneystreaming"
         val weaverV = "0.8.3"
         Seq(
-          "org.typelevel" %% "cats-effect"       % "3.5.0",
+          "org.typelevel" %% "cats-effect"       % "3.5.1",
           "co.fs2"        %% "fs2-core"          % "3.7.0",
           "co.fs2"        %% "fs2-io"            % "3.7.0",
           disney          %% "weaver-cats"       % weaverV % Test,
