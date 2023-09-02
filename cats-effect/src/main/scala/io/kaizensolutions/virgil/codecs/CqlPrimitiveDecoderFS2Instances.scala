@@ -11,7 +11,7 @@ trait CqlPrimitiveDecoderFS2Instances {
   ): CqlPrimitiveDecoder.WithDriver[Chunk[A], java.util.List[element.DriverType]] =
     ListPrimitiveDecoder[Chunk, A, element.DriverType](
       element,
-      (driverList, transformElement) => Chunk.iterable(driverList.asScala.map(transformElement))
+      (driverList, transformElement) => Chunk.from(driverList.asScala.map(transformElement))
     )
 }
 object CqlPrimitiveDecoderFS2Instances extends CqlPrimitiveDecoderFS2Instances
