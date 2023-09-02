@@ -83,7 +83,7 @@ private[virgil] class CQLExecutorImpl[F[_]](underlyingSession: CqlSession)(impli
 
   private def executeBatch(m: CQLType.Batch, config: ExecutionAttributes): F[MutationResult] =
     Chunk
-      .indexedSeq(m.mutations)
+      .from(m.mutations)
       .traverse(buildMutation(_))
       .flatMap { statements =>
         F.delay {
@@ -122,7 +122,7 @@ private[virgil] class CQLExecutorImpl[F[_]](underlyingSession: CqlSession)(impli
         if (in.hasMorePages) Pull.eval(F.fromCompletionStage(F.delay(in.fetchNextPage))).flatMap(go)
         else Pull.done
 
-      if (in.remaining() > 0) Pull.output(Chunk.iterable(in.currentPage().asScala)) >> next
+      if (in.remaining() > 0) Pull.output(Chunk.from(in.currentPage().asScala)) >> next
       else next
     }
 
@@ -173,7 +173,7 @@ private[virgil] class CQLExecutorImpl[F[_]](underlyingSession: CqlSession)(impli
 
   private def selectPage(queryConfiguredWithPageState: Statement[_]): F[(Chunk[Row], Option[PageState])] =
     executeAction(queryConfiguredWithPageState).map { resultSet =>
-      val rows = Chunk.iterable(resultSet.currentPage().asScala)
+      val rows = Chunk.from(resultSet.currentPage().asScala)
       if (resultSet.hasMorePages) {
         val pageState = PageState.fromDriver(resultSet.getExecutionInfo.getSafePagingState)
         (rows, Option(pageState))
