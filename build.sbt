@@ -82,11 +82,11 @@ lazy val core =
           Seq(
             datastax                  % "java-driver-core"        % datastaxV,
             "org.scala-lang.modules" %% "scala-collection-compat" % "2.11.0",
-            zio                      %% "zio-test"                % zioV      % Test,
-            zio                      %% "zio-test-scalacheck"     % zioV      % Test,
-            zio                      %% "zio-test-sbt"            % zioV      % Test,
+            zio                      %% "zio-test"                % zioV     % Test,
+            zio                      %% "zio-test-scalacheck"     % zioV     % Test,
+            zio                      %% "zio-test-sbt"            % zioV     % Test,
             "com.dimafeng"           %% "testcontainers-scala"    % "0.41.0" % Test,
-            "com.outr"               %% "scribe-slf4j"            % "3.12.1"  % Test
+            "com.outr"               %% "scribe-slf4j"            % "3.12.1" % Test
           )
 
         val isScala2x = scalaVersion.value.startsWith("2")
@@ -131,8 +131,8 @@ lazy val catsEffect =
         val weaverV = "0.8.3"
         Seq(
           "org.typelevel" %% "cats-effect"       % "3.5.1",
-          "co.fs2"        %% "fs2-core"          % "3.9.1",
-          "co.fs2"        %% "fs2-io"            % "3.9.1",
+          "co.fs2"        %% "fs2-core"          % "3.9.2",
+          "co.fs2"        %% "fs2-io"            % "3.9.2",
           disney          %% "weaver-cats"       % weaverV % Test,
           disney          %% "weaver-scalacheck" % weaverV % Test
         )
