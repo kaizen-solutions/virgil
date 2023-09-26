@@ -73,7 +73,7 @@ lazy val core =
         val datastaxV = "4.17.0"
 
         val zio                   = "dev.zio"
-        val zioV                  = "2.0.16"
+        val zioV                  = "2.0.18"
         val magnoliaForScala2     = "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.6"
         val scalaReflectForScala2 = "org.scala-lang"                % "scala-reflect" % scalaVersion.value
         val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.3.3"
@@ -82,11 +82,11 @@ lazy val core =
           Seq(
             datastax                  % "java-driver-core"        % datastaxV,
             "org.scala-lang.modules" %% "scala-collection-compat" % "2.11.0",
-            zio                      %% "zio-test"                % zioV      % Test,
-            zio                      %% "zio-test-scalacheck"     % zioV      % Test,
-            zio                      %% "zio-test-sbt"            % zioV      % Test,
+            zio                      %% "zio-test"                % zioV     % Test,
+            zio                      %% "zio-test-scalacheck"     % zioV     % Test,
+            zio                      %% "zio-test-sbt"            % zioV     % Test,
             "com.dimafeng"           %% "testcontainers-scala"    % "0.41.0" % Test,
-            "com.outr"               %% "scribe-slf4j"            % "3.12.1"  % Test
+            "com.outr"               %% "scribe-slf4j"            % "3.12.1" % Test
           )
 
         val isScala2x = scalaVersion.value.startsWith("2")
@@ -111,7 +111,7 @@ lazy val zio =
       name := "virgil-zio",
       libraryDependencies ++= {
         val zio  = "dev.zio"
-        val zioV = "2.0.16"
+        val zioV = "2.0.18"
 
         Seq(
           zio %% "zio"         % zioV,
