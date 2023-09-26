@@ -1,7 +1,7 @@
 inThisBuild {
   val scala212 = "2.12.18"
   val scala213 = "2.13.11"
-  val scala3   = "3.3.0"
+  val scala3   = "3.3.1"
 
   List(
     scalaVersion               := scala213,
@@ -73,7 +73,7 @@ lazy val core =
         val datastaxV = "4.17.0"
 
         val zio                   = "dev.zio"
-        val zioV                  = "2.0.16"
+        val zioV                  = "2.0.18"
         val magnoliaForScala2     = "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.6"
         val scalaReflectForScala2 = "org.scala-lang"                % "scala-reflect" % scalaVersion.value
         val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.3.3"
@@ -111,7 +111,7 @@ lazy val zio =
       name := "virgil-zio",
       libraryDependencies ++= {
         val zio  = "dev.zio"
-        val zioV = "2.0.16"
+        val zioV = "2.0.18"
 
         Seq(
           zio %% "zio"         % zioV,
@@ -131,8 +131,8 @@ lazy val catsEffect =
         val weaverV = "0.8.3"
         Seq(
           "org.typelevel" %% "cats-effect"       % "3.5.1",
-          "co.fs2"        %% "fs2-core"          % "3.9.1",
-          "co.fs2"        %% "fs2-io"            % "3.9.1",
+          "co.fs2"        %% "fs2-core"          % "3.9.2",
+          "co.fs2"        %% "fs2-io"            % "3.9.2",
           disney          %% "weaver-cats"       % weaverV % Test,
           disney          %% "weaver-scalacheck" % weaverV % Test
         )
