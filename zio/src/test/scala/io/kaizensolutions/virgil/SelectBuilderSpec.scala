@@ -1,12 +1,11 @@
 package io.kaizensolutions.virgil
 
+import io.kaizensolutions.virgil.models.MusicLibraryItem
 import io.kaizensolutions.virgil.cql._
 import io.kaizensolutions.virgil.dsl._
 import zio.test._
 import io.kaizensolutions.virgil.dsl.SelectBuilder
 import com.datastax.oss.driver.api.core.cql.Row
-import java.time.LocalDate
-import io.kaizensolutions.virgil.annotations.CqlColumn
 import io.kaizensolutions.virgil.codecs.CqlRowDecoder
 import zio.{Chunk, RIO}
 
@@ -134,22 +133,4 @@ object SelectBuilderSpec {
       assertTrue(queryResult == rawQueryResult) && assert(queryResult)
     )
   }
-}
-
-final case class MusicLibraryItem(
-  @CqlColumn(MusicLibraryItem.ArtistName) artistName: String,
-  @CqlColumn(MusicLibraryItem.AlbumName) albumName: String,
-  @CqlColumn(MusicLibraryItem.SongTitle) songTitle: String,
-  @CqlColumn(MusicLibraryItem.ReleaseDate) releaseDate: LocalDate,
-  @CqlColumn(MusicLibraryItem.Genre) genre: String,
-  @CqlColumn(MusicLibraryItem.DurationSeconds) durationSeconds: Int
-)
-object MusicLibraryItem {
-  val tableName       = "selectspec_musiclibrary"
-  val ArtistName      = "artist_name"
-  val AlbumName       = "album_name"
-  val SongTitle       = "song_title"
-  val ReleaseDate     = "release_date"
-  val Genre           = "genre"
-  val DurationSeconds = "duration_seconds"
 }
