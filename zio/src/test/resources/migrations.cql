@@ -157,3 +157,16 @@ CREATE TABLE insertbuilderspec_person(
     name TEXT,
     age  INT
 );
+
+CREATE TABLE selectspec_musiclibrary (
+  artist_name TEXT,
+  album_name TEXT,
+  song_title TEXT,
+  release_date DATE,
+  genre TEXT,
+  duration_seconds INT,
+  PRIMARY KEY ((artist_name), album_name, song_title)
+);
+INSERT INTO selectspec_musiclibrary (artist_name, album_name, song_title, release_date, genre, duration_seconds) VALUES ('The Beatles', 'Abbey Road', 'Come Together', '1969-09-26', 'Rock', 259);
+INSERT INTO selectspec_musiclibrary (artist_name, album_name, song_title, release_date, genre, duration_seconds) VALUES ('The Beatles', 'Abbey Road', 'Something', '1969-09-26', 'Rock', 182);
+INSERT INTO selectspec_musiclibrary (artist_name, album_name, song_title, release_date, genre, duration_seconds) VALUES ('The Beatles', 'Let It Be', 'Let It Be', '1970-03-06', 'Rock', 243);

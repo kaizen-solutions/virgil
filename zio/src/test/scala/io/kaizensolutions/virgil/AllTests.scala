@@ -67,6 +67,7 @@ object AllTests extends ZIOSpecDefault {
         UpdateBuilderSpec.updateBuilderSpec +
         RelationSpec.relationSpec +
         DeleteBuilderSpec.deleteBuilderSpec +
-        InsertBuilderSpec.insertBuilderSpec
+        InsertBuilderSpec.insertBuilderSpec +
+        SelectBuilderSpec.selectBuilderSpec
     }.provideSomeShared[TestEnvironment](containerLayer, executorLayer) @@ parallel @@ timed
 }
