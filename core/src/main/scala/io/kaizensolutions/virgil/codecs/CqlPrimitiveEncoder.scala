@@ -2,7 +2,7 @@ package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.`type`._
 import com.datastax.oss.driver.api.core.data.CqlDuration
-import com.datastax.oss.driver.api.core.data.SettableByName
+import com.datastax.oss.driver.api.core.data.{SettableByName, SettableByIndex}
 import com.datastax.oss.driver.api.core.data.UdtValue
 
 import scala.jdk.CollectionConverters._
@@ -88,7 +88,7 @@ object CqlPrimitiveEncoder {
         structure.set(fieldName, driverValue, other.driverClass)
     }
 
-  def encodePrimitiveByIndex[Structure <: SettableByName[Structure], Scala](
+  def encodePrimitiveByIndex[Structure <: SettableByIndex[Structure], Scala](
     structure: Structure,
     index: Int,
     value: Scala
