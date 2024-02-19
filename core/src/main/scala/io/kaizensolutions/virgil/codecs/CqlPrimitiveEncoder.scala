@@ -2,7 +2,7 @@ package io.kaizensolutions.virgil.codecs
 
 import com.datastax.oss.driver.api.core.`type`._
 import com.datastax.oss.driver.api.core.data.CqlDuration
-import com.datastax.oss.driver.api.core.data.{SettableByName, SettableByIndex}
+import com.datastax.oss.driver.api.core.data.{SettableByIndex, SettableByName}
 import com.datastax.oss.driver.api.core.data.UdtValue
 
 import scala.jdk.CollectionConverters._
