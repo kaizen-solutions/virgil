@@ -86,7 +86,7 @@ lazy val core =
             zio                      %% "zio-test-scalacheck"     % zioV     % Test,
             zio                      %% "zio-test-sbt"            % zioV     % Test,
             "com.dimafeng"           %% "testcontainers-scala"    % "0.41.0" % Test,
-            "com.outr"               %% "scribe-slf4j"            % "3.13.0" % Test
+            "com.outr"               %% "scribe-slf4j"            % "3.13.2" % Test
           )
 
         val isScala2x = scalaVersion.value.startsWith("2")
