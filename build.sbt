@@ -1,6 +1,6 @@
 inThisBuild {
-  val scala212 = "2.12.18"
-  val scala213 = "2.13.12"
+  val scala212 = "2.12.19"
+  val scala213 = "2.13.13"
   val scala3   = "3.3.3"
 
   List(
@@ -86,7 +86,7 @@ lazy val core =
             zio                      %% "zio-test-scalacheck"     % zioV     % Test,
             zio                      %% "zio-test-sbt"            % zioV     % Test,
             "com.dimafeng"           %% "testcontainers-scala"    % "0.41.3" % Test,
-            "com.outr"               %% "scribe-slf4j"            % "3.13.2" % Test
+            "com.outr"               %% "scribe-slf4j"            % "3.13.4" % Test
           )
 
         val isScala2x = scalaVersion.value.startsWith("2")
