@@ -1,4 +1,7 @@
 # Virgil
+
+![Logo](logo.webp)
+
 _Virgil is a functional Cassandra client built using ZIO 2.x, Cats Effect 3.x, Magnolia and the Datastax 4.x Java drivers_
 
 ![Build Status](https://github.com/kaizen-solutions/virgil/actions/workflows/ci.yml/badge.svg)

@@ -4,9 +4,13 @@ inThisBuild {
   val scala3   = "3.3.3"
 
   List(
-    scalaVersion               := scala213,
-    crossScalaVersions         := Seq(scala212, scala213, scala3),
-    githubWorkflowJavaVersions := List(JavaSpec.temurin("11")),
+    scalaVersion       := scala213,
+    crossScalaVersions := Seq(scala212, scala213, scala3),
+    githubWorkflowJavaVersions := List(
+      JavaSpec.temurin("11"),
+      JavaSpec.temurin("17"),
+      JavaSpec.temurin("21")
+    ),
     githubWorkflowBuild := Seq(
       WorkflowStep.Sbt(
         name = Option("Build & Test"),
@@ -73,7 +77,7 @@ lazy val core =
         val datastaxV = "4.17.0"
 
         val zio                   = "dev.zio"
-        val zioV                  = "2.0.22"
+        val zioV                  = "2.1.1"
         val magnoliaForScala2     = "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.9"
         val scalaReflectForScala2 = "org.scala-lang"                % "scala-reflect" % scalaVersion.value
         val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.3.6"
@@ -86,7 +90,7 @@ lazy val core =
             zio                      %% "zio-test-scalacheck"     % zioV     % Test,
             zio                      %% "zio-test-sbt"            % zioV     % Test,
             "com.dimafeng"           %% "testcontainers-scala"    % "0.41.3" % Test,
-            "com.outr"               %% "scribe-slf4j"            % "3.13.4" % Test
+            "com.outr"               %% "scribe-slf4j"            % "3.13.5" % Test
           )
 
         val isScala2x = scalaVersion.value.startsWith("2")
@@ -111,7 +115,7 @@ lazy val zio =
       name := "virgil-zio",
       libraryDependencies ++= {
         val zio  = "dev.zio"
-        val zioV = "2.0.22"
+        val zioV = "2.1.1"
 
         Seq(
           zio %% "zio"         % zioV,
