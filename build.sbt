@@ -89,7 +89,7 @@ lazy val core =
             zio                      %% "zio-test"                % zioV     % Test,
             zio                      %% "zio-test-scalacheck"     % zioV     % Test,
             zio                      %% "zio-test-sbt"            % zioV     % Test,
-            "com.dimafeng"           %% "testcontainers-scala"    % "0.41.3" % Test,
+            "com.dimafeng"           %% "testcontainers-scala"    % "0.41.4" % Test,
             "com.outr"               %% "scribe-slf4j"            % "3.14.0" % Test
           )
 
