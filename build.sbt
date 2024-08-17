@@ -1,6 +1,6 @@
 inThisBuild {
   val scala212 = "2.12.19"
-  val scala213 = "2.13.13"
+  val scala213 = "2.13.14"
   val scala3   = "3.3.3"
 
   List(
@@ -47,6 +47,7 @@ inThisBuild {
       new TestFramework("weaver.framework.CatsEffect")
     ),
     semanticdbEnabled      := true,
+    semanticdbVersion      := scalafixSemanticdb.revision,
     versionScheme          := Some("early-semver"),
     sonatypeCredentialHost := "s01.oss.sonatype.org",
     sonatypeProfileName    := "io.kaizen-solutions",
@@ -77,7 +78,7 @@ lazy val core =
         val datastaxV = "4.17.0"
 
         val zio                   = "dev.zio"
-        val zioV                  = "2.1.6"
+        val zioV                  = "2.1.7"
         val magnoliaForScala2     = "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.10"
         val scalaReflectForScala2 = "org.scala-lang"                % "scala-reflect" % scalaVersion.value
         val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.3.7"
@@ -90,7 +91,7 @@ lazy val core =
             zio                      %% "zio-test-scalacheck"     % zioV     % Test,
             zio                      %% "zio-test-sbt"            % zioV     % Test,
             "com.dimafeng"           %% "testcontainers-scala"    % "0.41.4" % Test,
-            "com.outr"               %% "scribe-slf4j"            % "3.14.0" % Test
+            "com.outr"               %% "scribe-slf4j"            % "3.15.0" % Test
           )
 
         val isScala2x = scalaVersion.value.startsWith("2")

@@ -10,12 +10,12 @@ trait CassandraContainer {
 object CassandraContainer {
   def apply(cassType: CassandraType): URIO[Scope, CassandraContainer] = {
     val nativePort         = 9042
-    val datastaxEnterprise = "datastax/dse-server:6.8.19"
+    val datastaxEnterprise = "datastax/dse-server:6.9.1"
     val datastaxEnv = Map(
       "DS_LICENSE"     -> "accept",
       "JVM_EXTRA_OPTS" -> "-Dcassandra.skip_wait_for_gossip_to_settle=0 -Dcassandra.load_ring_state=false -Dcassandra.initial_token=1 -Dcassandra.num_tokens=nil -Dcassandra.allocate_tokens_for_local_replication_factor=nil"
     )
-    val vanilla = "cassandra:4"
+    val vanilla = "cassandra:5"
     val vanillaEnv = Map(
       "CASSANDRA_ENDPOINT_SNITCH" -> "GossipingPropertyFileSnitch",
       "CASSANDRA_DC"              -> "dc1",
