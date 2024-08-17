@@ -1,6 +1,6 @@
 package io.kaizensolutions.virgil
 
-import com.datastax.oss.driver.api.core.CqlSession
+import com.datastax.oss.driver.api.core.{CqlSession, CqlSessionBuilder}
 import io.kaizensolutions.virgil.configuration.ConsistencyLevel
 import io.kaizensolutions.virgil.configuration.ExecutionAttributes
 import io.kaizensolutions.virgil.cql._
@@ -12,10 +12,8 @@ import zio.test._
 import zio.test.scalacheck._
 import zio.{test => _, _}
 
-import java.net.InetSocketAddress
-
 object CQLExecutorSpec {
-  def executorSpec: Spec[Live & TestConfig & Sized & CassandraContainer & CQLExecutor, Any] =
+  def executorSpec: Spec[Live & TestConfig & Sized & CqlSessionBuilder & CQLExecutor, Any] =
     suite("Cassandra Session Interpreter Specification") {
       (queries + actions + configuration) @@ timeout(2.minutes) @@ samples(4)
     }
@@ -138,20 +136,13 @@ object CQLExecutorSpec {
         }
     } @@ sequential
 
-  def configuration: Spec[CassandraContainer & Sized & TestConfig & CQLExecutor, Any] =
+  def configuration: Spec[Sized & TestConfig & CqlSessionBuilder & CQLExecutor, Any] =
     suite("Session Configuration")(
       test("Creating a layer from an existing session allows you to access Cassandra") {
-        val sessionScoped: URIO[CassandraContainer & Scope, CqlSession] = {
+        val sessionScoped: URIO[CqlSessionBuilder & Scope, CqlSession] = {
           val createSession = for {
-            c            <- ZIO.service[CassandraContainer]
-            contactPoint <- c.getHost.zipWith(c.getPort)(InetSocketAddress.createUnresolved)
-            session <- ZIO.succeed(
-                         CqlSession.builder
-                           .addContactPoint(contactPoint)
-                           .withLocalDatacenter("dc1")
-                           .withKeyspace("virgil")
-                           .build
-                       )
+            builder <- ZIO.service[CqlSessionBuilder]
+            session <- ZIO.attempt(builder.build())
           } yield session
           val releaseSession = (session: CqlSession) => ZIO.succeed(session.close())
           ZIO.acquireRelease(createSession)(releaseSession).orDie

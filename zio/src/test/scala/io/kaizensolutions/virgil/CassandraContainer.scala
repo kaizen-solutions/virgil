@@ -13,7 +13,7 @@ object CassandraContainer {
     val datastaxEnterprise = "datastax/dse-server:6.9.1"
     val datastaxEnv = Map(
       "DS_LICENSE"     -> "accept",
-      "JVM_EXTRA_OPTS" -> "-Dcassandra.skip_wait_for_gossip_to_settle=0 -Dcassandra.load_ring_state=false -Dcassandra.initial_token=1 -Dcassandra.num_tokens=nil -Dcassandra.allocate_tokens_for_local_replication_factor=nil"
+      "JVM_EXTRA_OPTS" -> "-Dcassandra.skip_wait_for_gossip_to_settle=0 -Dcassandra.load_ring_state=false -Dcassandra.initial_token=1 -Dcassandra.num_tokens=nil -Dcassandra.allocate_tokens_for_local_replication_factor=nil -D.cassandra.auto_snapshot=false -Dcassandra.force_default_indexing_page_size=4096"
     )
     val vanilla = "cassandra:5"
     val vanillaEnv = Map(
