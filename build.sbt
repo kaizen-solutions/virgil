@@ -117,7 +117,7 @@ lazy val zio =
       name := "virgil-zio",
       libraryDependencies ++= {
         val zio  = "dev.zio"
-        val zioV = "2.1.6"
+        val zioV = "2.1.9"
 
         Seq(
           zio %% "zio"         % zioV,
