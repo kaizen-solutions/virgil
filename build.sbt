@@ -78,7 +78,7 @@ lazy val core =
         val datastaxV = "4.17.0"
 
         val zio                   = "dev.zio"
-        val zioV                  = "2.1.7"
+        val zioV                  = "2.1.9"
         val magnoliaForScala2     = "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.10"
         val scalaReflectForScala2 = "org.scala-lang"                % "scala-reflect" % scalaVersion.value
         val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.3.7"
@@ -90,7 +90,7 @@ lazy val core =
             zio                      %% "zio-test"                % zioV     % Test,
             zio                      %% "zio-test-scalacheck"     % zioV     % Test,
             zio                      %% "zio-test-sbt"            % zioV     % Test,
-            zio                      %% "zio-logging-slf4j"       % "2.3.0"  % Test,
+            zio                      %% "zio-logging-slf4j"       % "2.3.1"  % Test,
             "ch.qos.logback"          % "logback-classic"         % "1.5.7"  % Test,
             "com.dimafeng"           %% "testcontainers-scala"    % "0.41.4" % Test
           )
@@ -137,8 +137,8 @@ lazy val catsEffect =
         val weaverV = "0.8.4"
         Seq(
           "org.typelevel" %% "cats-effect"       % "3.5.4",
-          "co.fs2"        %% "fs2-core"          % "3.10.2",
-          "co.fs2"        %% "fs2-io"            % "3.10.2",
+          "co.fs2"        %% "fs2-core"          % "3.11.0",
+          "co.fs2"        %% "fs2-io"            % "3.11.0",
           disney          %% "weaver-cats"       % weaverV % Test,
           disney          %% "weaver-scalacheck" % weaverV % Test
         )
