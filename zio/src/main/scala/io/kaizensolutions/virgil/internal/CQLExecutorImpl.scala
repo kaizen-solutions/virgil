@@ -3,7 +3,6 @@ package io.kaizensolutions.virgil.internal
 import com.datastax.oss.driver.api.core.CqlSession
 import com.datastax.oss.driver.api.core.cql.{BatchType => _, _}
 import com.datastax.oss.driver.api.core.metrics.Metrics
-import io.kaizensolutions.virgil.Paged
 import io.kaizensolutions.virgil._
 import io.kaizensolutions.virgil.configuration.ExecutionAttributes
 import io.kaizensolutions.virgil.configuration.PageState

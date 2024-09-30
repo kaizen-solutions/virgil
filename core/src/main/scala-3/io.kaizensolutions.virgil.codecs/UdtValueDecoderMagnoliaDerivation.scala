@@ -1,9 +1,10 @@
 package io.kaizensolutions.virgil.codecs
 
-import scala.deriving.Mirror
 import com.datastax.oss.driver.api.core.data.UdtValue
 import io.kaizensolutions.virgil.annotations.CqlColumn
 import magnolia1.*
+
+import scala.deriving.Mirror
 
 // Note: Fully automatic derivation is not yet present in Scala 3 just yet (because I haven't figured out how to do it yet)
 trait UdtValueDecoderMagnoliaDerivation extends ProductDerivation[CqlUdtValueDecoder]:

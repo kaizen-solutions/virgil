@@ -1,6 +1,7 @@
 package io.kaizensolutions.virgil
 
-import com.datastax.oss.driver.api.core.{CqlSession, CqlSessionBuilder}
+import com.datastax.oss.driver.api.core.CqlSession
+import com.datastax.oss.driver.api.core.CqlSessionBuilder
 import io.kaizensolutions.virgil.configuration.ConsistencyLevel
 import io.kaizensolutions.virgil.configuration.ExecutionAttributes
 import io.kaizensolutions.virgil.cql._

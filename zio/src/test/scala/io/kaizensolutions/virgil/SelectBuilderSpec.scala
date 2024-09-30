@@ -1,13 +1,13 @@
 package io.kaizensolutions.virgil
 
-import io.kaizensolutions.virgil.models.MusicLibraryItem
-import io.kaizensolutions.virgil.cql._
-import io.kaizensolutions.virgil.dsl._
-import zio.test._
-import io.kaizensolutions.virgil.dsl.SelectBuilder
 import com.datastax.oss.driver.api.core.cql.Row
 import io.kaizensolutions.virgil.codecs.CqlRowDecoder
-import zio.{Chunk, RIO}
+import io.kaizensolutions.virgil.cql._
+import io.kaizensolutions.virgil.dsl._
+import io.kaizensolutions.virgil.models.MusicLibraryItem
+import zio.Chunk
+import zio.RIO
+import zio.test._
 
 object SelectBuilderSpec {
   def selectBuilderSpec =

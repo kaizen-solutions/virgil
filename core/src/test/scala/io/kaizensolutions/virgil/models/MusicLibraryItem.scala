@@ -1,6 +1,7 @@
 package io.kaizensolutions.virgil.models
 
 import io.kaizensolutions.virgil.annotations.CqlColumn
+
 import java.time.LocalDate
 
 final case class MusicLibraryItem(
