@@ -1,6 +1,6 @@
 inThisBuild {
   val scala212 = "2.12.20"
-  val scala213 = "2.13.15"
+  val scala213 = "2.13.16"
   val scala3   = "3.3.5"
 
   List(
@@ -78,7 +78,7 @@ lazy val core =
         val datastaxV = "4.17.0"
 
         val zio                   = "dev.zio"
-        val zioV                  = "2.1.13"
+        val zioV                  = "2.1.16"
         val magnoliaForScala2     = "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.10"
         val scalaReflectForScala2 = "org.scala-lang"                % "scala-reflect" % scalaVersion.value
         val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.3.16"
@@ -91,7 +91,7 @@ lazy val core =
             zio                      %% "zio-test-scalacheck"     % zioV     % Test,
             zio                      %% "zio-test-sbt"            % zioV     % Test,
             zio                      %% "zio-logging-slf4j"       % "2.5.0"  % Test,
-            "ch.qos.logback"          % "logback-classic"         % "1.5.16" % Test,
+            "ch.qos.logback"          % "logback-classic"         % "1.5.17" % Test,
             "com.dimafeng"           %% "testcontainers-scala"    % "0.41.8" % Test
           )
 
@@ -117,7 +117,7 @@ lazy val zio =
       name := "virgil-zio",
       libraryDependencies ++= {
         val zio  = "dev.zio"
-        val zioV = "2.1.13"
+        val zioV = "2.1.16"
 
         Seq(
           zio %% "zio"         % zioV,
