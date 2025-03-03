@@ -81,7 +81,7 @@ lazy val core =
         val zioV                  = "2.1.13"
         val magnoliaForScala2     = "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.10"
         val scalaReflectForScala2 = "org.scala-lang"                % "scala-reflect" % scalaVersion.value
-        val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.3.14"
+        val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.3.16"
 
         val coreDependencies =
           Seq(
@@ -92,6 +92,7 @@ lazy val core =
             zio                      %% "zio-test-sbt"            % zioV     % Test,
             zio                      %% "zio-logging-slf4j"       % "2.4.0"  % Test,
             "ch.qos.logback"          % "logback-classic"         % "1.5.17" % Test,
+            zio                      %% "zio-logging-slf4j"       % "2.5.0"  % Test,
             "com.dimafeng"           %% "testcontainers-scala"    % "0.41.8" % Test
           )
 
