@@ -78,7 +78,7 @@ lazy val core =
         val datastaxV = "4.17.0"
 
         val zio                   = "dev.zio"
-        val zioV                  = "2.1.16"
+        val zioV                  = "2.1.17"
         val magnoliaForScala2     = "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.10"
         val scalaReflectForScala2 = "org.scala-lang"                % "scala-reflect" % scalaVersion.value
         val magnoliaForScala3     = "com.softwaremill.magnolia1_3" %% "magnolia"      % "1.3.16"
@@ -117,7 +117,7 @@ lazy val zio =
       name := "virgil-zio",
       libraryDependencies ++= {
         val zio  = "dev.zio"
-        val zioV = "2.1.16"
+        val zioV = "2.1.17"
 
         Seq(
           zio %% "zio"         % zioV,
@@ -136,7 +136,7 @@ lazy val catsEffect =
         val disney  = "com.disneystreaming"
         val weaverV = "0.8.4"
         Seq(
-          "org.typelevel" %% "cats-effect"       % "3.5.7",
+          "org.typelevel" %% "cats-effect"       % "3.6.1",
           "co.fs2"        %% "fs2-core"          % "3.12.0",
           "co.fs2"        %% "fs2-io"            % "3.12.0",
           disney          %% "weaver-cats"       % weaverV % Test,
