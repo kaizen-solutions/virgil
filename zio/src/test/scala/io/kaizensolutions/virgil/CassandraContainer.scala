@@ -65,8 +65,12 @@ object CassandraContainer {
         )
     }
 
+    val customized = container.configure { cont =>
+      val _ = cont.withSharedMemorySize(2048L * 1024L * 1024L)
+    }
+
     ZIO
-      .acquireRelease(ZIO.succeed(container.start()))(_ => ZIO.succeed(container.stop()))
+      .acquireRelease(ZIO.succeed(customized.start()))(_ => ZIO.succeed(customized.stop()))
       .as(
         new CassandraContainer {
           override def getHost: Task[String] = ZIO.attempt(container.host)
