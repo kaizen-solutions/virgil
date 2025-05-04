@@ -7,7 +7,6 @@ inThisBuild {
     scalaVersion       := scala213,
     crossScalaVersions := Seq(scala212, scala213, scala3),
     githubWorkflowJavaVersions := List(
-      JavaSpec.temurin("11"),
       JavaSpec.temurin("17"),
       JavaSpec.temurin("21")
     ),
