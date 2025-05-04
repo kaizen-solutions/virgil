@@ -1,4 +1,4 @@
 # Make GitHub runners happier
--J-XX:+UseSerialGC # Prioritize lower memory usage at the cost of stop-the-world GC pauses
+-J-XX:+UseG1GC
 -J-Xms2g
 -J-Xmx4g
