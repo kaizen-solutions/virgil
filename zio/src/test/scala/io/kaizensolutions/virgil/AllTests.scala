@@ -24,7 +24,7 @@ object AllTests extends ZIOSpecDefault {
         DeleteBuilderSpec.deleteBuilderSpec +
         InsertBuilderSpec.insertBuilderSpec +
         SelectBuilderSpec.selectBuilderSpec
-    }.provideSomeShared[TestEnvironment](containerLayer, executorLayer, keyspaceAndMigrations) @@ parallel @@ timed
+    }.provideSomeShared[TestEnvironment](containerLayer, executorLayer, keyspaceAndMigrations) @@ sequential @@ timed
 
   val keyspaceAndMigrations =
     ZLayer {
