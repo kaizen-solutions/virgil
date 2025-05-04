@@ -13,7 +13,7 @@ object CassandraContainer {
     val datastaxEnterprise = "datastax/dse-server:6.9.1"
     val datastaxEnv = Map(
       "DS_LICENSE"     -> "accept",
-      "JVM_EXTRA_OPTS" -> "-Dcassandra.skip_wait_for_gossip_to_settle=0 -Dcassandra.load_ring_state=false -Dcassandra.initial_token=1 -Dcassandra.num_tokens=nil -Dcassandra.allocate_tokens_for_local_replication_factor=nil -D.cassandra.auto_snapshot=false -Dcassandra.force_default_indexing_page_size=4096"
+      "JVM_EXTRA_OPTS" -> "-Dcassandra.skip_wait_for_gossip_to_settle=0 -Dcassandra.load_ring_state=false -Dcassandra.initial_token=1 -Dcassandra.num_tokens=nil -Dcassandra.allocate_tokens_for_local_replication_factor=nil -Dcassandra.auto_snapshot=false"
     )
     val vanilla = "cassandra:5"
     val vanillaEnv = Map(
@@ -21,7 +21,8 @@ object CassandraContainer {
       "CASSANDRA_DC"              -> "dc1",
       "CASSANDRA_NUM_TOKENS"      -> "1",
       "CASSANDRA_START_RPC"       -> "false",
-      "JVM_EXTRA_OPTS"            -> datastaxEnv("JVM_EXTRA_OPTS")
+      "JVM_EXTRA_OPTS"            -> datastaxEnv("JVM_EXTRA_OPTS"),
+      "JVM_OPTS"                  -> "-Xms256m -Xmx512m"
     )
 
     val container = cassType match {
@@ -65,12 +66,8 @@ object CassandraContainer {
         )
     }
 
-    val customized = container.configure { cont =>
-      val _ = cont.withSharedMemorySize(2048L * 1024L * 1024L)
-    }
-
     ZIO
-      .acquireRelease(ZIO.succeed(customized.start()))(_ => ZIO.succeed(customized.stop()))
+      .acquireRelease(ZIO.succeed(container.start()))(_ => ZIO.succeed(container.stop()))
       .as(
         new CassandraContainer {
           override def getHost: Task[String] = ZIO.attempt(container.host)
