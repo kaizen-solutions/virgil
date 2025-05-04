@@ -1,0 +1,3 @@
+# Make Gitlab runners happier
+-J-XX:MaxRAMPercentage=75.0
+-J-XX:+UseSerialGC # Prioritize lower memory usage at the cost of stop-the-world GC pauses
