@@ -45,20 +45,16 @@ inThisBuild {
       new TestFramework("zio.test.sbt.ZTestFramework"),
       new TestFramework("weaver.framework.CatsEffect")
     ),
-    semanticdbEnabled      := true,
-    semanticdbVersion      := scalafixSemanticdb.revision,
-    versionScheme          := Some("early-semver"),
-    sonatypeCredentialHost := "s01.oss.sonatype.org",
-    sonatypeProfileName    := "io.kaizen-solutions",
-    sonatypeRepository     := "https://s01.oss.sonatype.org/service/local",
-    licenses               := List("MPL-2.0" -> url("https://www.mozilla.org/en-US/MPL/2.0/")),
-    organization           := "io.kaizen-solutions",
-    organizationName       := "kaizen-solutions",
-    homepage               := Some(url("https://www.kaizen-solutions.io/")),
+    semanticdbEnabled := true,
+    semanticdbVersion := scalafixSemanticdb.revision,
+    versionScheme     := Some("early-semver"),
+    licenses          := List("MPL-2.0" -> url("https://www.mozilla.org/en-US/MPL/2.0/")),
+    organization      := "io.kaizen-solutions",
+    organizationName  := "kaizen-solutions",
+    homepage          := Some(url("https://www.kaizen-solutions.io/")),
     developers := List(
       Developer("calvinlfer", "Calvin Fernandes", "cal@kaizen-solutions.io", url("https://www.kaizen-solutions.io"))
-    ),
-    sonatypeCredentialHost := "s01.oss.sonatype.org"
+    )
   )
 }
 
