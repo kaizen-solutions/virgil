@@ -68,7 +68,7 @@ object CqlInterpolatorSpec extends ZIOSpecDefault {
                  |FROM persons
                  |WHERE id = ${1} AND name = ${"cal"}""".stripMargin
           val (queryString, bindMarkers) = query.render
-          val expected =
+          val expected                   =
             """SELECT id, name, persons
               |FROM persons
               |WHERE id = :param0 AND name = :param1""".stripMargin
