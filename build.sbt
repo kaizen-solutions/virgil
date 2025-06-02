@@ -4,8 +4,8 @@ inThisBuild {
   val scala3   = "3.3.6"
 
   List(
-    scalaVersion       := scala213,
-    crossScalaVersions := Seq(scala212, scala213, scala3),
+    scalaVersion               := scala213,
+    crossScalaVersions         := Seq(scala212, scala213, scala3),
     githubWorkflowJavaVersions := List(
       JavaSpec.temurin("17"),
       JavaSpec.temurin("21")
@@ -52,7 +52,7 @@ inThisBuild {
     organization      := "io.kaizen-solutions",
     organizationName  := "kaizen-solutions",
     homepage          := Some(url("https://www.kaizen-solutions.io/")),
-    developers := List(
+    developers        := List(
       Developer("calvinlfer", "Calvin Fernandes", "cal@kaizen-solutions.io", url("https://www.kaizen-solutions.io"))
     )
   )

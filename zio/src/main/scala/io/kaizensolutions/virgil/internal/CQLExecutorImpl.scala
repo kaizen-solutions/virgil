@@ -171,7 +171,7 @@ private[virgil] class CQLExecutorImpl(underlyingSession: CqlSession) extends CQL
   )(implicit trace: Trace): Task[BoundStatement] =
     prepare(queryString).mapAttempt { preparedStatement =>
       val result: BoundStatementBuilder = {
-        val initial = preparedStatement.boundStatementBuilder()
+        val initial      = preparedStatement.boundStatementBuilder()
         val boundColumns = columns.underlying.foldLeft(initial) { case (accBuilder, (colName, column)) =>
           column.write.encodeByFieldName(
             structure = accBuilder,
