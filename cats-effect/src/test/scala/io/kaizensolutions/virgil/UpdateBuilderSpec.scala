@@ -43,7 +43,7 @@ class UpdateBuilderSpec(global: GlobalRead) extends IOSuite with ResourceSuite w
 
     forall(gen) { person =>
       val updatedAge = person.age + 2
-      val update =
+      val update     =
         UpdateBuilder(tableName)
           .set(Age := updatedAge)
           .where(Id === person.id)
@@ -88,7 +88,7 @@ class UpdateBuilderSpec(global: GlobalRead) extends IOSuite with ResourceSuite w
 
     forall(gen) { person =>
       val updatedAge = person.age + 10
-      val update =
+      val update     =
         UpdateBuilder(tableName)
           .set(Age := updatedAge)
           .where(Id === person.id)
