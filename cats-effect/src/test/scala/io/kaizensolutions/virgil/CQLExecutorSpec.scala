@@ -18,7 +18,7 @@ import scala.concurrent.duration._
 
 class CQLExecutorSpec(global: GlobalRead) extends IOSuite with ResourceSuite with Checkers {
 
-  override def maxParallelism: Int = 1
+  override def maxParallelism: Int      = 1
   override def checkConfig: CheckConfig = CheckConfig.default.copy(
     minimumSuccessful = 4,
     maximumGeneratorSize = 10,
@@ -119,7 +119,7 @@ class CQLExecutorSpec(global: GlobalRead) extends IOSuite with ResourceSuite wit
     // primary key is id
     val testGen = Gen.listOfN(10, gen).map(distinctBy(_.id)).map(_.toList)
     forall(testGen) { elements =>
-      val truncateData = executor.execute(truncate(batchTable))
+      val truncateData                              = executor.execute(truncate(batchTable))
       val batchedInsert: Stream[IO, MutationResult] =
         executor.execute(
           elements
@@ -157,7 +157,7 @@ class CQLExecutorSpec(global: GlobalRead) extends IOSuite with ResourceSuite wit
   test("Timeouts are respected") { executor =>
     val testGen = Gen.listOfN(4, TimeoutCheckRow.gen).map(distinctBy(_.id)).map(_.toList)
     val rows    = testGen.retryUntil(_.nonEmpty, 10).sample.get
-    val insert =
+    val insert  =
       Stream
         .iterable(rows)
         .map(TimeoutCheckRow.insert)

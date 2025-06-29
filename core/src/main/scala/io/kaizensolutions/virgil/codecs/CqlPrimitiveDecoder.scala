@@ -80,7 +80,7 @@ object CqlPrimitiveDecoder extends LowPriorityCqlPrimitiveDecoderInstances {
     if (prim.isOptional && structure.isNull(fieldName)) None.asInstanceOf[Scala]
     else if (!prim.isOptional && !prim.isEither && !prim.isCollection && structure.isNull(fieldName)) {
       val typeName = structure.getType(fieldName).asCql(true, true)
-      val error =
+      val error    =
         s"Field (name: $fieldName type: $typeName) is not an optional field but the database came back with a null value"
       throw DecoderException.StructureReadFailure(
         message = error,
@@ -166,7 +166,7 @@ object CqlPrimitiveDecoder extends LowPriorityCqlPrimitiveDecoderInstances {
     if (prim.isOptional && structure.isNull(index)) None.asInstanceOf[Scala]
     else if (!prim.isOptional & !prim.isEither && !prim.isCollection && structure.isNull(index)) {
       val typeName = structure.getType(index).asCql(true, true)
-      val error =
+      val error    =
         s"Field (index: $index type: $typeName) is not an optional field but the database came back with a null value"
       throw DecoderException.PrimitiveReadFailure(error, new IllegalStateException(error))
     } else
@@ -397,7 +397,7 @@ object CqlPrimitiveDecoder extends LowPriorityCqlPrimitiveDecoderInstances {
     transform: (java.util.List[DriverElem], Function[DriverElem, ScalaElem]) => Collection[ScalaElem]
   ) extends CqlPrimitiveDecoder[Collection[ScalaElem]] {
     override type DriverType = java.util.List[DriverElem]
-    override def driverClass: Class[DriverType] = classOf[DriverType]
+    override def driverClass: Class[DriverType]                                                        = classOf[DriverType]
     override def driver2Scala(driverCollection: DriverType, dataType: DataType): Collection[ScalaElem] = {
       val elementDataType                           = dataType.asInstanceOf[ListType].getElementType
       val transformElement: DriverElem => ScalaElem = element.driver2Scala(_, elementDataType)
@@ -475,7 +475,7 @@ object CqlPrimitiveDecoder extends LowPriorityCqlPrimitiveDecoderInstances {
     f: Scala => Scala2
   ) extends CqlPrimitiveDecoder[Scala2] {
     override type DriverType = original.DriverType
-    override def driverClass: Class[DriverType] = original.driverClass
+    override def driverClass: Class[DriverType]                                    = original.driverClass
     override def driver2Scala(driverValue: DriverType, dataType: DataType): Scala2 =
       f(original.driver2Scala(driverValue, dataType))
   }

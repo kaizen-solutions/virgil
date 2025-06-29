@@ -295,7 +295,7 @@ private[virgil] object CqlStatementRenderer {
   private def renderRelations(prefix: String, relations: IndexedSeq[Relation]): (String, BindMarkers) =
     if (relations.isEmpty) ("", BindMarkers.empty)
     else {
-      val initial = (Vector[String](), BindMarkers.empty)
+      val initial              = (Vector[String](), BindMarkers.empty)
       val (exprChunk, columns) =
         relations.foldLeft(initial) { case ((accExpr, accColumns), relation) =>
           relation match {

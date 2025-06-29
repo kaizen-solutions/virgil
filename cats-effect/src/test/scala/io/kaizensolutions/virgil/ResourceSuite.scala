@@ -15,14 +15,14 @@ import java.net.InetSocketAddress
 
 trait ResourceSuite {
 
-  implicit val resourceTag: ResourceTag[CQLExecutor[IO]]                     = ResourceTag.classBasedInstance[CQLExecutor[IO]]
-  implicit val RowPersonShow: Show[UserDefinedTypesSpecDatatypes.Row_Person] = Show.fromToString
+  implicit val resourceTag: ResourceTag[CQLExecutor[IO]]                                                   = ResourceTag.classBasedInstance[CQLExecutor[IO]]
+  implicit val RowPersonShow: Show[UserDefinedTypesSpecDatatypes.Row_Person]                               = Show.fromToString
   implicit val RowHeavilyNestedUDTTableShow: Show[UserDefinedTypesSpecDatatypes.Row_HeavilyNestedUDTTable] =
     Show.fromToString
-  implicit val UpdateBuilderSpecPersonShow: Show[UpdateBuilderSpecDatatypes.UpdateBuilderSpecPerson] = Show.fromToString
+  implicit val UpdateBuilderSpecPersonShow: Show[UpdateBuilderSpecDatatypes.UpdateBuilderSpecPerson]   = Show.fromToString
   implicit val UpdateBuilderSpecCounterShow: Show[UpdateBuilderSpecDatatypes.UpdateBuilderSpecCounter] =
     Show.fromToString
-  implicit val RelationSpecPersonShow: Show[RelationSpecDatatypes.RelationSpec_Person] = Show.fromToString
+  implicit val RelationSpecPersonShow: Show[RelationSpecDatatypes.RelationSpec_Person]                = Show.fromToString
   implicit val DeleteBuilderSpecPersonShow: Show[DeleteBuilderSpecDatatypes.DeleteBuilderSpec_Person] =
     Show.fromToString
   implicit val InsertBuilderSpecPersonShow: Show[InsertBuilderSpecDatatypes.InsertBuilderSpecPerson] =
@@ -50,7 +50,7 @@ trait ResourceSuite {
 
     for {
       migrations <- Resource.eval(migrationCql.compile.lastOrError)
-      _ <- Resource.eval(
+      _          <- Resource.eval(
              migrations.toList
                .traverse(str => cql.execute(str.asCql.mutation).compile.drain)
                .void
@@ -67,7 +67,7 @@ object SharedResources extends ResourceSuite with GlobalResource {
       cassandra <- CassandraContainer(CassandraType.Plain)
       host      <- Resource.eval(cassandra.getHost)
       port      <- Resource.eval(cassandra.getPort)
-      session <- CQLExecutor[IO](
+      session   <- CQLExecutor[IO](
                    CqlSession
                      .builder()
                      .withLocalDatacenter("dc1")

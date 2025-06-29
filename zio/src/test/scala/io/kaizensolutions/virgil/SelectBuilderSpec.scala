@@ -32,7 +32,7 @@ object SelectBuilderSpec {
         assertTrue(dslQuery.cqlType.debug == cqlQueryNormalizedRenderedQuery)
       } +
         test("Select all songs by artist") {
-          val artist = "The Beatles"
+          val artist                = "The Beatles"
           val allSongsByArtistQuery = SelectBuilder
             .from(MusicLibraryItem.tableName)
             .allColumns
@@ -51,8 +51,8 @@ object SelectBuilderSpec {
           )(queryResult => assertTrue(queryResult.size == 3))
         } +
         test("Select all songs from a specific album") {
-          val artist = "The Beatles"
-          val album  = "Abbey Road"
+          val artist            = "The Beatles"
+          val album             = "Abbey Road"
           val allSongsFromAlbum = SelectBuilder
             .from(MusicLibraryItem.tableName)
             .allColumns
@@ -72,9 +72,9 @@ object SelectBuilderSpec {
           )(queryResult => assertTrue(queryResult.size == 2))
         } +
         test("Select a specific song") {
-          val artist = "The Beatles"
-          val album  = "Abbey Road"
-          val song   = "Come Together"
+          val artist       = "The Beatles"
+          val album        = "Abbey Road"
+          val song         = "Come Together"
           val specificSong = SelectBuilder
             .from(MusicLibraryItem.tableName)
             .allColumns
