@@ -41,9 +41,9 @@ class DeleteBuilderSpec(global: GlobalRead) extends IOSuite with ResourceSuite w
   test("Delete columns in a row without deleting the entire row") { executor =>
     forall(DeleteBuilderSpec_Person.gen) { person =>
       for {
-        _           <- executor.executeMutation(truncate)
-        _           <- executor.executeMutation(insert(person))
-        afterInsert <- executor.execute(find(person.id)).compile.toList.map(_.headOption)
+        _            <- executor.executeMutation(truncate)
+        _            <- executor.executeMutation(insert(person))
+        afterInsert  <- executor.execute(find(person.id)).compile.toList.map(_.headOption)
         deleteResult <- executor.executeMutation(
                           DeleteBuilder(tableName)
                             .columns(Name, Age)

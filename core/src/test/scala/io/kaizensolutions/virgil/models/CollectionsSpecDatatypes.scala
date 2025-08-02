@@ -102,7 +102,7 @@ object CollectionsSpecDatatypes {
         list <- Gen.option(Gen.vectorOf(Gen.stringOf(Gen.alphaNumChar)))
       } yield OptionCollectionRow(id, map, set, list)
 
-    private val tableName = "collectionspec_optioncollectiontable"
+    private val tableName             = "collectionspec_optioncollectiontable"
     def truncate: CQL[MutationResult] =
       (cql"TRUNCATE " ++ tableName.asCql).mutation
 

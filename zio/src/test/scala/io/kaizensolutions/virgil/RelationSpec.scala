@@ -33,7 +33,7 @@ object RelationSpec {
         check(RelationSpec_Person.gen.toGenZIO) { person =>
           val insert  = RelationSpec_Person.insert(person).execute.runDrain
           val newName = person.name + " " + person.name
-          val update =
+          val update  =
             UpdateBuilder(RelationSpec_Person.table)
               .set(Name := newName)
               .where(Id === person.id)
