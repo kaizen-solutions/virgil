@@ -107,7 +107,7 @@ object CQLExecutorSpec {
           // primary key is id
           val testGen = Gen.chunkOfN(10)(gen.toGenZIO).map(distinctBy(_.id))
           check(testGen) { elements =>
-            val truncateData = truncate(batchTable).execute
+            val truncateData                                                   = truncate(batchTable).execute
             val batchedInsert: ZStream[CQLExecutor, Throwable, MutationResult] =
               elements
                 .map(ExecuteTestTable.insert(batchTable))

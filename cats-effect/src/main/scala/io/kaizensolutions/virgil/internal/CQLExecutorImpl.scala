@@ -156,7 +156,7 @@ private[virgil] class CQLExecutorImpl[F[_]](underlyingSession: CqlSession)(impli
   ): F[BoundStatement] = prepare(queryString).flatMap { preparedStatement =>
     F.delay {
       val result: BoundStatementBuilder = {
-        val initial = preparedStatement.boundStatementBuilder()
+        val initial      = preparedStatement.boundStatementBuilder()
         val boundColumns = columns.underlying.foldLeft(initial) { case (accBuilder, (colName, column)) =>
           column.write.encodeByFieldName(
             structure = accBuilder,

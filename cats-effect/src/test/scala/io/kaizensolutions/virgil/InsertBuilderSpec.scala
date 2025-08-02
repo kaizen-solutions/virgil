@@ -23,8 +23,8 @@ class InsertBuilderSpec(global: GlobalRead) extends IOSuite with ResourceSuite w
   test("Using TTL and exceeding it will cause the result to not be found") { executor =>
     forall(InsertBuilderSpecPerson.gen) { person =>
       for {
-        _ <- executor.executeMutation(InsertBuilderSpecPerson.insert(person).usingTTL(JDuration.ofSeconds(1)).build)
-        _ <- IO.sleep(1001.milliseconds)
+        _    <- executor.executeMutation(InsertBuilderSpecPerson.insert(person).usingTTL(JDuration.ofSeconds(1)).build)
+        _    <- IO.sleep(1001.milliseconds)
         find <- executor
                   .execute(InsertBuilderSpecPerson.find(person.id))
                   .compile

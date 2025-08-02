@@ -28,7 +28,7 @@ object UpdateBuilderSpec {
           import UpdateBuilderSpecPerson._
           check(gen.toGenZIO) { person =>
             val updatedAge = person.age + 2
-            val update =
+            val update     =
               UpdateBuilder(tableName)
                 .set(Age := updatedAge)
                 .where(Id === person.id)
@@ -67,7 +67,7 @@ object UpdateBuilderSpec {
           import UpdateBuilderSpecPerson._
           check(gen.toGenZIO) { person =>
             val updatedAge = person.age + 10
-            val update =
+            val update     =
               UpdateBuilder(tableName)
                 .set(Age := updatedAge)
                 .where(Id === person.id)

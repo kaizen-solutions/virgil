@@ -22,7 +22,7 @@ final case class InsertBuilder[State <: InsertState](
     values(columnName -> inputValue)
 
   def values(column: (String, ValueInCql), rest: (String, ValueInCql)*): InsertBuilder[InsertState.ColumnAdded] = {
-    val allColumns = column +: rest
+    val allColumns                              = column +: rest
     val underlying: ListMap[String, ValueInCql] = {
       val acc         = ListMap.newBuilder[String, ValueInCql]
       val withColumns = acc ++= allColumns
