@@ -76,7 +76,7 @@ final case class CQL[+Result](
     else self
 
   def take[Result1 >: Result](n: Long)(implicit ev: Result1 <:!< MutationResult): CQL[Result1] = {
-    val _ = ev
+    val _       = ev
     val adjustN = n match {
       case invalid if invalid <= 0 => 1
       case _                       => n

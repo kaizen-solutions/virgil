@@ -26,9 +26,9 @@ object DeleteBuilderSpec {
       } + test("Delete columns in a row without deleting the entire row") {
         check(DeleteBuilderSpec_Person.gen.toGenZIO) { person =>
           for {
-            _           <- truncate.execute.runDrain
-            _           <- insert(person).execute.runDrain
-            afterInsert <- find(person.id).execute.runHead
+            _            <- truncate.execute.runDrain
+            _            <- insert(person).execute.runDrain
+            afterInsert  <- find(person.id).execute.runHead
             deleteResult <- DeleteBuilder(tableName)
                               .columns(Name, Age)
                               .where(Id === person.id)

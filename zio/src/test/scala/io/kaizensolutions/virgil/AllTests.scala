@@ -29,7 +29,7 @@ object AllTests extends ZIOSpecDefault {
   val keyspaceAndMigrations =
     ZLayer {
       for {
-        executor <- ZIO.service[CQLExecutor]
+        executor      <- ZIO.service[CQLExecutor]
         createKeyspace =
           cql"""CREATE KEYSPACE IF NOT EXISTS virgil
           WITH REPLICATION = {
@@ -51,7 +51,7 @@ object AllTests extends ZIOSpecDefault {
         container   <- ZIO.service[CassandraContainer]
         hostAndPort <- container.getHost.zip(container.getPort)
         (host, port) = hostAndPort
-        builder <- ZIO.attempt(
+        builder     <- ZIO.attempt(
                      CqlSession
                        .builder()
                        .withLocalDatacenter("dc1")
