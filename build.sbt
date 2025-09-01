@@ -129,7 +129,7 @@ lazy val catsEffect =
       name := "virgil-cats-effect",
       libraryDependencies ++= {
         val disney  = "com.disneystreaming"
-        val weaverV = "0.8.4"
+        val weaverV = "0.10.0"
         Seq(
           "org.typelevel" %% "cats-effect"       % "3.6.3",
           "co.fs2"        %% "fs2-core"          % "3.11.0",
