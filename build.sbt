@@ -132,8 +132,8 @@ lazy val catsEffect =
         val weaverV = "0.8.4"
         Seq(
           "org.typelevel" %% "cats-effect"       % "3.6.3",
-          "co.fs2"        %% "fs2-core"          % "3.11.0",
-          "co.fs2"        %% "fs2-io"            % "3.11.0",
+          "co.fs2"        %% "fs2-core"          % "3.12.2",
+          "co.fs2"        %% "fs2-io"            % "3.12.2",
           disney          %% "weaver-cats"       % weaverV % Test,
           disney          %% "weaver-scalacheck" % weaverV % Test
         )
