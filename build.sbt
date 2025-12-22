@@ -86,7 +86,7 @@ lazy val core =
             zio                      %% "zio-test-scalacheck"     % zioV     % Test,
             zio                      %% "zio-test-sbt"            % zioV     % Test,
             zio                      %% "zio-logging-slf4j"       % "2.5.1"  % Test,
-            "ch.qos.logback"          % "logback-classic"         % "1.5.19" % Test,
+            "ch.qos.logback"          % "logback-classic"         % "1.5.23" % Test,
             "com.dimafeng"           %% "testcontainers-scala"    % "0.43.0" % Test
           )
 
