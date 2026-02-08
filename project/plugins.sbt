@@ -1,5 +1,5 @@
 addSbtPlugin("com.github.sbt"   % "sbt-github-actions" % "0.27.0")
-addSbtPlugin("org.typelevel"    % "sbt-tpolecat"       % "0.5.2")
+addSbtPlugin("org.typelevel"    % "sbt-tpolecat"       % "0.5.3")
 addSbtPlugin("org.scoverage"    % "sbt-scoverage"      % "2.3.1")
 addSbtPlugin("org.scoverage"    % "sbt-coveralls"      % "1.3.15")
 addSbtPlugin("com.timushev.sbt" % "sbt-updates"        % "0.6.4")
