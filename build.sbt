@@ -1,7 +1,7 @@
 inThisBuild {
   val scala212 = "2.12.20"
   val scala213 = "2.13.16"
-  val scala3   = "3.3.7"
+  val scala3   = "3.3.9"
 
   List(
     scalaVersion               := scala213,
